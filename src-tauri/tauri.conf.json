@@ -23,7 +23,26 @@
       }
     ],
     "security": {
-      "csp": null
+      "csp": null,
+      "capabilities": [
+        {
+          "identifier": "main-capability",
+          "windows": ["main"],
+          "permissions": [
+            "core:default",
+            "core:webview:allow-internal-toggle-devtools",
+            "sql:allow-load",
+            "sql:allow-execute",
+            "sql:allow-select",
+            "sql:default"
+          ]
+        }
+      ]
+    }
+  },
+  "plugins": {
+    "sql": {
+      "preload": ["sqlite:funhou.db"]
     }
   }
 }

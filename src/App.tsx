@@ -58,7 +58,7 @@ function App() {
         )
 
         const newEntry: Entry = {
-          id: result.lastInsertId,
+          id: Number(result.lastInsertId),
           content: currentEntry,
           timestamp: timestamp,
         }
