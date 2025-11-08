@@ -1,0 +1,38 @@
+{
+  "name": "funhou",
+  "version": "1.0.0",
+  "description": "**funhou** は分報を簡単に記録できるツールです。",
+  "main": "index.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "tauri": "tauri",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/FScoward/funhou.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/FScoward/funhou/issues"
+  },
+  "homepage": "https://github.com/FScoward/funhou#readme",
+  "dependencies": {
+    "@vitejs/plugin-react": "^5.1.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "vite": "^7.2.2"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.9.3",
+    "@types/react": "^19.2.2",
+    "@types/react-dom": "^19.2.2",
+    "typescript": "^5.9.3"
+  }
+}
