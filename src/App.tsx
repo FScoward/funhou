@@ -76,6 +76,13 @@ function App() {
     return date.toLocaleTimeString('ja-JP')
   }
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+      e.preventDefault()
+      handleAddEntry()
+    }
+  }
+
   return (
     <div className="app">
       <header>
@@ -87,6 +94,7 @@ function App() {
           <textarea
             value={currentEntry}
             onChange={(e) => setCurrentEntry(e.target.value)}
+            onKeyDown={handleKeyDown}
             placeholder="今やっていることを記録..."
             rows={3}
           />
