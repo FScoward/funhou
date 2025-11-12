@@ -2,6 +2,7 @@
   max-width: 800px;
   margin: 0 auto;
   padding: 2rem;
+  color: #555;
 }
 
 header {
@@ -13,54 +14,219 @@ h1 {
   margin: 0;
 }
 
+.date-navigation {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  margin-bottom: 2rem;
+  padding: 0.75rem;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.date-display {
+  font-size: 0.95rem;
+  font-weight: 400;
+  color: #555;
+  min-width: 200px;
+  text-align: center;
+}
+
+.nav-button {
+  padding: 0.3rem 0.6rem;
+  font-size: 0.9rem;
+  background-color: transparent;
+  color: #888;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.nav-button:hover {
+  background-color: #f5f5f5;
+  color: #333;
+}
+
+.today-button {
+  padding: 0.3rem 0.7rem;
+  font-size: 0.8rem;
+  background-color: transparent;
+  color: #888;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.today-button:hover {
+  background-color: #f5f5f5;
+  color: #333;
+}
+
 .input-section {
   margin-bottom: 2rem;
+  position: relative;
+  border: 1px solid #e5e5e5;
+  border-radius: 12px;
+  background-color: #fff;
+  padding: 1rem;
+  transition: border-color 0.15s;
+  display: flex;
+  flex-direction: column;
+}
+
+.input-section:focus-within {
+  border-color: #bbb;
 }
 
 textarea {
   width: 100%;
-  padding: 0.75rem;
-  font-size: 1rem;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  resize: vertical;
-  font-family: inherit;
-}
-
-button {
-  margin-top: 0.5rem;
-  padding: 0.75rem 1.5rem;
-  font-size: 1rem;
-  background-color: #007bff;
-  color: white;
+  padding: 0;
+  padding-bottom: 2.5rem;
+  font-size: 0.85rem;
   border: none;
-  border-radius: 4px;
-  cursor: pointer;
+  resize: none;
+  font-family: inherit;
+  background-color: transparent;
+  color: #555;
+  min-height: 60px;
+  overflow: hidden;
 }
 
-button:hover {
-  background-color: #0056b3;
+textarea:focus {
+  outline: none;
+}
+
+textarea::placeholder {
+  color: #aaa;
+  font-size: 0.85rem;
+}
+
+.submit-button {
+  position: absolute;
+  bottom: 1rem;
+  right: 1rem;
+  margin: 0;
+  padding: 0.4rem 0.9rem;
+  font-size: 0.75rem;
+  background-color: #333;
+  color: #fff;
+  border: none;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.15s;
+  z-index: 1;
+}
+
+.submit-button:hover {
+  background-color: #000;
 }
 
 .timeline h2 {
+  font-size: 1.1rem;
+  margin-bottom: 1.5rem;
+}
+
+.timeline-container {
+  position: relative;
+}
+
+.timeline-item {
+  display: grid;
+  grid-template-columns: 60px 40px 1fr;
+  gap: 0;
+  margin-bottom: 1.5rem;
+  position: relative;
+}
+
+.timeline-date {
+  text-align: right;
+  padding-right: 1rem;
+  padding-top: 0.25rem;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.date-day {
   font-size: 1.5rem;
-  margin-bottom: 1rem;
+  font-weight: 600;
+  color: #333;
+  line-height: 1.2;
 }
 
-.timeline ul {
-  list-style: none;
-  padding: 0;
+.date-month {
+  font-size: 0.75rem;
+  color: #888;
+  text-transform: uppercase;
+  margin-bottom: 0.25rem;
 }
 
-.timeline li {
-  padding: 0.75rem;
-  margin-bottom: 0.5rem;
-  background-color: #f5f5f5;
-  border-radius: 4px;
-  border-left: 3px solid #007bff;
+.timeline-date .entry-time {
+  font-size: 0.7rem;
+  color: #aaa;
+  margin-top: 0.25rem;
+}
+
+.timeline-line {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  padding-top: 0.5rem;
+}
+
+.timeline-line::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: -1.5rem;
+  width: 2px;
+  background-color: #e0e0e0;
+  transform: translateX(-50%);
+}
+
+.timeline-item:last-child .timeline-line::before {
+  display: none;
+}
+
+.timeline-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background-color: #4CAF50;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 2px #e0e0e0;
+  position: relative;
+  z-index: 1;
+}
+
+.timeline-content {
+  padding-left: 1rem;
+}
+
+.entry-card {
+  background-color: #fff;
+  border: 1px solid #e5e5e5;
+  border-radius: 8px;
+  padding: 1rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  transition: box-shadow 0.15s;
+}
+
+.entry-card:hover {
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.entry-text {
+  font-size: 0.9rem;
+  color: #555;
+  line-height: 1.5;
 }
 
 .empty {
   color: #666;
   font-style: italic;
+  font-size: 0.85rem;
 }

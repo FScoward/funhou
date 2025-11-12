@@ -29,16 +29,20 @@ async function getDb() {
 function App() {
   const [entries, setEntries] = useState<Entry[]>([])
   const [currentEntry, setCurrentEntry] = useState('')
+  const [selectedDate, setSelectedDate] = useState(new Date())
 
   useEffect(() => {
     loadEntries()
-  }, [])
+  }, [selectedDate])
 
   const loadEntries = async () => {
     try {
       const database = await getDb()
+      // 選択された日付のエントリーのみを取得（JSTタイムゾーンを考慮）
+      const dateStr = selectedDate.toISOString().split('T')[0]
       const loadedEntries = await database.select<Entry[]>(
-        'SELECT id, content, timestamp FROM entries ORDER BY timestamp DESC'
+        'SELECT id, content, timestamp FROM entries WHERE DATE(timestamp) = DATE(?) ORDER BY timestamp DESC',
+        [dateStr]
       )
       setEntries(loadedEntries)
     } catch (error) {
@@ -65,6 +69,12 @@ function App() {
 
         setEntries([newEntry, ...entries])
         setCurrentEntry('')
+
+        // textareaの高さをリセット
+        const textarea = document.querySelector('textarea')
+        if (textarea) {
+          textarea.style.height = 'auto'
+        }
       } catch (error) {
         console.error('エントリーの追加に失敗しました:', error)
       }
@@ -83,33 +93,132 @@ function App() {
     }
   }
 
+  // テキストエリアの自動リサイズ
+  const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setCurrentEntry(e.target.value)
+    // 高さをリセットしてから再計算
+    e.target.style.height = 'auto'
+    e.target.style.height = `${e.target.scrollHeight}px`
+  }
+
+  // 日付移動関数
+  const goToPreviousDay = () => {
+    const newDate = new Date(selectedDate)
+    newDate.setDate(newDate.getDate() - 1)
+    setSelectedDate(newDate)
+  }
+
+  const goToNextDay = () => {
+    const newDate = new Date(selectedDate)
+    newDate.setDate(newDate.getDate() + 1)
+    setSelectedDate(newDate)
+  }
+
+  const goToToday = () => {
+    setSelectedDate(new Date())
+  }
+
+  // 日本語の日付フォーマット（曜日付き）
+  const formatDateWithWeekday = (date: Date) => {
+    const year = date.getFullYear()
+    const month = date.getMonth() + 1
+    const day = date.getDate()
+    const weekdays = ['日', '月', '火', '水', '木', '金', '土']
+    const weekday = weekdays[date.getDay()]
+    return `${year}年${month}月${day}日（${weekday}）`
+  }
+
+  // キーボードショートカット（矢印キーとTキー）
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      // textareaにフォーカスがある場合はスキップ
+      if (document.activeElement?.tagName === 'TEXTAREA') {
+        return
+      }
+
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault()
+        goToPreviousDay()
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault()
+        goToNextDay()
+      } else if (e.key === 't' || e.key === 'T') {
+        e.preventDefault()
+        goToToday()
+      }
+    }
+
+    window.addEventListener('keydown', handleGlobalKeyDown)
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown)
+  }, [selectedDate])
+
   return (
     <div className="app">
-
       <main>
+        <div className="date-navigation">
+          <button onClick={goToPreviousDay} className="nav-button">
+            ◀
+          </button>
+          <div className="date-display">
+            {formatDateWithWeekday(selectedDate)}
+          </div>
+          <button onClick={goToNextDay} className="nav-button">
+            ▶
+          </button>
+          <button onClick={goToToday} className="today-button">
+            今日
+          </button>
+        </div>
+
         <div className="input-section">
           <textarea
             value={currentEntry}
-            onChange={(e) => setCurrentEntry(e.target.value)}
+            onChange={handleTextareaChange}
             onKeyDown={handleKeyDown}
-            placeholder="今やっていることを記録..."
-            rows={3}
+            placeholder="今やっていることを記録してください..."
+            rows={1}
           />
-          <button onClick={handleAddEntry}>記録</button>
+          <button onClick={handleAddEntry} className="submit-button">送信</button>
         </div>
 
         <div className="timeline">
-          <h2>今日の分報</h2>
           {entries.length === 0 ? (
-            <p className="empty">まだ記録がありません</p>
+            <p className="empty">この日の記録がありません</p>
           ) : (
-            <ul>
-              {entries.map((entry) => (
-                <li key={entry.id}>
-                  [{formatTimestamp(entry.timestamp)}] {entry.content}
-                </li>
-              ))}
-            </ul>
+            <div className="timeline-container">
+              {entries.map((entry, index) => {
+                const entryDate = new Date(entry.timestamp)
+                const day = entryDate.getDate()
+                const month = entryDate.toLocaleDateString('ja-JP', { month: 'short' })
+
+                // 前のエントリーと日付を比較
+                const prevEntry = index > 0 ? entries[index - 1] : null
+                const prevDate = prevEntry ? new Date(prevEntry.timestamp).getDate() : null
+                const showDate = prevDate !== day
+
+                return (
+                  <div key={entry.id} className="timeline-item">
+                    <div className="timeline-date">
+                      {showDate ? (
+                        <>
+                          <div className="date-day">{day}</div>
+                          <div className="date-month">{month}</div>
+                        </>
+                      ) : null}
+                      <div className="entry-time">{formatTimestamp(entry.timestamp)}</div>
+                    </div>
+                    <div className="timeline-line">
+                      <div className="timeline-dot"></div>
+                    </div>
+                    <div className="timeline-content">
+                      <div className="entry-card">
+                        <div className="entry-text">{entry.content}</div>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
           )}
         </div>
       </main>
