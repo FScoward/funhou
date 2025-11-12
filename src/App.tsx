@@ -182,17 +182,43 @@ function App() {
         </div>
 
         <div className="timeline">
-          <h2>{formatDateWithWeekday(selectedDate)}の分報</h2>
           {entries.length === 0 ? (
             <p className="empty">この日の記録がありません</p>
           ) : (
-            <ul>
-              {entries.map((entry) => (
-                <li key={entry.id}>
-                  [{formatTimestamp(entry.timestamp)}] {entry.content}
-                </li>
-              ))}
-            </ul>
+            <div className="timeline-container">
+              {entries.map((entry, index) => {
+                const entryDate = new Date(entry.timestamp)
+                const day = entryDate.getDate()
+                const month = entryDate.toLocaleDateString('ja-JP', { month: 'short' })
+
+                // 前のエントリーと日付を比較
+                const prevEntry = index > 0 ? entries[index - 1] : null
+                const prevDate = prevEntry ? new Date(prevEntry.timestamp).getDate() : null
+                const showDate = prevDate !== day
+
+                return (
+                  <div key={entry.id} className="timeline-item">
+                    <div className="timeline-date">
+                      {showDate ? (
+                        <>
+                          <div className="date-day">{day}</div>
+                          <div className="date-month">{month}</div>
+                        </>
+                      ) : null}
+                      <div className="entry-time">{formatTimestamp(entry.timestamp)}</div>
+                    </div>
+                    <div className="timeline-line">
+                      <div className="timeline-dot"></div>
+                    </div>
+                    <div className="timeline-content">
+                      <div className="entry-card">
+                        <div className="entry-text">{entry.content}</div>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
           )}
         </div>
       </main>
