@@ -85,9 +85,6 @@ function App() {
 
   return (
     <div className="app">
-      <header>
-        <h1>funhou - 分報ツール</h1>
-      </header>
 
       <main>
         <div className="input-section">
