@@ -69,6 +69,12 @@ function App() {
 
         setEntries([newEntry, ...entries])
         setCurrentEntry('')
+
+        // textareaの高さをリセット
+        const textarea = document.querySelector('textarea')
+        if (textarea) {
+          textarea.style.height = 'auto'
+        }
       } catch (error) {
         console.error('エントリーの追加に失敗しました:', error)
       }
@@ -85,6 +91,14 @@ function App() {
       e.preventDefault()
       handleAddEntry()
     }
+  }
+
+  // テキストエリアの自動リサイズ
+  const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setCurrentEntry(e.target.value)
+    // 高さをリセットしてから再計算
+    e.target.style.height = 'auto'
+    e.target.style.height = `${e.target.scrollHeight}px`
   }
 
   // 日付移動関数
@@ -159,12 +173,12 @@ function App() {
         <div className="input-section">
           <textarea
             value={currentEntry}
-            onChange={(e) => setCurrentEntry(e.target.value)}
+            onChange={handleTextareaChange}
             onKeyDown={handleKeyDown}
-            placeholder="今やっていることを記録..."
-            rows={3}
+            placeholder="今やっていることを記録してください..."
+            rows={1}
           />
-          <button onClick={handleAddEntry}>記録</button>
+          <button onClick={handleAddEntry} className="submit-button">送信</button>
         </div>
 
         <div className="timeline">
