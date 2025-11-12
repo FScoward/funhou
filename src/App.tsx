@@ -29,16 +29,20 @@ async function getDb() {
 function App() {
   const [entries, setEntries] = useState<Entry[]>([])
   const [currentEntry, setCurrentEntry] = useState('')
+  const [selectedDate, setSelectedDate] = useState(new Date())
 
   useEffect(() => {
     loadEntries()
-  }, [])
+  }, [selectedDate])
 
   const loadEntries = async () => {
     try {
       const database = await getDb()
+      // 選択された日付のエントリーのみを取得（JSTタイムゾーンを考慮）
+      const dateStr = selectedDate.toISOString().split('T')[0]
       const loadedEntries = await database.select<Entry[]>(
-        'SELECT id, content, timestamp FROM entries ORDER BY timestamp DESC'
+        'SELECT id, content, timestamp FROM entries WHERE DATE(timestamp) = DATE(?) ORDER BY timestamp DESC',
+        [dateStr]
       )
       setEntries(loadedEntries)
     } catch (error) {
@@ -83,10 +87,75 @@ function App() {
     }
   }
 
+  // 日付移動関数
+  const goToPreviousDay = () => {
+    const newDate = new Date(selectedDate)
+    newDate.setDate(newDate.getDate() - 1)
+    setSelectedDate(newDate)
+  }
+
+  const goToNextDay = () => {
+    const newDate = new Date(selectedDate)
+    newDate.setDate(newDate.getDate() + 1)
+    setSelectedDate(newDate)
+  }
+
+  const goToToday = () => {
+    setSelectedDate(new Date())
+  }
+
+  // 日本語の日付フォーマット（曜日付き）
+  const formatDateWithWeekday = (date: Date) => {
+    const year = date.getFullYear()
+    const month = date.getMonth() + 1
+    const day = date.getDate()
+    const weekdays = ['日', '月', '火', '水', '木', '金', '土']
+    const weekday = weekdays[date.getDay()]
+    return `${year}年${month}月${day}日（${weekday}）`
+  }
+
+  // キーボードショートカット（矢印キーとTキー）
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      // textareaにフォーカスがある場合はスキップ
+      if (document.activeElement?.tagName === 'TEXTAREA') {
+        return
+      }
+
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault()
+        goToPreviousDay()
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault()
+        goToNextDay()
+      } else if (e.key === 't' || e.key === 'T') {
+        e.preventDefault()
+        goToToday()
+      }
+    }
+
+    window.addEventListener('keydown', handleGlobalKeyDown)
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown)
+  }, [selectedDate])
+
   return (
     <div className="app">
-
       <main>
+        <div className="date-navigation">
+          <button onClick={goToPreviousDay} className="nav-button">
+            ◀
+          </button>
+          <div className="date-display">
+            {formatDateWithWeekday(selectedDate)}
+          </div>
+          <button onClick={goToNextDay} className="nav-button">
+            ▶
+          </button>
+          <button onClick={goToToday} className="today-button">
+            今日
+          </button>
+        </div>
+
         <div className="input-section">
           <textarea
             value={currentEntry}
@@ -99,9 +168,9 @@ function App() {
         </div>
 
         <div className="timeline">
-          <h2>今日の分報</h2>
+          <h2>{formatDateWithWeekday(selectedDate)}の分報</h2>
           {entries.length === 0 ? (
-            <p className="empty">まだ記録がありません</p>
+            <p className="empty">この日の記録がありません</p>
           ) : (
             <ul>
               {entries.map((entry) => (
