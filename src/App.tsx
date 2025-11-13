@@ -4,6 +4,8 @@ import './App.css'
 import { Calendar } from '@/components/ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Button } from '@/components/ui/button'
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
+import { Trash2 } from 'lucide-react'
 import { ja } from 'date-fns/locale'
 
 interface Entry {
@@ -43,6 +45,8 @@ function App() {
   const [currentEntry, setCurrentEntry] = useState('')
   const [selectedDate, setSelectedDate] = useState(new Date())
   const [calendarOpen, setCalendarOpen] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [deleteTargetId, setDeleteTargetId] = useState<number | null>(null)
 
   useEffect(() => {
     loadEntries()
@@ -91,6 +95,29 @@ function App() {
       } catch (error) {
         console.error('エントリーの追加に失敗しました:', error)
       }
+    }
+  }
+
+  const openDeleteDialog = (id: number) => {
+    setDeleteTargetId(id)
+    setDeleteDialogOpen(true)
+  }
+
+  const handleDeleteEntry = async () => {
+    if (deleteTargetId === null) return
+
+    try {
+      const database = await getDb()
+      await database.execute('DELETE FROM entries WHERE id = ?', [deleteTargetId])
+
+      // stateからエントリーを削除
+      setEntries(entries.filter((entry) => entry.id !== deleteTargetId))
+
+      // ダイアログを閉じる
+      setDeleteDialogOpen(false)
+      setDeleteTargetId(null)
+    } catch (error) {
+      console.error('エントリーの削除に失敗しました:', error)
     }
   }
 
@@ -255,6 +282,13 @@ function App() {
                     </div>
                     <div className="timeline-content">
                       <div className="entry-card">
+                        <button
+                          className="delete-button"
+                          onClick={() => openDeleteDialog(entry.id)}
+                          aria-label="削除"
+                        >
+                          <Trash2 size={16} />
+                        </button>
                         <div className="entry-text">{entry.content}</div>
                       </div>
                     </div>
@@ -265,6 +299,21 @@ function App() {
           )}
         </div>
       </main>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>エントリーを削除しますか？</AlertDialogTitle>
+            <AlertDialogDescription>
+              この操作は取り消せません。本当に削除してもよろしいですか？
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>キャンセル</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteEntry}>削除</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
