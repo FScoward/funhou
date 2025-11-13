@@ -17,6 +17,18 @@ interface Entry {
   timestamp: string
 }
 
+interface Reply {
+  id: number
+  entry_id: number
+  content: string
+  timestamp: string
+}
+
+interface EntryWithReplies extends Entry {
+  replies: Reply[]
+  replyCount?: number
+}
+
 let db: Database | null = null
 
 async function getDb() {
@@ -44,6 +56,22 @@ async function getDb() {
     await db.execute(`
       INSERT OR IGNORE INTO settings (key, value) VALUES ('always_on_top', 'false')
     `)
+
+    // 返信テーブルを作成
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS replies (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        entry_id INTEGER NOT NULL,
+        content TEXT NOT NULL,
+        timestamp DATETIME NOT NULL,
+        FOREIGN KEY (entry_id) REFERENCES entries(id) ON DELETE CASCADE
+      )
+    `)
+
+    // インデックス作成
+    await db.execute(`
+      CREATE INDEX IF NOT EXISTS idx_replies_entry_id ON replies(entry_id)
+    `)
   }
   return db
 }
@@ -57,7 +85,7 @@ function formatDateToLocalYYYYMMDD(date: Date): string {
 }
 
 function App() {
-  const [entries, setEntries] = useState<Entry[]>([])
+  const [entries, setEntries] = useState<EntryWithReplies[]>([])
   const [currentEntry, setCurrentEntry] = useState('')
   const [selectedDate, setSelectedDate] = useState(new Date())
   const [calendarOpen, setCalendarOpen] = useState(false)
@@ -65,6 +93,9 @@ function App() {
   const [deleteTargetId, setDeleteTargetId] = useState<number | null>(null)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [database, setDatabase] = useState<Database | null>(null)
+  const [replyingToId, setReplyingToId] = useState<number | null>(null)
+  const [replyContent, setReplyContent] = useState('')
+  const [expandedEntries, setExpandedEntries] = useState<Set<number>>(new Set())
 
   useEffect(() => {
     initializeDb()
@@ -100,7 +131,23 @@ function App() {
         'SELECT id, content, timestamp FROM entries WHERE DATE(timestamp, \'localtime\') = DATE(?) ORDER BY timestamp DESC',
         [dateStr]
       )
-      setEntries(loadedEntries)
+
+      // 各エントリーに対して返信を取得
+      const entriesWithReplies: EntryWithReplies[] = await Promise.all(
+        loadedEntries.map(async (entry) => {
+          const replies = await database.select<Reply[]>(
+            'SELECT id, entry_id, content, timestamp FROM replies WHERE entry_id = ? ORDER BY timestamp ASC',
+            [entry.id]
+          )
+          return {
+            ...entry,
+            replies,
+            replyCount: replies.length
+          }
+        })
+      )
+
+      setEntries(entriesWithReplies)
     } catch (error) {
       console.error('エントリーの読み込みに失敗しました:', error)
     }
@@ -116,10 +163,12 @@ function App() {
           [currentEntry, timestamp]
         )
 
-        const newEntry: Entry = {
+        const newEntry: EntryWithReplies = {
           id: Number(result.lastInsertId),
           content: currentEntry,
           timestamp: timestamp,
+          replies: [],
+          replyCount: 0
         }
 
         setEntries([newEntry, ...entries])
@@ -156,6 +205,87 @@ function App() {
     } catch (error) {
       console.error('エントリーの削除に失敗しました:', error)
     }
+  }
+
+  const handleAddReply = async (entryId: number) => {
+    if (replyContent.trim() && database) {
+      try {
+        const timestamp = new Date().toISOString()
+
+        const result = await database.execute(
+          'INSERT INTO replies (entry_id, content, timestamp) VALUES (?, ?, ?)',
+          [entryId, replyContent, timestamp]
+        )
+
+        const newReply: Reply = {
+          id: Number(result.lastInsertId),
+          entry_id: entryId,
+          content: replyContent,
+          timestamp: timestamp,
+        }
+
+        // 該当エントリーの返信リストを更新
+        setEntries(entries.map(entry =>
+          entry.id === entryId
+            ? { ...entry, replies: [...entry.replies, newReply], replyCount: entry.replies.length + 1 }
+            : entry
+        ))
+
+        setReplyContent('')
+        setReplyingToId(null)
+
+        // textareaの高さをリセット
+        const textarea = document.querySelector(`textarea[data-reply-to="${entryId}"]`)
+        if (textarea instanceof HTMLTextAreaElement) {
+          textarea.style.height = 'auto'
+        }
+      } catch (error) {
+        console.error('返信の追加に失敗しました:', error)
+      }
+    }
+  }
+
+  const handleDeleteReply = async (replyId: number, entryId: number) => {
+    if (!database) return
+
+    try {
+      await database.execute('DELETE FROM replies WHERE id = ?', [replyId])
+
+      // 該当エントリーの返信リストから削除
+      setEntries(entries.map(entry =>
+        entry.id === entryId
+          ? {
+              ...entry,
+              replies: entry.replies.filter(r => r.id !== replyId),
+              replyCount: entry.replies.length - 1
+            }
+          : entry
+      ))
+    } catch (error) {
+      console.error('返信の削除に失敗しました:', error)
+    }
+  }
+
+  const toggleReplyForm = (entryId: number) => {
+    if (replyingToId === entryId) {
+      setReplyingToId(null)
+      setReplyContent('')
+    } else {
+      setReplyingToId(entryId)
+      setReplyContent('')
+    }
+  }
+
+  const toggleExpandEntry = (entryId: number) => {
+    setExpandedEntries(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(entryId)) {
+        newSet.delete(entryId)
+      } else {
+        newSet.add(entryId)
+      }
+      return newSet
+    })
   }
 
   const formatTimestamp = (timestamp: string) => {
@@ -313,6 +443,9 @@ function App() {
                 const prevDate = prevEntry ? new Date(prevEntry.timestamp).getDate() : null
                 const showDate = prevDate !== day
 
+                const isExpanded = expandedEntries.has(entry.id)
+                const hasReplies = entry.replies.length > 0
+
                 return (
                   <div key={entry.id} className="timeline-item">
                     <div className="timeline-date">
@@ -337,6 +470,87 @@ function App() {
                           <Trash2 size={16} />
                         </button>
                         <div className="entry-text">{entry.content}</div>
+
+                        {/* 返信関連のボタン */}
+                        <div className="entry-actions">
+                          <button
+                            className="reply-button"
+                            onClick={() => toggleReplyForm(entry.id)}
+                          >
+                            💬 返信する
+                          </button>
+
+                          {hasReplies && (
+                            <button
+                              className="toggle-replies-button"
+                              onClick={() => toggleExpandEntry(entry.id)}
+                            >
+                              {isExpanded ? '▼' : '▶'} 返信 ({entry.replyCount})
+                            </button>
+                          )}
+                        </div>
+
+                        {/* 返信入力フォーム */}
+                        {replyingToId === entry.id && (
+                          <div className="reply-input-section">
+                            <textarea
+                              data-reply-to={entry.id}
+                              value={replyContent}
+                              onChange={(e) => {
+                                setReplyContent(e.target.value)
+                                e.target.style.height = 'auto'
+                                e.target.style.height = `${e.target.scrollHeight}px`
+                              }}
+                              onKeyDown={(e) => {
+                                if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+                                  e.preventDefault()
+                                  handleAddReply(entry.id)
+                                }
+                              }}
+                              placeholder="返信を入力..."
+                              rows={1}
+                              className="reply-textarea"
+                            />
+                            <div className="reply-buttons">
+                              <button
+                                onClick={() => handleAddReply(entry.id)}
+                                className="submit-reply-button"
+                              >
+                                送信
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setReplyingToId(null)
+                                  setReplyContent('')
+                                }}
+                                className="cancel-reply-button"
+                              >
+                                キャンセル
+                              </button>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* 返信一覧 */}
+                        {isExpanded && hasReplies && (
+                          <div className="replies-container">
+                            {entry.replies.map((reply) => (
+                              <div key={reply.id} className="reply-item">
+                                <div className="reply-header">
+                                  <span className="reply-time">{formatTimestamp(reply.timestamp)}</span>
+                                  <button
+                                    className="delete-reply-button"
+                                    onClick={() => handleDeleteReply(reply.id, entry.id)}
+                                    aria-label="削除"
+                                  >
+                                    <Trash2 size={12} />
+                                  </button>
+                                </div>
+                                <div className="reply-text">{reply.content}</div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
