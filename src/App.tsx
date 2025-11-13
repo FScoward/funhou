@@ -10,6 +10,7 @@ import { ja } from 'date-fns/locale'
 import { SettingsDialog } from '@/components/SettingsDialog'
 import { getSettings } from '@/lib/settings'
 import { getCurrentWindow } from '@tauri-apps/api/window'
+import CustomInput from '@/components/CustomInput'
 
 interface Entry {
   id: number
@@ -248,12 +249,6 @@ function App() {
 
         setTimelineItems([newItem, ...timelineItems])
         setCurrentEntry('')
-
-        // textareaの高さをリセット
-        const textarea = document.querySelector('textarea')
-        if (textarea) {
-          textarea.style.height = 'auto'
-        }
       } catch (error) {
         console.error('エントリーの追加に失敗しました:', error)
       }
@@ -511,14 +506,6 @@ function App() {
     }
   }
 
-  // テキストエリアの自動リサイズ
-  const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setCurrentEntry(e.target.value)
-    // 高さをリセットしてから再計算
-    e.target.style.height = 'auto'
-    e.target.style.height = `${e.target.scrollHeight}px`
-  }
-
   // 日付移動関数
   const goToPreviousDay = () => {
     const newDate = new Date(selectedDate)
@@ -629,14 +616,12 @@ function App() {
         </div>
 
         <div className="input-section">
-          <textarea
+          <CustomInput
             value={currentEntry}
-            onChange={handleTextareaChange}
+            onChange={setCurrentEntry}
+            onSubmit={handleAddEntry}
             onKeyDown={handleKeyDown}
-            placeholder="今やっていることを記録してください..."
-            rows={1}
           />
-          <button onClick={handleAddEntry} className="submit-button">送信</button>
         </div>
 
         <div className="timeline">
