@@ -251,6 +251,7 @@ textarea::placeholder {
   font-size: 0.9rem;
   color: #555;
   line-height: 1.5;
+  white-space: pre-wrap;
 }
 
 .empty {
