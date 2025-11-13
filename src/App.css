@@ -48,10 +48,6 @@ h1 {
   color: #333;
 }
 
-.today-nav-button {
-  margin-left: -0.4rem;
-}
-
 /* Calendar custom styles */
 [data-slot="calendar"] {
   font-family: inherit;

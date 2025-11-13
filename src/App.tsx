@@ -200,9 +200,6 @@ function App() {
               </div>
             </PopoverContent>
           </Popover>
-          <button onClick={goToToday} className="nav-button today-nav-button" aria-label="今日に戻る">
-            📅
-          </button>
           <button onClick={goToNextDay} className="nav-button">
             ▶
           </button>
