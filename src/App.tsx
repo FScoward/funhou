@@ -5,11 +5,12 @@ import { Calendar } from '@/components/ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Button } from '@/components/ui/button'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
-import { Trash2, Settings, Pencil } from 'lucide-react'
+import { Trash2, Settings, Pencil, X } from 'lucide-react'
 import { ja } from 'date-fns/locale'
 import { SettingsDialog } from '@/components/SettingsDialog'
 import { getSettings } from '@/lib/settings'
 import { getCurrentWindow } from '@tauri-apps/api/window'
+import CustomInput from '@/components/CustomInput'
 
 interface Entry {
   id: number
@@ -125,30 +126,6 @@ function App() {
     }
   }, [selectedDate, database])
 
-  // エントリ編集時のtextarea高さ自動調整
-  useEffect(() => {
-    if (editingEntryId !== null) {
-      const textarea = document.querySelector('.edit-textarea') as HTMLTextAreaElement
-      if (textarea) {
-        textarea.style.height = 'auto'
-        textarea.style.height = `${textarea.scrollHeight}px`
-      }
-    }
-  }, [editingEntryId])
-
-  // 返信編集時のtextarea高さ自動調整
-  useEffect(() => {
-    if (editingReplyId !== null) {
-      const textareas = document.querySelectorAll('.edit-textarea')
-      textareas.forEach((textarea) => {
-        if (textarea instanceof HTMLTextAreaElement) {
-          textarea.style.height = 'auto'
-          textarea.style.height = `${textarea.scrollHeight}px`
-        }
-      })
-    }
-  }, [editingReplyId])
-
   const initializeDb = async () => {
     const db = await getDb()
     setDatabase(db)
@@ -248,12 +225,6 @@ function App() {
 
         setTimelineItems([newItem, ...timelineItems])
         setCurrentEntry('')
-
-        // textareaの高さをリセット
-        const textarea = document.querySelector('textarea')
-        if (textarea) {
-          textarea.style.height = 'auto'
-        }
       } catch (error) {
         console.error('エントリーの追加に失敗しました:', error)
       }
@@ -338,12 +309,6 @@ function App() {
 
         setReplyContent('')
         setReplyingToId(null)
-
-        // textareaの高さをリセット
-        const textarea = document.querySelector(`textarea[data-reply-to="${entryId}"]`)
-        if (textarea instanceof HTMLTextAreaElement) {
-          textarea.style.height = 'auto'
-        }
       } catch (error) {
         console.error('返信の追加に失敗しました:', error)
       }
@@ -511,14 +476,6 @@ function App() {
     }
   }
 
-  // テキストエリアの自動リサイズ
-  const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setCurrentEntry(e.target.value)
-    // 高さをリセットしてから再計算
-    e.target.style.height = 'auto'
-    e.target.style.height = `${e.target.scrollHeight}px`
-  }
-
   // 日付移動関数
   const goToPreviousDay = () => {
     const newDate = new Date(selectedDate)
@@ -629,14 +586,12 @@ function App() {
         </div>
 
         <div className="input-section">
-          <textarea
+          <CustomInput
             value={currentEntry}
-            onChange={handleTextareaChange}
+            onChange={setCurrentEntry}
+            onSubmit={handleAddEntry}
             onKeyDown={handleKeyDown}
-            placeholder="今やっていることを記録してください..."
-            rows={1}
           />
-          <button onClick={handleAddEntry} className="submit-button">送信</button>
         </div>
 
         <div className="timeline">
@@ -677,10 +632,10 @@ function App() {
                         <div className="entry-card">
                           <button
                             className="edit-button"
-                            onClick={() => startEditEntry(item.id, item.content)}
-                            aria-label="編集"
+                            onClick={() => editingEntryId === item.id ? cancelEditEntry() : startEditEntry(item.id, item.content)}
+                            aria-label={editingEntryId === item.id ? "キャンセル" : "編集"}
                           >
-                            <Pencil size={16} />
+                            {editingEntryId === item.id ? <X size={16} /> : <Pencil size={16} />}
                           </button>
                           <button
                             className="delete-button"
@@ -691,13 +646,10 @@ function App() {
                           </button>
                           {editingEntryId === item.id ? (
                             <div className="edit-input-section">
-                              <textarea
+                              <CustomInput
                                 value={editContent}
-                                onChange={(e) => {
-                                  setEditContent(e.target.value)
-                                  e.target.style.height = 'auto'
-                                  e.target.style.height = `${e.target.scrollHeight}px`
-                                }}
+                                onChange={setEditContent}
+                                onSubmit={() => handleUpdateEntry(item.id)}
                                 onKeyDown={(e) => {
                                   if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
                                     e.preventDefault()
@@ -707,23 +659,8 @@ function App() {
                                     cancelEditEntry()
                                   }
                                 }}
-                                className="edit-textarea"
-                                autoFocus
+                                placeholder="エントリーを編集..."
                               />
-                              <div className="edit-buttons">
-                                <button
-                                  onClick={() => handleUpdateEntry(item.id)}
-                                  className="save-button"
-                                >
-                                  保存
-                                </button>
-                                <button
-                                  onClick={cancelEditEntry}
-                                  className="cancel-button"
-                                >
-                                  キャンセル
-                                </button>
-                              </div>
                             </div>
                           ) : (
                             <div className="entry-text">{item.content}</div>
@@ -735,7 +672,15 @@ function App() {
                               className="reply-button"
                               onClick={() => toggleReplyForm(item.id)}
                             >
-                              💬 返信する{(item.replyCount ?? 0) > 0 && <span className="reply-count"> ({item.replyCount})</span>}
+                              {replyingToId === item.id ? (
+                                <>
+                                  <X size={16} style={{ display: 'inline-block', marginRight: '4px' }} /> キャンセル
+                                </>
+                              ) : (
+                                <>
+                                  💬 返信する{(item.replyCount ?? 0) > 0 && <span className="reply-count"> ({item.replyCount})</span>}
+                                </>
+                              )}
                             </button>
                             {(item.replyCount ?? 0) > 0 && (
                               <button
@@ -750,14 +695,10 @@ function App() {
                           {/* 返信入力フォーム */}
                           {replyingToId === item.id && (
                             <div className="reply-input-section">
-                              <textarea
-                                data-reply-to={item.id}
+                              <CustomInput
                                 value={replyContent}
-                                onChange={(e) => {
-                                  setReplyContent(e.target.value)
-                                  e.target.style.height = 'auto'
-                                  e.target.style.height = `${e.target.scrollHeight}px`
-                                }}
+                                onChange={setReplyContent}
+                                onSubmit={() => handleAddReply(item.id)}
                                 onKeyDown={(e) => {
                                   if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
                                     e.preventDefault()
@@ -765,26 +706,7 @@ function App() {
                                   }
                                 }}
                                 placeholder="返信を入力..."
-                                rows={1}
-                                className="reply-textarea"
                               />
-                              <div className="reply-buttons">
-                                <button
-                                  onClick={() => handleAddReply(item.id)}
-                                  className="submit-reply-button"
-                                >
-                                  送信
-                                </button>
-                                <button
-                                  onClick={() => {
-                                    setReplyingToId(null)
-                                    setReplyContent('')
-                                  }}
-                                  className="cancel-reply-button"
-                                >
-                                  キャンセル
-                                </button>
-                              </div>
                             </div>
                           )}
 
@@ -806,10 +728,10 @@ function App() {
                         <div className="reply-card">
                           <button
                             className="edit-button"
-                            onClick={() => startEditReply(item.replyId!, item.content)}
-                            aria-label="編集"
+                            onClick={() => editingReplyId === item.replyId ? cancelEditReply() : startEditReply(item.replyId!, item.content)}
+                            aria-label={editingReplyId === item.replyId ? "キャンセル" : "編集"}
                           >
-                            <Pencil size={16} />
+                            {editingReplyId === item.replyId ? <X size={16} /> : <Pencil size={16} />}
                           </button>
                           <button
                             className="delete-button"
@@ -828,13 +750,10 @@ function App() {
                           )}
                           {editingReplyId === item.replyId ? (
                             <div className="edit-input-section">
-                              <textarea
+                              <CustomInput
                                 value={editReplyContent}
-                                onChange={(e) => {
-                                  setEditReplyContent(e.target.value)
-                                  e.target.style.height = 'auto'
-                                  e.target.style.height = `${e.target.scrollHeight}px`
-                                }}
+                                onChange={setEditReplyContent}
+                                onSubmit={() => handleUpdateReply(item.replyId!, item.entryId!)}
                                 onKeyDown={(e) => {
                                   if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
                                     e.preventDefault()
@@ -844,23 +763,8 @@ function App() {
                                     cancelEditReply()
                                   }
                                 }}
-                                className="edit-textarea"
-                                autoFocus
+                                placeholder="返信を編集..."
                               />
-                              <div className="edit-buttons">
-                                <button
-                                  onClick={() => handleUpdateReply(item.replyId!, item.entryId!)}
-                                  className="save-button"
-                                >
-                                  保存
-                                </button>
-                                <button
-                                  onClick={cancelEditReply}
-                                  className="cancel-button"
-                                >
-                                  キャンセル
-                                </button>
-                              </div>
                             </div>
                           ) : (
                             <div className="reply-text">{item.content}</div>
