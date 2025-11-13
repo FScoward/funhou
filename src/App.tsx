@@ -91,6 +91,8 @@ function App() {
   const [calendarOpen, setCalendarOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [deleteTargetId, setDeleteTargetId] = useState<number | null>(null)
+  const [deleteReplyDialogOpen, setDeleteReplyDialogOpen] = useState(false)
+  const [deleteReplyTarget, setDeleteReplyTarget] = useState<{ replyId: number; entryId: number } | null>(null)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [database, setDatabase] = useState<Database | null>(null)
   const [replyingToId, setReplyingToId] = useState<number | null>(null)
@@ -245,22 +247,31 @@ function App() {
     }
   }
 
-  const handleDeleteReply = async (replyId: number, entryId: number) => {
-    if (!database) return
+  const openDeleteReplyDialog = (replyId: number, entryId: number) => {
+    setDeleteReplyTarget({ replyId, entryId })
+    setDeleteReplyDialogOpen(true)
+  }
+
+  const handleDeleteReply = async () => {
+    if (deleteReplyTarget === null || !database) return
 
     try {
-      await database.execute('DELETE FROM replies WHERE id = ?', [replyId])
+      await database.execute('DELETE FROM replies WHERE id = ?', [deleteReplyTarget.replyId])
 
       // 該当エントリーの返信リストから削除
       setEntries(entries.map(entry =>
-        entry.id === entryId
+        entry.id === deleteReplyTarget.entryId
           ? {
               ...entry,
-              replies: entry.replies.filter(r => r.id !== replyId),
+              replies: entry.replies.filter(r => r.id !== deleteReplyTarget.replyId),
               replyCount: entry.replies.length - 1
             }
           : entry
       ))
+
+      // ダイアログを閉じる
+      setDeleteReplyDialogOpen(false)
+      setDeleteReplyTarget(null)
     } catch (error) {
       console.error('返信の削除に失敗しました:', error)
     }
@@ -540,7 +551,7 @@ function App() {
                                   <span className="reply-time">{formatTimestamp(reply.timestamp)}</span>
                                   <button
                                     className="delete-reply-button"
-                                    onClick={() => handleDeleteReply(reply.id, entry.id)}
+                                    onClick={() => openDeleteReplyDialog(reply.id, entry.id)}
                                     aria-label="削除"
                                   >
                                     <Trash2 size={12} />
@@ -572,6 +583,21 @@ function App() {
           <AlertDialogFooter>
             <AlertDialogCancel>キャンセル</AlertDialogCancel>
             <AlertDialogAction onClick={handleDeleteEntry}>削除</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={deleteReplyDialogOpen} onOpenChange={setDeleteReplyDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>返信を削除しますか？</AlertDialogTitle>
+            <AlertDialogDescription>
+              この操作は取り消せません。本当に削除してもよろしいですか？
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>キャンセル</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteReply}>削除</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
