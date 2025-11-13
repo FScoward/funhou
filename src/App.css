@@ -277,6 +277,11 @@ textarea::placeholder {
   font-size: 0.85rem;
 }
 
+/* Timeline item for replies */
+.timeline-item.is-reply .timeline-dot {
+  background-color: #888;
+}
+
 /* Entry Actions */
 .entry-actions {
   display: flex;
@@ -286,8 +291,7 @@ textarea::placeholder {
   border-top: 1px solid #f0f0f0;
 }
 
-.reply-button,
-.toggle-replies-button {
+.reply-button {
   padding: 0.25rem 0.5rem;
   font-size: 0.75rem;
   background-color: transparent;
@@ -298,8 +302,7 @@ textarea::placeholder {
   transition: all 0.15s;
 }
 
-.reply-button:hover,
-.toggle-replies-button:hover {
+.reply-button:hover {
   background-color: #f5f5f5;
   border-color: #ccc;
   color: #333;
@@ -368,64 +371,66 @@ textarea::placeholder {
   background-color: #d0d0d0;
 }
 
-/* Replies Container */
-.replies-container {
-  margin-top: 0.75rem;
-  padding-left: 1rem;
-  border-left: 2px solid #e0e0e0;
-}
-
-.reply-item {
-  background-color: #f9f9f9;
-  border: 1px solid #e5e5e5;
-  border-radius: 6px;
-  padding: 0.6rem;
-  margin-bottom: 0.5rem;
+/* Reply Card */
+.reply-card {
   position: relative;
+  background-color: #fff;
+  border: 1px solid #e5e5e5;
+  border-radius: 8px;
+  padding: 1rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  transition: box-shadow 0.15s;
 }
 
-.reply-item:last-child {
-  margin-bottom: 0;
+.reply-card:hover {
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
 }
 
-.reply-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 0.4rem;
-}
-
-.reply-time {
-  font-size: 0.65rem;
-  color: #999;
-}
-
-.delete-reply-button {
-  padding: 0.2rem;
-  background-color: transparent;
-  border: none;
-  border-radius: 3px;
-  cursor: pointer;
-  color: #999;
-  opacity: 0;
-  transition: all 0.15s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.reply-item:hover .delete-reply-button {
+.reply-card:hover .delete-button {
   opacity: 1;
 }
 
-.delete-reply-button:hover {
-  background-color: #fee;
-  color: #e53e3e;
+.reply-reference {
+  font-size: 0.75rem;
+  color: #666;
+  margin-bottom: 0.5rem;
+  padding: 0.4rem 0.6rem;
+  background-color: #f5f5f5;
+  border-radius: 4px;
+  border: 1px solid #e0e0e0;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: left;
+  width: auto;
+  display: inline-block;
+}
+
+.reply-reference:hover {
+  background-color: #e8e8e8;
+  border-color: #ccc;
 }
 
 .reply-text {
-  font-size: 0.8rem;
+  font-size: 0.9rem;
   color: #555;
-  line-height: 1.4;
+  line-height: 1.5;
   white-space: pre-wrap;
+}
+
+/* Highlight animation for scroll target */
+@keyframes highlight-pulse {
+  0% {
+    background-color: transparent;
+  }
+  15% {
+    background-color: #fff3cd;
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+.timeline-item.highlight-flash .entry-card,
+.timeline-item.highlight-flash .reply-card {
+  animation: highlight-pulse 2s ease-in-out;
 }

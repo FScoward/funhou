@@ -24,9 +24,18 @@ interface Reply {
   timestamp: string
 }
 
-interface EntryWithReplies extends Entry {
-  replies: Reply[]
-  replyCount?: number
+interface TimelineItem {
+  type: 'entry' | 'reply'
+  id: number
+  content: string
+  timestamp: string
+  // reply specific fields
+  replyId?: number
+  entryId?: number
+  parentEntry?: {
+    id: number
+    content: string
+  }
 }
 
 let db: Database | null = null
@@ -85,7 +94,7 @@ function formatDateToLocalYYYYMMDD(date: Date): string {
 }
 
 function App() {
-  const [entries, setEntries] = useState<EntryWithReplies[]>([])
+  const [timelineItems, setTimelineItems] = useState<TimelineItem[]>([])
   const [currentEntry, setCurrentEntry] = useState('')
   const [selectedDate, setSelectedDate] = useState(new Date())
   const [calendarOpen, setCalendarOpen] = useState(false)
@@ -97,7 +106,6 @@ function App() {
   const [database, setDatabase] = useState<Database | null>(null)
   const [replyingToId, setReplyingToId] = useState<number | null>(null)
   const [replyContent, setReplyContent] = useState('')
-  const [expandedEntries, setExpandedEntries] = useState<Set<number>>(new Set())
 
   useEffect(() => {
     initializeDb()
@@ -134,22 +142,49 @@ function App() {
         [dateStr]
       )
 
-      // 各エントリーに対して返信を取得
-      const entriesWithReplies: EntryWithReplies[] = await Promise.all(
-        loadedEntries.map(async (entry) => {
-          const replies = await database.select<Reply[]>(
-            'SELECT id, entry_id, content, timestamp FROM replies WHERE entry_id = ? ORDER BY timestamp ASC',
-            [entry.id]
-          )
-          return {
-            ...entry,
-            replies,
-            replyCount: replies.length
-          }
-        })
+      // エントリーをTimelineItemに変換
+      const entryItems: TimelineItem[] = loadedEntries.map(entry => ({
+        type: 'entry' as const,
+        id: entry.id,
+        content: entry.content,
+        timestamp: entry.timestamp
+      }))
+
+      // 返信を取得（親エントリーの情報も含める）
+      const entryIds = loadedEntries.map(e => e.id)
+      if (entryIds.length === 0) {
+        setTimelineItems([])
+        return
+      }
+
+      const replies = await database.select<Reply[]>(
+        `SELECT id, entry_id, content, timestamp FROM replies WHERE entry_id IN (${entryIds.join(',')})`,
+        []
       )
 
-      setEntries(entriesWithReplies)
+      // 返信をTimelineItemに変換（親エントリー情報も含める）
+      const replyItems: TimelineItem[] = replies.map(reply => {
+        const parentEntry = loadedEntries.find(e => e.id === reply.entry_id)
+        return {
+          type: 'reply' as const,
+          id: reply.id,
+          replyId: reply.id,
+          entryId: reply.entry_id,
+          content: reply.content,
+          timestamp: reply.timestamp,
+          parentEntry: parentEntry ? {
+            id: parentEntry.id,
+            content: parentEntry.content
+          } : undefined
+        }
+      })
+
+      // 統合して時系列順（降順）にソート
+      const allItems = [...entryItems, ...replyItems].sort((a, b) =>
+        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+      )
+
+      setTimelineItems(allItems)
     } catch (error) {
       console.error('エントリーの読み込みに失敗しました:', error)
     }
@@ -165,15 +200,14 @@ function App() {
           [currentEntry, timestamp]
         )
 
-        const newEntry: EntryWithReplies = {
+        const newItem: TimelineItem = {
+          type: 'entry',
           id: Number(result.lastInsertId),
           content: currentEntry,
-          timestamp: timestamp,
-          replies: [],
-          replyCount: 0
+          timestamp: timestamp
         }
 
-        setEntries([newEntry, ...entries])
+        setTimelineItems([newItem, ...timelineItems])
         setCurrentEntry('')
 
         // textareaの高さをリセット
@@ -198,8 +232,11 @@ function App() {
     try {
       await database.execute('DELETE FROM entries WHERE id = ?', [deleteTargetId])
 
-      // stateからエントリーを削除
-      setEntries(entries.filter((entry) => entry.id !== deleteTargetId))
+      // stateからエントリーと関連する返信を削除
+      setTimelineItems(timelineItems.filter((item) =>
+        !(item.type === 'entry' && item.id === deleteTargetId) &&
+        !(item.type === 'reply' && item.entryId === deleteTargetId)
+      ))
 
       // ダイアログを閉じる
       setDeleteDialogOpen(false)
@@ -219,19 +256,27 @@ function App() {
           [entryId, replyContent, timestamp]
         )
 
-        const newReply: Reply = {
+        // 親エントリーを探す
+        const parentEntry = timelineItems.find(item => item.type === 'entry' && item.id === entryId)
+
+        const newReplyItem: TimelineItem = {
+          type: 'reply',
           id: Number(result.lastInsertId),
-          entry_id: entryId,
+          replyId: Number(result.lastInsertId),
+          entryId: entryId,
           content: replyContent,
           timestamp: timestamp,
+          parentEntry: parentEntry ? {
+            id: parentEntry.id,
+            content: parentEntry.content
+          } : undefined
         }
 
-        // 該当エントリーの返信リストを更新
-        setEntries(entries.map(entry =>
-          entry.id === entryId
-            ? { ...entry, replies: [...entry.replies, newReply], replyCount: entry.replies.length + 1 }
-            : entry
-        ))
+        // タイムラインに追加して時系列順に再ソート
+        const updatedItems = [...timelineItems, newReplyItem].sort((a, b) =>
+          new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+        )
+        setTimelineItems(updatedItems)
 
         setReplyContent('')
         setReplyingToId(null)
@@ -258,15 +303,9 @@ function App() {
     try {
       await database.execute('DELETE FROM replies WHERE id = ?', [deleteReplyTarget.replyId])
 
-      // 該当エントリーの返信リストから削除
-      setEntries(entries.map(entry =>
-        entry.id === deleteReplyTarget.entryId
-          ? {
-              ...entry,
-              replies: entry.replies.filter(r => r.id !== deleteReplyTarget.replyId),
-              replyCount: entry.replies.length - 1
-            }
-          : entry
+      // タイムラインから返信を削除
+      setTimelineItems(timelineItems.filter(item =>
+        !(item.type === 'reply' && item.replyId === deleteReplyTarget.replyId)
       ))
 
       // ダイアログを閉じる
@@ -287,21 +326,26 @@ function App() {
     }
   }
 
-  const toggleExpandEntry = (entryId: number) => {
-    setExpandedEntries(prev => {
-      const newSet = new Set(prev)
-      if (newSet.has(entryId)) {
-        newSet.delete(entryId)
-      } else {
-        newSet.add(entryId)
-      }
-      return newSet
-    })
-  }
-
   const formatTimestamp = (timestamp: string) => {
     const date = new Date(timestamp)
     return date.toLocaleTimeString('ja-JP')
+  }
+
+  const truncateText = (text: string, maxLength: number = 50) => {
+    if (text.length <= maxLength) return text
+    return text.substring(0, maxLength) + '...'
+  }
+
+  const handleScrollToEntry = (entryId: number) => {
+    const element = document.getElementById(`item-entry-${entryId}`)
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      // ハイライト表示
+      element.classList.add('highlight-flash')
+      setTimeout(() => {
+        element.classList.remove('highlight-flash')
+      }, 2000)
+    }
   }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -440,25 +484,26 @@ function App() {
         </div>
 
         <div className="timeline">
-          {entries.length === 0 ? (
+          {timelineItems.length === 0 ? (
             <p className="empty">この日の記録がありません</p>
           ) : (
             <div className="timeline-container">
-              {entries.map((entry, index) => {
-                const entryDate = new Date(entry.timestamp)
-                const day = entryDate.getDate()
-                const month = entryDate.toLocaleDateString('ja-JP', { month: 'short' })
+              {timelineItems.map((item, index) => {
+                const itemDate = new Date(item.timestamp)
+                const day = itemDate.getDate()
+                const month = itemDate.toLocaleDateString('ja-JP', { month: 'short' })
 
-                // 前のエントリーと日付を比較
-                const prevEntry = index > 0 ? entries[index - 1] : null
-                const prevDate = prevEntry ? new Date(prevEntry.timestamp).getDate() : null
+                // 前のアイテムと日付を比較
+                const prevItem = index > 0 ? timelineItems[index - 1] : null
+                const prevDate = prevItem ? new Date(prevItem.timestamp).getDate() : null
                 const showDate = prevDate !== day
 
-                const isExpanded = expandedEntries.has(entry.id)
-                const hasReplies = entry.replies.length > 0
-
                 return (
-                  <div key={entry.id} className="timeline-item">
+                  <div
+                    key={`${item.type}-${item.id}`}
+                    id={`item-${item.type}-${item.id}`}
+                    className={`timeline-item ${item.type === 'reply' ? 'is-reply' : ''}`}
+                  >
                     <div className="timeline-date">
                       {showDate ? (
                         <>
@@ -466,103 +511,94 @@ function App() {
                           <div className="date-month">{month}</div>
                         </>
                       ) : null}
-                      <div className="entry-time">{formatTimestamp(entry.timestamp)}</div>
+                      <div className="entry-time">{formatTimestamp(item.timestamp)}</div>
                     </div>
                     <div className="timeline-line">
-                      <div className="timeline-dot"></div>
+                      <div className={`timeline-dot ${item.type === 'reply' ? 'is-reply' : ''}`}></div>
                     </div>
                     <div className="timeline-content">
-                      <div className="entry-card">
-                        <button
-                          className="delete-button"
-                          onClick={() => openDeleteDialog(entry.id)}
-                          aria-label="削除"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                        <div className="entry-text">{entry.content}</div>
-
-                        {/* 返信関連のボタン */}
-                        <div className="entry-actions">
+                      {item.type === 'entry' ? (
+                        <div className="entry-card">
                           <button
-                            className="reply-button"
-                            onClick={() => toggleReplyForm(entry.id)}
+                            className="delete-button"
+                            onClick={() => openDeleteDialog(item.id)}
+                            aria-label="削除"
                           >
-                            💬 返信する
+                            <Trash2 size={16} />
                           </button>
+                          <div className="entry-text">{item.content}</div>
 
-                          {hasReplies && (
+                          {/* 返信ボタン */}
+                          <div className="entry-actions">
                             <button
-                              className="toggle-replies-button"
-                              onClick={() => toggleExpandEntry(entry.id)}
+                              className="reply-button"
+                              onClick={() => toggleReplyForm(item.id)}
                             >
-                              {isExpanded ? '▼' : '▶'} 返信 ({entry.replyCount})
+                              💬 返信する
                             </button>
+                          </div>
+
+                          {/* 返信入力フォーム */}
+                          {replyingToId === item.id && (
+                            <div className="reply-input-section">
+                              <textarea
+                                data-reply-to={item.id}
+                                value={replyContent}
+                                onChange={(e) => {
+                                  setReplyContent(e.target.value)
+                                  e.target.style.height = 'auto'
+                                  e.target.style.height = `${e.target.scrollHeight}px`
+                                }}
+                                onKeyDown={(e) => {
+                                  if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+                                    e.preventDefault()
+                                    handleAddReply(item.id)
+                                  }
+                                }}
+                                placeholder="返信を入力..."
+                                rows={1}
+                                className="reply-textarea"
+                              />
+                              <div className="reply-buttons">
+                                <button
+                                  onClick={() => handleAddReply(item.id)}
+                                  className="submit-reply-button"
+                                >
+                                  送信
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setReplyingToId(null)
+                                    setReplyContent('')
+                                  }}
+                                  className="cancel-reply-button"
+                                >
+                                  キャンセル
+                                </button>
+                              </div>
+                            </div>
                           )}
                         </div>
-
-                        {/* 返信入力フォーム */}
-                        {replyingToId === entry.id && (
-                          <div className="reply-input-section">
-                            <textarea
-                              data-reply-to={entry.id}
-                              value={replyContent}
-                              onChange={(e) => {
-                                setReplyContent(e.target.value)
-                                e.target.style.height = 'auto'
-                                e.target.style.height = `${e.target.scrollHeight}px`
-                              }}
-                              onKeyDown={(e) => {
-                                if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
-                                  e.preventDefault()
-                                  handleAddReply(entry.id)
-                                }
-                              }}
-                              placeholder="返信を入力..."
-                              rows={1}
-                              className="reply-textarea"
-                            />
-                            <div className="reply-buttons">
-                              <button
-                                onClick={() => handleAddReply(entry.id)}
-                                className="submit-reply-button"
-                              >
-                                送信
-                              </button>
-                              <button
-                                onClick={() => {
-                                  setReplyingToId(null)
-                                  setReplyContent('')
-                                }}
-                                className="cancel-reply-button"
-                              >
-                                キャンセル
-                              </button>
-                            </div>
-                          </div>
-                        )}
-
-                        {/* 返信一覧 */}
-                        {isExpanded && hasReplies && (
-                          <div className="replies-container">
-                            {entry.replies.map((reply) => (
-                              <div key={reply.id} className="reply-item">
-                                <div className="reply-header">
-                                  <span className="reply-time">{formatTimestamp(reply.timestamp)}</span>
-                                  <button
-                                    className="delete-reply-button"
-                                    onClick={() => openDeleteReplyDialog(reply.id, entry.id)}
-                                    aria-label="削除"
-                                  >
-                                    <Trash2 size={12} />
-                                  </button>
-                                </div>
-                                <div className="reply-text">{reply.content}</div>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
+                      ) : (
+                        <div className="reply-card">
+                          <button
+                            className="delete-button"
+                            onClick={() => openDeleteReplyDialog(item.replyId!, item.entryId!)}
+                            aria-label="削除"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                          {item.parentEntry && (
+                            <button
+                              className="reply-reference"
+                              onClick={() => handleScrollToEntry(item.parentEntry!.id)}
+                            >
+                              → 「{truncateText(item.parentEntry.content)}」への返信
+                            </button>
+                          )}
+                          <div className="reply-text">{item.content}</div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )
