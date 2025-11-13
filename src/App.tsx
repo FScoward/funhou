@@ -5,7 +5,7 @@ import { Calendar } from '@/components/ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Button } from '@/components/ui/button'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
-import { Trash2, Settings, Pencil } from 'lucide-react'
+import { Trash2, Settings, Pencil, X } from 'lucide-react'
 import { ja } from 'date-fns/locale'
 import { SettingsDialog } from '@/components/SettingsDialog'
 import { getSettings } from '@/lib/settings'
@@ -125,30 +125,6 @@ function App() {
       loadEntries()
     }
   }, [selectedDate, database])
-
-  // エントリ編集時のtextarea高さ自動調整
-  useEffect(() => {
-    if (editingEntryId !== null) {
-      const textarea = document.querySelector('.edit-textarea') as HTMLTextAreaElement
-      if (textarea) {
-        textarea.style.height = 'auto'
-        textarea.style.height = `${textarea.scrollHeight}px`
-      }
-    }
-  }, [editingEntryId])
-
-  // 返信編集時のtextarea高さ自動調整
-  useEffect(() => {
-    if (editingReplyId !== null) {
-      const textareas = document.querySelectorAll('.edit-textarea')
-      textareas.forEach((textarea) => {
-        if (textarea instanceof HTMLTextAreaElement) {
-          textarea.style.height = 'auto'
-          textarea.style.height = `${textarea.scrollHeight}px`
-        }
-      })
-    }
-  }, [editingReplyId])
 
   const initializeDb = async () => {
     const db = await getDb()
@@ -656,10 +632,10 @@ function App() {
                         <div className="entry-card">
                           <button
                             className="edit-button"
-                            onClick={() => startEditEntry(item.id, item.content)}
-                            aria-label="編集"
+                            onClick={() => editingEntryId === item.id ? cancelEditEntry() : startEditEntry(item.id, item.content)}
+                            aria-label={editingEntryId === item.id ? "キャンセル" : "編集"}
                           >
-                            <Pencil size={16} />
+                            {editingEntryId === item.id ? <X size={16} /> : <Pencil size={16} />}
                           </button>
                           <button
                             className="delete-button"
@@ -670,13 +646,10 @@ function App() {
                           </button>
                           {editingEntryId === item.id ? (
                             <div className="edit-input-section">
-                              <textarea
+                              <CustomInput
                                 value={editContent}
-                                onChange={(e) => {
-                                  setEditContent(e.target.value)
-                                  e.target.style.height = 'auto'
-                                  e.target.style.height = `${e.target.scrollHeight}px`
-                                }}
+                                onChange={setEditContent}
+                                onSubmit={() => handleUpdateEntry(item.id)}
                                 onKeyDown={(e) => {
                                   if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
                                     e.preventDefault()
@@ -686,23 +659,8 @@ function App() {
                                     cancelEditEntry()
                                   }
                                 }}
-                                className="edit-textarea"
-                                autoFocus
+                                placeholder="エントリーを編集..."
                               />
-                              <div className="edit-buttons">
-                                <button
-                                  onClick={() => handleUpdateEntry(item.id)}
-                                  className="save-button"
-                                >
-                                  保存
-                                </button>
-                                <button
-                                  onClick={cancelEditEntry}
-                                  className="cancel-button"
-                                >
-                                  キャンセル
-                                </button>
-                              </div>
                             </div>
                           ) : (
                             <div className="entry-text">{item.content}</div>
@@ -772,10 +730,10 @@ function App() {
                         <div className="reply-card">
                           <button
                             className="edit-button"
-                            onClick={() => startEditReply(item.replyId!, item.content)}
-                            aria-label="編集"
+                            onClick={() => editingReplyId === item.replyId ? cancelEditReply() : startEditReply(item.replyId!, item.content)}
+                            aria-label={editingReplyId === item.replyId ? "キャンセル" : "編集"}
                           >
-                            <Pencil size={16} />
+                            {editingReplyId === item.replyId ? <X size={16} /> : <Pencil size={16} />}
                           </button>
                           <button
                             className="delete-button"
@@ -794,13 +752,10 @@ function App() {
                           )}
                           {editingReplyId === item.replyId ? (
                             <div className="edit-input-section">
-                              <textarea
+                              <CustomInput
                                 value={editReplyContent}
-                                onChange={(e) => {
-                                  setEditReplyContent(e.target.value)
-                                  e.target.style.height = 'auto'
-                                  e.target.style.height = `${e.target.scrollHeight}px`
-                                }}
+                                onChange={setEditReplyContent}
+                                onSubmit={() => handleUpdateReply(item.replyId!, item.entryId!)}
                                 onKeyDown={(e) => {
                                   if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
                                     e.preventDefault()
@@ -810,23 +765,8 @@ function App() {
                                     cancelEditReply()
                                   }
                                 }}
-                                className="edit-textarea"
-                                autoFocus
+                                placeholder="返信を編集..."
                               />
-                              <div className="edit-buttons">
-                                <button
-                                  onClick={() => handleUpdateReply(item.replyId!, item.entryId!)}
-                                  className="save-button"
-                                >
-                                  保存
-                                </button>
-                                <button
-                                  onClick={cancelEditReply}
-                                  className="cancel-button"
-                                >
-                                  キャンセル
-                                </button>
-                              </div>
                             </div>
                           ) : (
                             <div className="reply-text">{item.content}</div>
