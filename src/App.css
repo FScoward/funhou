@@ -48,20 +48,25 @@ h1 {
   color: #333;
 }
 
-.today-button {
-  padding: 0.3rem 0.7rem;
-  font-size: 0.8rem;
-  background-color: transparent;
-  color: #888;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: all 0.15s;
+.today-nav-button {
+  margin-left: -0.4rem;
 }
 
-.today-button:hover {
-  background-color: #f5f5f5;
-  color: #333;
+/* Calendar custom styles */
+[data-slot="calendar"] {
+  font-family: inherit;
+}
+
+[data-slot="calendar"] button {
+  transition: all 0.15s ease-in-out;
+}
+
+[data-slot="calendar"] button:hover:not(:disabled) {
+  transform: scale(1.05);
+}
+
+[data-slot="calendar"] [data-selected-single="true"] {
+  font-weight: 600;
 }
 
 .input-section {

@@ -1,6 +1,10 @@
 import { useState, useEffect } from 'react'
 import Database from '@tauri-apps/plugin-sql'
 import './App.css'
+import { Calendar } from '@/components/ui/calendar'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Button } from '@/components/ui/button'
+import { ja } from 'date-fns/locale'
 
 interface Entry {
   id: number
@@ -30,6 +34,7 @@ function App() {
   const [entries, setEntries] = useState<Entry[]>([])
   const [currentEntry, setCurrentEntry] = useState('')
   const [selectedDate, setSelectedDate] = useState(new Date())
+  const [calendarOpen, setCalendarOpen] = useState(false)
 
   useEffect(() => {
     loadEntries()
@@ -159,14 +164,47 @@ function App() {
           <button onClick={goToPreviousDay} className="nav-button">
             ◀
           </button>
-          <div className="date-display">
-            {formatDateWithWeekday(selectedDate)}
-          </div>
+          <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+            <PopoverTrigger asChild>
+              <button className="date-display" style={{ cursor: 'pointer', background: 'none', border: 'none' }}>
+                {formatDateWithWeekday(selectedDate)}
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="center">
+              <Calendar
+                mode="single"
+                selected={selectedDate}
+                onSelect={(date) => {
+                  if (date) {
+                    setSelectedDate(date)
+                    setCalendarOpen(false)
+                  }
+                }}
+                locale={ja}
+                captionLayout="dropdown"
+                fromYear={2000}
+                toYear={2050}
+                initialFocus
+              />
+              <div className="p-3 border-t">
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => {
+                    setSelectedDate(new Date())
+                    setCalendarOpen(false)
+                  }}
+                >
+                  今日
+                </Button>
+              </div>
+            </PopoverContent>
+          </Popover>
+          <button onClick={goToToday} className="nav-button today-nav-button" aria-label="今日に戻る">
+            📅
+          </button>
           <button onClick={goToNextDay} className="nav-button">
             ▶
-          </button>
-          <button onClick={goToToday} className="today-button">
-            今日
           </button>
         </div>
 
