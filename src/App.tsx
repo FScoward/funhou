@@ -672,7 +672,15 @@ function App() {
                               className="reply-button"
                               onClick={() => toggleReplyForm(item.id)}
                             >
-                              💬 返信する{(item.replyCount ?? 0) > 0 && <span className="reply-count"> ({item.replyCount})</span>}
+                              {replyingToId === item.id ? (
+                                <>
+                                  <X size={16} style={{ display: 'inline-block', marginRight: '4px' }} /> キャンセル
+                                </>
+                              ) : (
+                                <>
+                                  💬 返信する{(item.replyCount ?? 0) > 0 && <span className="reply-count"> ({item.replyCount})</span>}
+                                </>
+                              )}
                             </button>
                             {(item.replyCount ?? 0) > 0 && (
                               <button
@@ -699,16 +707,6 @@ function App() {
                                 }}
                                 placeholder="返信を入力..."
                               />
-                              <button
-                                onClick={() => {
-                                  setReplyingToId(null)
-                                  setReplyContent('')
-                                }}
-                                className="cancel-reply-button"
-                                style={{ marginTop: '8px' }}
-                              >
-                                キャンセル
-                              </button>
                             </div>
                           )}
 
