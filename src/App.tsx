@@ -5,8 +5,11 @@ import { Calendar } from '@/components/ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Button } from '@/components/ui/button'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
-import { Trash2 } from 'lucide-react'
+import { Trash2, Settings } from 'lucide-react'
 import { ja } from 'date-fns/locale'
+import { SettingsDialog } from '@/components/SettingsDialog'
+import { getSettings } from '@/lib/settings'
+import { getCurrentWindow } from '@tauri-apps/api/window'
 
 interface Entry {
   id: number
@@ -28,6 +31,19 @@ async function getDb() {
         timestamp DATETIME NOT NULL
       )
     `)
+
+    // 設定テーブルを作成
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS settings (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL
+      )
+    `)
+
+    // デフォルト設定を挿入（既に存在しない場合のみ）
+    await db.execute(`
+      INSERT OR IGNORE INTO settings (key, value) VALUES ('always_on_top', 'false')
+    `)
   }
   return db
 }
@@ -47,14 +63,37 @@ function App() {
   const [calendarOpen, setCalendarOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [deleteTargetId, setDeleteTargetId] = useState<number | null>(null)
+  const [settingsOpen, setSettingsOpen] = useState(false)
+  const [database, setDatabase] = useState<Database | null>(null)
 
   useEffect(() => {
-    loadEntries()
-  }, [selectedDate])
+    initializeDb()
+  }, [])
+
+  useEffect(() => {
+    if (database) {
+      loadEntries()
+    }
+  }, [selectedDate, database])
+
+  const initializeDb = async () => {
+    const db = await getDb()
+    setDatabase(db)
+
+    // 設定を読み込んでウィンドウに適用
+    try {
+      const settings = await getSettings(db)
+      const window = getCurrentWindow()
+      await window.setAlwaysOnTop(settings.alwaysOnTop)
+    } catch (error) {
+      console.error('設定の適用に失敗しました:', error)
+    }
+  }
 
   const loadEntries = async () => {
+    if (!database) return
+
     try {
-      const database = await getDb()
       // 選択された日付のエントリーのみを取得（ローカルタイムゾーンを考慮）
       const dateStr = formatDateToLocalYYYYMMDD(selectedDate)
       const loadedEntries = await database.select<Entry[]>(
@@ -68,9 +107,8 @@ function App() {
   }
 
   const handleAddEntry = async () => {
-    if (currentEntry.trim()) {
+    if (currentEntry.trim() && database) {
       try {
-        const database = await getDb()
         const timestamp = new Date().toISOString()
 
         const result = await database.execute(
@@ -104,10 +142,9 @@ function App() {
   }
 
   const handleDeleteEntry = async () => {
-    if (deleteTargetId === null) return
+    if (deleteTargetId === null || !database) return
 
     try {
-      const database = await getDb()
       await database.execute('DELETE FROM entries WHERE id = ?', [deleteTargetId])
 
       // stateからエントリーを削除
@@ -196,47 +233,57 @@ function App() {
     <div className="app">
       <main>
         <div className="date-navigation">
-          <button onClick={goToPreviousDay} className="nav-button">
-            ◀
-          </button>
-          <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
-            <PopoverTrigger asChild>
-              <button className="date-display" style={{ cursor: 'pointer', background: 'none', border: 'none' }}>
-                {formatDateWithWeekday(selectedDate)}
-              </button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="center">
-              <Calendar
-                mode="single"
-                selected={selectedDate}
-                onSelect={(date) => {
-                  if (date) {
-                    setSelectedDate(date)
-                    setCalendarOpen(false)
-                  }
-                }}
-                locale={ja}
-                captionLayout="dropdown"
-                fromYear={2000}
-                toYear={2050}
-                initialFocus
-              />
-              <div className="p-3 border-t">
-                <Button
-                  variant="outline"
-                  className="w-full"
-                  onClick={() => {
-                    setSelectedDate(new Date())
-                    setCalendarOpen(false)
+          <div className="settings-spacer"></div>
+          <div className="date-navigation-center">
+            <button onClick={goToPreviousDay} className="nav-button">
+              ◀
+            </button>
+            <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+              <PopoverTrigger asChild>
+                <button className="date-display" style={{ cursor: 'pointer', background: 'none', border: 'none' }}>
+                  {formatDateWithWeekday(selectedDate)}
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="center">
+                <Calendar
+                  mode="single"
+                  selected={selectedDate}
+                  onSelect={(date) => {
+                    if (date) {
+                      setSelectedDate(date)
+                      setCalendarOpen(false)
+                    }
                   }}
-                >
-                  今日
-                </Button>
-              </div>
-            </PopoverContent>
-          </Popover>
-          <button onClick={goToNextDay} className="nav-button">
-            ▶
+                  locale={ja}
+                  captionLayout="dropdown"
+                  fromYear={2000}
+                  toYear={2050}
+                  initialFocus
+                />
+                <div className="p-3 border-t">
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => {
+                      setSelectedDate(new Date())
+                      setCalendarOpen(false)
+                    }}
+                  >
+                    今日
+                  </Button>
+                </div>
+              </PopoverContent>
+            </Popover>
+            <button onClick={goToNextDay} className="nav-button">
+              ▶
+            </button>
+          </div>
+          <button
+            onClick={() => setSettingsOpen(true)}
+            className="nav-button settings-button"
+            aria-label="設定"
+          >
+            <Settings size={20} />
           </button>
         </div>
 
@@ -314,6 +361,14 @@ function App() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {database && (
+        <SettingsDialog
+          open={settingsOpen}
+          onOpenChange={setSettingsOpen}
+          db={database}
+        />
+      )}
     </div>
   )
 }
