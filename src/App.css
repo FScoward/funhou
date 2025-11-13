@@ -18,10 +18,27 @@ h1 {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.75rem;
+  position: relative;
   margin-bottom: 2rem;
   padding: 0.75rem;
   border-bottom: 1px solid #e0e0e0;
+}
+
+.date-navigation-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+}
+
+.settings-button {
+  position: absolute;
+  right: 0.75rem;
+}
+
+.settings-spacer {
+  width: 44px;
+  visibility: hidden;
 }
 
 .date-display {

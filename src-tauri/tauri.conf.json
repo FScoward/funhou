@@ -31,6 +31,7 @@
           "permissions": [
             "core:default",
             "core:webview:allow-internal-toggle-devtools",
+            "core:window:allow-set-always-on-top",
             "sql:allow-load",
             "sql:allow-execute",
             "sql:allow-select",
