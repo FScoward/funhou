@@ -5,7 +5,7 @@ import { Calendar } from '@/components/ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Button } from '@/components/ui/button'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
-import { Trash2, Settings } from 'lucide-react'
+import { Trash2, Settings, Pencil } from 'lucide-react'
 import { ja } from 'date-fns/locale'
 import { SettingsDialog } from '@/components/SettingsDialog'
 import { getSettings } from '@/lib/settings'
@@ -110,6 +110,10 @@ function App() {
   const [replyingToId, setReplyingToId] = useState<number | null>(null)
   const [replyContent, setReplyContent] = useState('')
   const [expandedEntryReplies, setExpandedEntryReplies] = useState<Set<number>>(new Set())
+  const [editingEntryId, setEditingEntryId] = useState<number | null>(null)
+  const [editContent, setEditContent] = useState('')
+  const [editingReplyId, setEditingReplyId] = useState<number | null>(null)
+  const [editReplyContent, setEditReplyContent] = useState('')
 
   useEffect(() => {
     initializeDb()
@@ -120,6 +124,30 @@ function App() {
       loadEntries()
     }
   }, [selectedDate, database])
+
+  // エントリ編集時のtextarea高さ自動調整
+  useEffect(() => {
+    if (editingEntryId !== null) {
+      const textarea = document.querySelector('.edit-textarea') as HTMLTextAreaElement
+      if (textarea) {
+        textarea.style.height = 'auto'
+        textarea.style.height = `${textarea.scrollHeight}px`
+      }
+    }
+  }, [editingEntryId])
+
+  // 返信編集時のtextarea高さ自動調整
+  useEffect(() => {
+    if (editingReplyId !== null) {
+      const textareas = document.querySelectorAll('.edit-textarea')
+      textareas.forEach((textarea) => {
+        if (textarea instanceof HTMLTextAreaElement) {
+          textarea.style.height = 'auto'
+          textarea.style.height = `${textarea.scrollHeight}px`
+        }
+      })
+    }
+  }, [editingReplyId])
 
   const initializeDb = async () => {
     const db = await getDb()
@@ -358,6 +386,80 @@ function App() {
     }
   }
 
+  const startEditEntry = (entryId: number, currentContent: string) => {
+    setEditingEntryId(entryId)
+    setEditContent(currentContent)
+  }
+
+  const handleUpdateEntry = async (entryId: number) => {
+    if (editContent.trim() && database) {
+      try {
+        await database.execute(
+          'UPDATE entries SET content = ? WHERE id = ?',
+          [editContent, entryId]
+        )
+
+        // stateを更新
+        setTimelineItems(timelineItems.map(item =>
+          item.type === 'entry' && item.id === entryId
+            ? { ...item, content: editContent }
+            : item
+        ))
+
+        setEditingEntryId(null)
+        setEditContent('')
+      } catch (error) {
+        console.error('エントリーの更新に失敗しました:', error)
+      }
+    }
+  }
+
+  const cancelEditEntry = () => {
+    setEditingEntryId(null)
+    setEditContent('')
+  }
+
+  const startEditReply = (replyId: number, currentContent: string) => {
+    setEditingReplyId(replyId)
+    setEditReplyContent(currentContent)
+  }
+
+  const handleUpdateReply = async (replyId: number, entryId: number) => {
+    if (editReplyContent.trim() && database) {
+      try {
+        await database.execute(
+          'UPDATE replies SET content = ? WHERE id = ?',
+          [editReplyContent, replyId]
+        )
+
+        // stateを更新
+        setTimelineItems(timelineItems.map(item => {
+          if (item.type === 'reply' && item.replyId === replyId) {
+            return { ...item, content: editReplyContent }
+          }
+          // 親エントリーのrepliesリストも更新
+          if (item.type === 'entry' && item.id === entryId) {
+            const updatedReplies = (item.replies || []).map(reply =>
+              reply.id === replyId ? { ...reply, content: editReplyContent } : reply
+            )
+            return { ...item, replies: updatedReplies }
+          }
+          return item
+        }))
+
+        setEditingReplyId(null)
+        setEditReplyContent('')
+      } catch (error) {
+        console.error('返信の更新に失敗しました:', error)
+      }
+    }
+  }
+
+  const cancelEditReply = () => {
+    setEditingReplyId(null)
+    setEditReplyContent('')
+  }
+
   const toggleReplyForm = (entryId: number) => {
     if (replyingToId === entryId) {
       setReplyingToId(null)
@@ -574,13 +676,58 @@ function App() {
                       {item.type === 'entry' ? (
                         <div className="entry-card">
                           <button
+                            className="edit-button"
+                            onClick={() => startEditEntry(item.id, item.content)}
+                            aria-label="編集"
+                          >
+                            <Pencil size={16} />
+                          </button>
+                          <button
                             className="delete-button"
                             onClick={() => openDeleteDialog(item.id)}
                             aria-label="削除"
                           >
                             <Trash2 size={16} />
                           </button>
-                          <div className="entry-text">{item.content}</div>
+                          {editingEntryId === item.id ? (
+                            <div className="edit-input-section">
+                              <textarea
+                                value={editContent}
+                                onChange={(e) => {
+                                  setEditContent(e.target.value)
+                                  e.target.style.height = 'auto'
+                                  e.target.style.height = `${e.target.scrollHeight}px`
+                                }}
+                                onKeyDown={(e) => {
+                                  if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+                                    e.preventDefault()
+                                    handleUpdateEntry(item.id)
+                                  } else if (e.key === 'Escape') {
+                                    e.preventDefault()
+                                    cancelEditEntry()
+                                  }
+                                }}
+                                className="edit-textarea"
+                                autoFocus
+                              />
+                              <div className="edit-buttons">
+                                <button
+                                  onClick={() => handleUpdateEntry(item.id)}
+                                  className="save-button"
+                                >
+                                  保存
+                                </button>
+                                <button
+                                  onClick={cancelEditEntry}
+                                  className="cancel-button"
+                                >
+                                  キャンセル
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="entry-text">{item.content}</div>
+                          )}
 
                           {/* 返信ボタン */}
                           <div className="entry-actions">
@@ -658,6 +805,13 @@ function App() {
                       ) : (
                         <div className="reply-card">
                           <button
+                            className="edit-button"
+                            onClick={() => startEditReply(item.replyId!, item.content)}
+                            aria-label="編集"
+                          >
+                            <Pencil size={16} />
+                          </button>
+                          <button
                             className="delete-button"
                             onClick={() => openDeleteReplyDialog(item.replyId!, item.entryId!)}
                             aria-label="削除"
@@ -672,7 +826,45 @@ function App() {
                               → 「{truncateText(item.parentEntry.content)}」への返信
                             </button>
                           )}
-                          <div className="reply-text">{item.content}</div>
+                          {editingReplyId === item.replyId ? (
+                            <div className="edit-input-section">
+                              <textarea
+                                value={editReplyContent}
+                                onChange={(e) => {
+                                  setEditReplyContent(e.target.value)
+                                  e.target.style.height = 'auto'
+                                  e.target.style.height = `${e.target.scrollHeight}px`
+                                }}
+                                onKeyDown={(e) => {
+                                  if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+                                    e.preventDefault()
+                                    handleUpdateReply(item.replyId!, item.entryId!)
+                                  } else if (e.key === 'Escape') {
+                                    e.preventDefault()
+                                    cancelEditReply()
+                                  }
+                                }}
+                                className="edit-textarea"
+                                autoFocus
+                              />
+                              <div className="edit-buttons">
+                                <button
+                                  onClick={() => handleUpdateReply(item.replyId!, item.entryId!)}
+                                  className="save-button"
+                                >
+                                  保存
+                                </button>
+                                <button
+                                  onClick={cancelEditReply}
+                                  className="cancel-button"
+                                >
+                                  キャンセル
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="reply-text">{item.content}</div>
+                          )}
                         </div>
                       )}
                     </div>
