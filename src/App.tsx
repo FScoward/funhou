@@ -29,6 +29,9 @@ interface TimelineItem {
   id: number
   content: string
   timestamp: string
+  // entry specific fields
+  replies?: Reply[]
+  replyCount?: number
   // reply specific fields
   replyId?: number
   entryId?: number
@@ -106,6 +109,7 @@ function App() {
   const [database, setDatabase] = useState<Database | null>(null)
   const [replyingToId, setReplyingToId] = useState<number | null>(null)
   const [replyContent, setReplyContent] = useState('')
+  const [expandedEntryReplies, setExpandedEntryReplies] = useState<Set<number>>(new Set())
 
   useEffect(() => {
     initializeDb()
@@ -142,14 +146,6 @@ function App() {
         [dateStr]
       )
 
-      // エントリーをTimelineItemに変換
-      const entryItems: TimelineItem[] = loadedEntries.map(entry => ({
-        type: 'entry' as const,
-        id: entry.id,
-        content: entry.content,
-        timestamp: entry.timestamp
-      }))
-
       // 返信を取得（親エントリーの情報も含める）
       const entryIds = loadedEntries.map(e => e.id)
       if (entryIds.length === 0) {
@@ -161,6 +157,19 @@ function App() {
         `SELECT id, entry_id, content, timestamp FROM replies WHERE entry_id IN (${entryIds.join(',')})`,
         []
       )
+
+      // エントリーをTimelineItemに変換（返信リストも含める）
+      const entryItems: TimelineItem[] = loadedEntries.map(entry => {
+        const entryReplies = replies.filter(r => r.entry_id === entry.id)
+        return {
+          type: 'entry' as const,
+          id: entry.id,
+          content: entry.content,
+          timestamp: entry.timestamp,
+          replies: entryReplies,
+          replyCount: entryReplies.length
+        }
+      })
 
       // 返信をTimelineItemに変換（親エントリー情報も含める）
       const replyItems: TimelineItem[] = replies.map(reply => {
@@ -204,7 +213,9 @@ function App() {
           type: 'entry',
           id: Number(result.lastInsertId),
           content: currentEntry,
-          timestamp: timestamp
+          timestamp: timestamp,
+          replies: [],
+          replyCount: 0
         }
 
         setTimelineItems([newItem, ...timelineItems])
@@ -259,6 +270,13 @@ function App() {
         // 親エントリーを探す
         const parentEntry = timelineItems.find(item => item.type === 'entry' && item.id === entryId)
 
+        const newReply: Reply = {
+          id: Number(result.lastInsertId),
+          entry_id: entryId,
+          content: replyContent,
+          timestamp: timestamp,
+        }
+
         const newReplyItem: TimelineItem = {
           type: 'reply',
           id: Number(result.lastInsertId),
@@ -272,11 +290,23 @@ function App() {
           } : undefined
         }
 
-        // タイムラインに追加して時系列順に再ソート
-        const updatedItems = [...timelineItems, newReplyItem].sort((a, b) =>
+        // 親エントリーのrepliesリストも更新
+        const updatedItems = timelineItems.map(item => {
+          if (item.type === 'entry' && item.id === entryId) {
+            return {
+              ...item,
+              replies: [...(item.replies || []), newReply],
+              replyCount: (item.replyCount || 0) + 1
+            }
+          }
+          return item
+        })
+
+        // 新しい返信をタイムラインに追加して時系列順に再ソート
+        const allItems = [...updatedItems, newReplyItem].sort((a, b) =>
           new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
         )
-        setTimelineItems(updatedItems)
+        setTimelineItems(allItems)
 
         setReplyContent('')
         setReplyingToId(null)
@@ -303,10 +333,22 @@ function App() {
     try {
       await database.execute('DELETE FROM replies WHERE id = ?', [deleteReplyTarget.replyId])
 
-      // タイムラインから返信を削除
-      setTimelineItems(timelineItems.filter(item =>
-        !(item.type === 'reply' && item.replyId === deleteReplyTarget.replyId)
-      ))
+      // タイムラインから返信を削除し、親エントリーの返信リストも更新
+      const updatedItems = timelineItems
+        .filter(item => !(item.type === 'reply' && item.replyId === deleteReplyTarget.replyId))
+        .map(item => {
+          if (item.type === 'entry' && item.id === deleteReplyTarget.entryId) {
+            const updatedReplies = (item.replies || []).filter(r => r.id !== deleteReplyTarget.replyId)
+            return {
+              ...item,
+              replies: updatedReplies,
+              replyCount: updatedReplies.length
+            }
+          }
+          return item
+        })
+
+      setTimelineItems(updatedItems)
 
       // ダイアログを閉じる
       setDeleteReplyDialogOpen(false)
@@ -324,6 +366,18 @@ function App() {
       setReplyingToId(entryId)
       setReplyContent('')
     }
+  }
+
+  const toggleEntryReplies = (entryId: number) => {
+    setExpandedEntryReplies(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(entryId)) {
+        newSet.delete(entryId)
+      } else {
+        newSet.add(entryId)
+      }
+      return newSet
+    })
   }
 
   const formatTimestamp = (timestamp: string) => {
@@ -534,8 +588,16 @@ function App() {
                               className="reply-button"
                               onClick={() => toggleReplyForm(item.id)}
                             >
-                              💬 返信する
+                              💬 返信する{(item.replyCount ?? 0) > 0 && <span className="reply-count"> ({item.replyCount})</span>}
                             </button>
+                            {(item.replyCount ?? 0) > 0 && (
+                              <button
+                                className="show-replies-button"
+                                onClick={() => toggleEntryReplies(item.id)}
+                              >
+                                {expandedEntryReplies.has(item.id) ? '▼' : '▶'} 返信を表示
+                              </button>
+                            )}
                           </div>
 
                           {/* 返信入力フォーム */}
@@ -576,6 +638,20 @@ function App() {
                                   キャンセル
                                 </button>
                               </div>
+                            </div>
+                          )}
+
+                          {/* 返信一覧 */}
+                          {expandedEntryReplies.has(item.id) && item.replies && item.replies.length > 0 && (
+                            <div className="entry-replies-list">
+                              {item.replies
+                                .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
+                                .map((reply) => (
+                                  <div key={reply.id} className="entry-reply-item">
+                                    <div className="entry-reply-time">{formatTimestamp(reply.timestamp)}</div>
+                                    <div className="entry-reply-text">{reply.content}</div>
+                                  </div>
+                                ))}
                             </div>
                           )}
                         </div>
