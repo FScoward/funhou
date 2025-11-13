@@ -39,11 +39,11 @@ export default function CustomInput({
         <InputGroupAddon align="block-end">
           <InputGroupButton
             className={`ml-auto rounded-full transition-opacity ${hasContent ? 'opacity-100' : 'opacity-30'}`}
-            size="icon-sm"
+            size="icon-xs"
             variant="default"
             onClick={onSubmit}
           >
-            <ArrowUp size={16} />
+            <ArrowUp className="size-[14px]" />
           </InputGroupButton>
         </InputGroupAddon>
       </InputGroup>

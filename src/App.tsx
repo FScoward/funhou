@@ -333,12 +333,6 @@ function App() {
 
         setReplyContent('')
         setReplyingToId(null)
-
-        // textareaの高さをリセット
-        const textarea = document.querySelector(`textarea[data-reply-to="${entryId}"]`)
-        if (textarea instanceof HTMLTextAreaElement) {
-          textarea.style.height = 'auto'
-        }
       } catch (error) {
         console.error('返信の追加に失敗しました:', error)
       }
@@ -735,14 +729,10 @@ function App() {
                           {/* 返信入力フォーム */}
                           {replyingToId === item.id && (
                             <div className="reply-input-section">
-                              <textarea
-                                data-reply-to={item.id}
+                              <CustomInput
                                 value={replyContent}
-                                onChange={(e) => {
-                                  setReplyContent(e.target.value)
-                                  e.target.style.height = 'auto'
-                                  e.target.style.height = `${e.target.scrollHeight}px`
-                                }}
+                                onChange={setReplyContent}
+                                onSubmit={() => handleAddReply(item.id)}
                                 onKeyDown={(e) => {
                                   if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
                                     e.preventDefault()
@@ -750,26 +740,17 @@ function App() {
                                   }
                                 }}
                                 placeholder="返信を入力..."
-                                rows={1}
-                                className="reply-textarea"
                               />
-                              <div className="reply-buttons">
-                                <button
-                                  onClick={() => handleAddReply(item.id)}
-                                  className="submit-reply-button"
-                                >
-                                  送信
-                                </button>
-                                <button
-                                  onClick={() => {
-                                    setReplyingToId(null)
-                                    setReplyContent('')
-                                  }}
-                                  className="cancel-reply-button"
-                                >
-                                  キャンセル
-                                </button>
-                              </div>
+                              <button
+                                onClick={() => {
+                                  setReplyingToId(null)
+                                  setReplyContent('')
+                                }}
+                                className="cancel-reply-button"
+                                style={{ marginTop: '8px' }}
+                              >
+                                キャンセル
+                              </button>
                             </div>
                           )}
 
