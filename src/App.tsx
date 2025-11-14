@@ -11,11 +11,31 @@ import { SettingsDialog } from '@/components/SettingsDialog'
 import { getSettings } from '@/lib/settings'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import CustomInput from '@/components/CustomInput'
+import { TagFilter } from '@/components/TagFilter'
+import { TagBadge } from '@/components/TagBadge'
+import {
+  extractTagsFromContent,
+  associateTagsWithEntry,
+  getTagsForEntry,
+  associateTagsWithReply,
+  getTagsForReply,
+  getAllTags,
+  buildTagFilterCondition,
+  buildReplyTagFilterCondition,
+  deleteTag,
+  type Tag as TagType
+} from '@/lib/tags'
+
+interface Tag {
+  id: number
+  name: string
+}
 
 interface Entry {
   id: number
   content: string
   timestamp: string
+  tags?: Tag[]
 }
 
 interface Reply {
@@ -23,6 +43,7 @@ interface Reply {
   entry_id: number
   content: string
   timestamp: string
+  tags?: Tag[]
 }
 
 interface TimelineItem {
@@ -33,6 +54,7 @@ interface TimelineItem {
   // entry specific fields
   replies?: Reply[]
   replyCount?: number
+  tags?: Tag[]
   // reply specific fields
   replyId?: number
   entryId?: number
@@ -85,6 +107,52 @@ async function getDb() {
     await db.execute(`
       CREATE INDEX IF NOT EXISTS idx_replies_entry_id ON replies(entry_id)
     `)
+
+    // タグテーブルを作成
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS tags (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL UNIQUE
+      )
+    `)
+
+    // エントリーとタグの中間テーブルを作成
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS entry_tags (
+        entry_id INTEGER NOT NULL,
+        tag_id INTEGER NOT NULL,
+        PRIMARY KEY (entry_id, tag_id),
+        FOREIGN KEY (entry_id) REFERENCES entries(id) ON DELETE CASCADE,
+        FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE
+      )
+    `)
+
+    // タグ検索用のインデックスを作成
+    await db.execute(`
+      CREATE INDEX IF NOT EXISTS idx_entry_tags_entry_id ON entry_tags(entry_id)
+    `)
+    await db.execute(`
+      CREATE INDEX IF NOT EXISTS idx_entry_tags_tag_id ON entry_tags(tag_id)
+    `)
+
+    // 返信とタグの中間テーブルを作成
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS reply_tags (
+        reply_id INTEGER NOT NULL,
+        tag_id INTEGER NOT NULL,
+        PRIMARY KEY (reply_id, tag_id),
+        FOREIGN KEY (reply_id) REFERENCES replies(id) ON DELETE CASCADE,
+        FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE
+      )
+    `)
+
+    // 返信タグ検索用のインデックスを作成
+    await db.execute(`
+      CREATE INDEX IF NOT EXISTS idx_reply_tags_reply_id ON reply_tags(reply_id)
+    `)
+    await db.execute(`
+      CREATE INDEX IF NOT EXISTS idx_reply_tags_tag_id ON reply_tags(tag_id)
+    `)
   }
   return db
 }
@@ -115,6 +183,19 @@ function App() {
   const [editContent, setEditContent] = useState('')
   const [editingReplyId, setEditingReplyId] = useState<number | null>(null)
   const [editReplyContent, setEditReplyContent] = useState('')
+  // タグフィルタリング関連の状態
+  const [selectedTags, setSelectedTags] = useState<string[]>([])
+  const [filterMode, setFilterMode] = useState<'AND' | 'OR'>('OR')
+  const [availableTags, setAvailableTags] = useState<Tag[]>([])
+  // エントリー作成・編集時のタグ選択状態
+  const [manualTags, setManualTags] = useState<string[]>([])
+  const [editManualTags, setEditManualTags] = useState<string[]>([])
+  // 返信作成・編集時のタグ選択状態
+  const [replyManualTags, setReplyManualTags] = useState<string[]>([])
+  const [editReplyManualTags, setEditReplyManualTags] = useState<string[]>([])
+  // タグ削除確認ダイアログ
+  const [deleteTagDialogOpen, setDeleteTagDialogOpen] = useState(false)
+  const [deleteTagTarget, setDeleteTagTarget] = useState<string | null>(null)
 
   useEffect(() => {
     initializeDb()
@@ -123,8 +204,9 @@ function App() {
   useEffect(() => {
     if (database) {
       loadEntries()
+      loadAvailableTags()
     }
-  }, [selectedDate, database])
+  }, [selectedDate, database, selectedTags, filterMode])
 
   const initializeDb = async () => {
     const db = await getDb()
@@ -140,28 +222,108 @@ function App() {
     }
   }
 
+  const loadAvailableTags = async () => {
+    if (!database) return
+
+    try {
+      const tags = await getAllTags(database)
+      setAvailableTags(tags)
+    } catch (error) {
+      console.error('タグの読み込みに失敗しました:', error)
+    }
+  }
+
   const loadEntries = async () => {
     if (!database) return
 
     try {
       // 選択された日付のエントリーのみを取得（ローカルタイムゾーンを考慮）
       const dateStr = formatDateToLocalYYYYMMDD(selectedDate)
-      const loadedEntries = await database.select<Entry[]>(
-        'SELECT id, content, timestamp FROM entries WHERE DATE(timestamp, \'localtime\') = DATE(?) ORDER BY timestamp DESC',
-        [dateStr]
-      )
 
-      // 返信を取得（親エントリーの情報も含める）
-      const entryIds = loadedEntries.map(e => e.id)
-      if (entryIds.length === 0) {
-        setTimelineItems([])
-        return
+      // タグフィルタ条件を構築
+      const tagFilter = buildTagFilterCondition(selectedTags, filterMode)
+      const replyTagFilter = buildReplyTagFilterCondition(selectedTags, filterMode)
+
+      // エントリーをSQLクエリで取得
+      let entryQuery = 'SELECT id, content, timestamp FROM entries WHERE DATE(timestamp, \'localtime\') = DATE(?)'
+      const entryParams: (string | number)[] = [dateStr]
+
+      if (tagFilter.condition) {
+        entryQuery += ` AND ${tagFilter.condition}`
+        entryParams.push(...tagFilter.params)
       }
 
-      const replies = await database.select<Reply[]>(
-        `SELECT id, entry_id, content, timestamp FROM replies WHERE entry_id IN (${entryIds.join(',')})`,
-        []
-      )
+      entryQuery += ' ORDER BY timestamp DESC'
+
+      let loadedEntries = await database.select<Entry[]>(entryQuery, entryParams)
+
+      // 各エントリーのタグを取得
+      for (const entry of loadedEntries) {
+        entry.tags = await getTagsForEntry(database, entry.id)
+      }
+
+      // 返信の取得とフィルタリング
+      let replies: Reply[] = []
+
+      if (selectedTags.length > 0) {
+        // タグフィルタが有効な場合：返信もタグでフィルタリング
+        // タグフィルタを適用した返信を抽出
+        let replyQuery = 'SELECT id, entry_id, content, timestamp FROM replies WHERE 1=1'
+        const replyParams: (string | number)[] = []
+
+        if (replyTagFilter.condition) {
+          replyQuery += ` AND ${replyTagFilter.condition}`
+          replyParams.push(...replyTagFilter.params)
+        }
+
+        const tagMatchedReplies = await database.select<Reply[]>(replyQuery, replyParams)
+
+        // タグマッチした返信のタグを取得
+        for (const reply of tagMatchedReplies) {
+          reply.tags = await getTagsForReply(database, reply.id)
+        }
+
+        // タグマッチした返信の親エントリーIDを収集
+        const tagMatchedReplyParentIds = Array.from(new Set(tagMatchedReplies.map(r => r.entry_id)))
+
+        // 親エントリーを追加で取得（既に取得済みでないもの）
+        const loadedEntryIds = new Set(loadedEntries.map(e => e.id))
+        const additionalParentIds = tagMatchedReplyParentIds.filter(id => !loadedEntryIds.has(id))
+
+        if (additionalParentIds.length > 0) {
+          const additionalParents = await database.select<Entry[]>(
+            `SELECT id, content, timestamp FROM entries WHERE id IN (${additionalParentIds.join(',')}) AND DATE(timestamp, 'localtime') = DATE(?)`,
+            [dateStr]
+          )
+
+          // 追加エントリーのタグを取得
+          for (const entry of additionalParents) {
+            entry.tags = await getTagsForEntry(database, entry.id)
+          }
+
+          loadedEntries = [...loadedEntries, ...additionalParents]
+        }
+
+        // タグマッチした返信のみを使用
+        replies = tagMatchedReplies
+      } else {
+        // タグフィルタが無効な場合：既存の動作
+        const entryIds = loadedEntries.map(e => e.id)
+        if (entryIds.length === 0) {
+          setTimelineItems([])
+          return
+        }
+
+        replies = await database.select<Reply[]>(
+          `SELECT id, entry_id, content, timestamp FROM replies WHERE entry_id IN (${entryIds.join(',')})`,
+          []
+        )
+
+        // 各返信のタグを取得
+        for (const reply of replies) {
+          reply.tags = await getTagsForReply(database, reply.id)
+        }
+      }
 
       // エントリーをTimelineItemに変換（返信リストも含める）
       const entryItems: TimelineItem[] = loadedEntries.map(entry => {
@@ -172,7 +334,8 @@ function App() {
           content: entry.content,
           timestamp: entry.timestamp,
           replies: entryReplies,
-          replyCount: entryReplies.length
+          replyCount: entryReplies.length,
+          tags: entry.tags
         }
       })
 
@@ -186,6 +349,7 @@ function App() {
           entryId: reply.entry_id,
           content: reply.content,
           timestamp: reply.timestamp,
+          tags: reply.tags,
           parentEntry: parentEntry ? {
             id: parentEntry.id,
             content: parentEntry.content
@@ -214,17 +378,32 @@ function App() {
           [currentEntry, timestamp]
         )
 
+        const entryId = Number(result.lastInsertId)
+
+        // 手動選択タグを保存
+        if (manualTags.length > 0) {
+          await associateTagsWithEntry(database, entryId, manualTags)
+        }
+
+        // 保存したタグを取得
+        const savedTags = await getTagsForEntry(database, entryId)
+
         const newItem: TimelineItem = {
           type: 'entry',
-          id: Number(result.lastInsertId),
+          id: entryId,
           content: currentEntry,
           timestamp: timestamp,
           replies: [],
-          replyCount: 0
+          replyCount: 0,
+          tags: savedTags
         }
 
         setTimelineItems([newItem, ...timelineItems])
         setCurrentEntry('')
+        setManualTags([]) // 手動選択タグをクリア
+
+        // タグ一覧を更新
+        loadAvailableTags()
       } catch (error) {
         console.error('エントリーの追加に失敗しました:', error)
       }
@@ -266,23 +445,35 @@ function App() {
           [entryId, replyContent, timestamp]
         )
 
+        const replyId = Number(result.lastInsertId)
+
+        // 手動選択タグを保存
+        if (replyManualTags.length > 0) {
+          await associateTagsWithReply(database, replyId, replyManualTags)
+        }
+
+        // 保存したタグを取得
+        const savedTags = await getTagsForReply(database, replyId)
+
         // 親エントリーを探す
         const parentEntry = timelineItems.find(item => item.type === 'entry' && item.id === entryId)
 
         const newReply: Reply = {
-          id: Number(result.lastInsertId),
+          id: replyId,
           entry_id: entryId,
           content: replyContent,
           timestamp: timestamp,
+          tags: savedTags
         }
 
         const newReplyItem: TimelineItem = {
           type: 'reply',
-          id: Number(result.lastInsertId),
-          replyId: Number(result.lastInsertId),
+          id: replyId,
+          replyId: replyId,
           entryId: entryId,
           content: replyContent,
           timestamp: timestamp,
+          tags: savedTags,
           parentEntry: parentEntry ? {
             id: parentEntry.id,
             content: parentEntry.content
@@ -307,8 +498,12 @@ function App() {
         )
         setTimelineItems(allItems)
 
+        // タグ一覧を更新
+        loadAvailableTags()
+
         setReplyContent('')
         setReplyingToId(null)
+        setReplyManualTags([]) // 手動選択タグをクリア
       } catch (error) {
         console.error('返信の追加に失敗しました:', error)
       }
@@ -351,9 +546,20 @@ function App() {
     }
   }
 
-  const startEditEntry = (entryId: number, currentContent: string) => {
+  const startEditEntry = async (entryId: number, currentContent: string) => {
     setEditingEntryId(entryId)
     setEditContent(currentContent)
+
+    // 既存のタグを読み込んで手動選択タグとして設定
+    if (database) {
+      try {
+        const existingTags = await getTagsForEntry(database, entryId)
+        setEditManualTags(existingTags.map(tag => tag.name))
+      } catch (error) {
+        console.error('既存タグの読み込みに失敗しました:', error)
+        setEditManualTags([])
+      }
+    }
   }
 
   const handleUpdateEntry = async (entryId: number) => {
@@ -364,15 +570,25 @@ function App() {
           [editContent, entryId]
         )
 
+        // 手動選択タグを保存
+        await associateTagsWithEntry(database, entryId, editManualTags)
+
+        // 更新したタグを取得
+        const updatedTags = await getTagsForEntry(database, entryId)
+
         // stateを更新
         setTimelineItems(timelineItems.map(item =>
           item.type === 'entry' && item.id === entryId
-            ? { ...item, content: editContent }
+            ? { ...item, content: editContent, tags: updatedTags }
             : item
         ))
 
         setEditingEntryId(null)
         setEditContent('')
+        setEditManualTags([]) // 手動選択タグをクリア
+
+        // タグ一覧を更新
+        loadAvailableTags()
       } catch (error) {
         console.error('エントリーの更新に失敗しました:', error)
       }
@@ -382,11 +598,23 @@ function App() {
   const cancelEditEntry = () => {
     setEditingEntryId(null)
     setEditContent('')
+    setEditManualTags([])
   }
 
-  const startEditReply = (replyId: number, currentContent: string) => {
+  const startEditReply = async (replyId: number, currentContent: string) => {
     setEditingReplyId(replyId)
     setEditReplyContent(currentContent)
+
+    // 既存のタグを読み込んで手動選択タグとして設定
+    if (database) {
+      try {
+        const existingTags = await getTagsForReply(database, replyId)
+        setEditReplyManualTags(existingTags.map(tag => tag.name))
+      } catch (error) {
+        console.error('既存タグの読み込みに失敗しました:', error)
+        setEditReplyManualTags([])
+      }
+    }
   }
 
   const handleUpdateReply = async (replyId: number, entryId: number) => {
@@ -397,15 +625,21 @@ function App() {
           [editReplyContent, replyId]
         )
 
+        // 手動選択タグを保存
+        await associateTagsWithReply(database, replyId, editReplyManualTags)
+
+        // 更新したタグを取得
+        const updatedTags = await getTagsForReply(database, replyId)
+
         // stateを更新
         setTimelineItems(timelineItems.map(item => {
           if (item.type === 'reply' && item.replyId === replyId) {
-            return { ...item, content: editReplyContent }
+            return { ...item, content: editReplyContent, tags: updatedTags }
           }
           // 親エントリーのrepliesリストも更新
           if (item.type === 'entry' && item.id === entryId) {
             const updatedReplies = (item.replies || []).map(reply =>
-              reply.id === replyId ? { ...reply, content: editReplyContent } : reply
+              reply.id === replyId ? { ...reply, content: editReplyContent, tags: updatedTags } : reply
             )
             return { ...item, replies: updatedReplies }
           }
@@ -414,6 +648,10 @@ function App() {
 
         setEditingReplyId(null)
         setEditReplyContent('')
+        setEditReplyManualTags([]) // 手動選択タグをクリア
+
+        // タグ一覧を更新
+        loadAvailableTags()
       } catch (error) {
         console.error('返信の更新に失敗しました:', error)
       }
@@ -423,15 +661,18 @@ function App() {
   const cancelEditReply = () => {
     setEditingReplyId(null)
     setEditReplyContent('')
+    setEditReplyManualTags([])
   }
 
   const toggleReplyForm = (entryId: number) => {
     if (replyingToId === entryId) {
       setReplyingToId(null)
       setReplyContent('')
+      setReplyManualTags([])
     } else {
       setReplyingToId(entryId)
       setReplyContent('')
+      setReplyManualTags([])
     }
   }
 
@@ -445,6 +686,34 @@ function App() {
       }
       return newSet
     })
+  }
+
+  const openDeleteTagDialog = (tagName: string) => {
+    setDeleteTagTarget(tagName)
+    setDeleteTagDialogOpen(true)
+  }
+
+  const handleDeleteTag = async () => {
+    if (!database || deleteTagTarget === null) return
+
+    try {
+      await deleteTag(database, deleteTagTarget)
+
+      // 削除したタグがフィルターに選択されていたら除外
+      setSelectedTags(selectedTags.filter(t => t !== deleteTagTarget))
+
+      // タグ一覧を更新
+      await loadAvailableTags()
+
+      // エントリーを再読み込み
+      await loadEntries()
+
+      // ダイアログを閉じる
+      setDeleteTagDialogOpen(false)
+      setDeleteTagTarget(null)
+    } catch (error) {
+      console.error('タグの削除に失敗しました:', error)
+    }
   }
 
   const formatTimestamp = (timestamp: string) => {
@@ -585,12 +854,48 @@ function App() {
           </button>
         </div>
 
+        {/* タグフィルター */}
+        <div className="tag-filter-section">
+          <TagFilter
+            availableTags={availableTags}
+            selectedTags={selectedTags}
+            filterMode={filterMode}
+            onTagSelect={(tag) => {
+              if (selectedTags.includes(tag)) {
+                setSelectedTags(selectedTags.filter(t => t !== tag))
+              } else {
+                setSelectedTags([...selectedTags, tag])
+              }
+            }}
+            onTagRemove={(tag) => {
+              setSelectedTags(selectedTags.filter(t => t !== tag))
+            }}
+            onFilterModeChange={(mode) => {
+              setFilterMode(mode)
+            }}
+            onClearAll={() => {
+              setSelectedTags([])
+            }}
+            onTagDelete={openDeleteTagDialog}
+          />
+        </div>
+
         <div className="input-section">
           <CustomInput
             value={currentEntry}
             onChange={setCurrentEntry}
             onSubmit={handleAddEntry}
             onKeyDown={handleKeyDown}
+            availableTags={availableTags}
+            selectedTags={manualTags}
+            onTagAdd={(tag) => {
+              if (!manualTags.includes(tag)) {
+                setManualTags([...manualTags, tag])
+              }
+            }}
+            onTagRemove={(tag) => {
+              setManualTags(manualTags.filter(t => t !== tag))
+            }}
           />
         </div>
 
@@ -660,10 +965,38 @@ function App() {
                                   }
                                 }}
                                 placeholder="エントリーを編集..."
+                                availableTags={availableTags}
+                                selectedTags={editManualTags}
+                                onTagAdd={(tag) => {
+                                  if (!editManualTags.includes(tag)) {
+                                    setEditManualTags([...editManualTags, tag])
+                                  }
+                                }}
+                                onTagRemove={(tag) => {
+                                  setEditManualTags(editManualTags.filter(t => t !== tag))
+                                }}
                               />
                             </div>
                           ) : (
-                            <div className="entry-text">{item.content}</div>
+                            <>
+                              <div className="entry-text">{item.content}</div>
+                              {/* タグ表示 */}
+                              {item.tags && item.tags.length > 0 && (
+                                <div className="entry-tags">
+                                  {item.tags.map(tag => (
+                                    <TagBadge
+                                      key={tag.id}
+                                      tag={tag.name}
+                                      onClick={(tagName) => {
+                                        if (!selectedTags.includes(tagName)) {
+                                          setSelectedTags([...selectedTags, tagName])
+                                        }
+                                      }}
+                                    />
+                                  ))}
+                                </div>
+                              )}
+                            </>
                           )}
 
                           {/* 返信ボタン */}
@@ -706,6 +1039,16 @@ function App() {
                                   }
                                 }}
                                 placeholder="返信を入力..."
+                                availableTags={availableTags}
+                                selectedTags={replyManualTags}
+                                onTagAdd={(tag) => {
+                                  if (!replyManualTags.includes(tag)) {
+                                    setReplyManualTags([...replyManualTags, tag])
+                                  }
+                                }}
+                                onTagRemove={(tag) => {
+                                  setReplyManualTags(replyManualTags.filter(t => t !== tag))
+                                }}
                               />
                             </div>
                           )}
@@ -764,10 +1107,38 @@ function App() {
                                   }
                                 }}
                                 placeholder="返信を編集..."
+                                availableTags={availableTags}
+                                selectedTags={editReplyManualTags}
+                                onTagAdd={(tag) => {
+                                  if (!editReplyManualTags.includes(tag)) {
+                                    setEditReplyManualTags([...editReplyManualTags, tag])
+                                  }
+                                }}
+                                onTagRemove={(tag) => {
+                                  setEditReplyManualTags(editReplyManualTags.filter(t => t !== tag))
+                                }}
                               />
                             </div>
                           ) : (
-                            <div className="reply-text">{item.content}</div>
+                            <>
+                              <div className="reply-text">{item.content}</div>
+                              {/* タグ表示 */}
+                              {item.tags && item.tags.length > 0 && (
+                                <div className="entry-tags">
+                                  {item.tags.map(tag => (
+                                    <TagBadge
+                                      key={tag.id}
+                                      tag={tag.name}
+                                      onClick={(tagName) => {
+                                        if (!selectedTags.includes(tagName)) {
+                                          setSelectedTags([...selectedTags, tagName])
+                                        }
+                                      }}
+                                    />
+                                  ))}
+                                </div>
+                              )}
+                            </>
                           )}
                         </div>
                       )}
@@ -806,6 +1177,22 @@ function App() {
           <AlertDialogFooter>
             <AlertDialogCancel>キャンセル</AlertDialogCancel>
             <AlertDialogAction onClick={handleDeleteReply}>削除</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={deleteTagDialogOpen} onOpenChange={setDeleteTagDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>タグを削除しますか？</AlertDialogTitle>
+            <AlertDialogDescription>
+              タグ「{deleteTagTarget}」を削除します。このタグが付いているエントリーや返信からも削除されます。
+              この操作は取り消せません。本当に削除してもよろしいですか？
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>キャンセル</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteTag}>削除</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
