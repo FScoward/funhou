@@ -5,7 +5,6 @@ import { ReplyCard } from './ReplyCard'
 
 interface TimelineItemComponentProps {
   item: TimelineItem
-  index: number
   previousItem: TimelineItem | null
   editingEntryId: number | null
   editContent: string
@@ -45,7 +44,6 @@ interface TimelineItemComponentProps {
 
 export function TimelineItemComponent({
   item,
-  index,
   previousItem,
   editingEntryId,
   editContent,

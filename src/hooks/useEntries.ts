@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import Database from '@tauri-apps/plugin-sql'
-import { TimelineItem, Entry, Reply } from '@/types'
+import { TimelineItem } from '@/types'
 import { associateTagsWithEntry, getTagsForEntry } from '@/lib/tags'
 
 interface UseEntriesProps {

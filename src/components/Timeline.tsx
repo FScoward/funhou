@@ -86,7 +86,6 @@ export function Timeline({
             <TimelineItemComponent
               key={`${item.type}-${item.id}`}
               item={item}
-              index={index}
               previousItem={index > 0 ? timelineItems[index - 1] : null}
               editingEntryId={editingEntryId}
               editContent={editContent}

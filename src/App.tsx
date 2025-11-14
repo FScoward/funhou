@@ -31,15 +31,7 @@ function App() {
     goToToday,
   } = useDateNavigation()
 
-  // タイムライン
-  const { timelineItems, setTimelineItems, loadEntries, handleScrollToEntry } = useTimeline({
-    database,
-    selectedDate,
-    selectedTags: [], // 後で更新
-    filterMode: 'OR', // 後で更新
-  })
-
-  // タグ
+  // タグ（先に初期化）
   const {
     selectedTags,
     setSelectedTags,
@@ -53,10 +45,10 @@ function App() {
     handleTagClick,
     openDeleteTagDialog,
     handleDeleteTag,
-  } = useTags({ database, loadEntries })
+  } = useTags({ database, loadEntries: async () => {} })
 
-  // タイムラインのフィルター更新
-  const { timelineItems: filteredTimelineItems, setTimelineItems: setFilteredTimelineItems, loadEntries: reloadEntries, handleScrollToEntry: scrollToEntry } = useTimeline({
+  // タイムライン
+  const { timelineItems: filteredTimelineItems, setTimelineItems: setFilteredTimelineItems, handleScrollToEntry: scrollToEntry } = useTimeline({
     database,
     selectedDate,
     selectedTags,
