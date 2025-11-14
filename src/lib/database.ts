@@ -89,6 +89,16 @@ export async function getDb() {
     await db.execute(`
       CREATE INDEX IF NOT EXISTS idx_reply_tags_tag_id ON reply_tags(tag_id)
     `)
+
+    // pinnedカラムを追加（既に存在する場合はエラーを無視）
+    try {
+      await db.execute(`
+        ALTER TABLE entries ADD COLUMN pinned INTEGER DEFAULT 0
+      `)
+    } catch (error) {
+      // カラムが既に存在する場合はエラーを無視
+      console.log('pinned column already exists or migration error:', error)
+    }
   }
   return db
 }

@@ -1,4 +1,4 @@
-import { Trash2, Pencil, X } from 'lucide-react'
+import { Trash2, Pencil, X, Pin } from 'lucide-react'
 import CustomInput from '@/components/CustomInput'
 import { TagBadge } from '@/components/TagBadge'
 import { formatTimestamp } from '@/utils/dateUtils'
@@ -10,6 +10,7 @@ interface EntryCardProps {
   tags?: Tag[]
   replyCount?: number
   replies?: Reply[]
+  pinned?: boolean
   isEditing: boolean
   editContent: string
   editManualTags: string[]
@@ -33,6 +34,7 @@ interface EntryCardProps {
   onReplyTagRemove: (tag: string) => void
   onAddReply: (id: number) => void
   onToggleReplies: (id: number) => void
+  onTogglePin: (id: number) => void
 }
 
 export function EntryCard({
@@ -41,6 +43,7 @@ export function EntryCard({
   tags,
   replyCount,
   replies,
+  pinned,
   isEditing,
   editContent,
   editManualTags,
@@ -64,9 +67,10 @@ export function EntryCard({
   onReplyTagRemove,
   onAddReply,
   onToggleReplies,
+  onTogglePin,
 }: EntryCardProps) {
   return (
-    <div className="entry-card">
+    <div className={`entry-card ${pinned ? 'pinned' : ''}`}>
       <button
         className="edit-button"
         onClick={() => isEditing ? onCancelEdit() : onEdit(id, content)}
@@ -80,6 +84,13 @@ export function EntryCard({
         aria-label="削除"
       >
         <Trash2 size={16} />
+      </button>
+      <button
+        className={`pin-button ${pinned ? 'pinned' : ''}`}
+        onClick={() => onTogglePin(id)}
+        aria-label={pinned ? "ピン留めを解除" : "ピン留め"}
+      >
+        <Pin size={16} />
       </button>
       {isEditing ? (
         <div className="edit-input-section">

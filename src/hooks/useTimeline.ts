@@ -31,8 +31,8 @@ export function useTimeline({ database, selectedDate, selectedTags, filterMode }
       const tagFilter = buildTagFilterCondition(selectedTags, filterMode)
       const replyTagFilter = buildReplyTagFilterCondition(selectedTags, filterMode)
 
-      // エントリーをSQLクエリで取得
-      let entryQuery = 'SELECT id, content, timestamp FROM entries WHERE DATE(timestamp, \'localtime\') = DATE(?)'
+      // エントリーをSQLクエリで取得（pinned状態も含める）
+      let entryQuery = 'SELECT id, content, timestamp, pinned FROM entries WHERE DATE(timestamp, \'localtime\') = DATE(?)'
       const entryParams: (string | number)[] = [dateStr]
 
       if (tagFilter.condition) {
@@ -79,7 +79,7 @@ export function useTimeline({ database, selectedDate, selectedTags, filterMode }
 
         if (additionalParentIds.length > 0) {
           const additionalParents = await database.select<Entry[]>(
-            `SELECT id, content, timestamp FROM entries WHERE id IN (${additionalParentIds.join(',')}) AND DATE(timestamp, 'localtime') = DATE(?)`,
+            `SELECT id, content, timestamp, pinned FROM entries WHERE id IN (${additionalParentIds.join(',')}) AND DATE(timestamp, 'localtime') = DATE(?)`,
             [dateStr]
           )
 
@@ -122,7 +122,8 @@ export function useTimeline({ database, selectedDate, selectedTags, filterMode }
           timestamp: entry.timestamp,
           replies: entryReplies,
           replyCount: entryReplies.length,
-          tags: entry.tags
+          tags: entry.tags,
+          pinned: entry.pinned === 1
         }
       })
 
@@ -144,10 +145,19 @@ export function useTimeline({ database, selectedDate, selectedTags, filterMode }
         }
       })
 
-      // 統合して時系列順（降順）にソート
-      const allItems = [...entryItems, ...replyItems].sort((a, b) =>
-        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-      )
+      // 統合してソート（ピン留め優先、その後時系列順）
+      const allItems = [...entryItems, ...replyItems].sort((a, b) => {
+        // ピン留めされたエントリーを優先
+        const aPinned = a.type === 'entry' && a.pinned ? 1 : 0
+        const bPinned = b.type === 'entry' && b.pinned ? 1 : 0
+
+        if (aPinned !== bPinned) {
+          return bPinned - aPinned
+        }
+
+        // 同じピン留め状態の場合は時系列順（降順）
+        return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+      })
 
       setTimelineItems(allItems)
     } catch (error) {

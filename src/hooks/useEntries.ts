@@ -148,6 +148,54 @@ export function useEntries({ database, timelineItems, setTimelineItems, loadAvai
     }
   }
 
+  const handleTogglePin = async (entryId: number) => {
+    if (!database) return
+
+    try {
+      // 現在のpinned状態を取得
+      const result = await database.select<{ pinned: number }[]>(
+        'SELECT pinned FROM entries WHERE id = ?',
+        [entryId]
+      )
+
+      if (result.length === 0) return
+
+      const currentPinned = result[0].pinned
+      const newPinned = currentPinned === 1 ? 0 : 1
+
+      // データベースを更新
+      await database.execute(
+        'UPDATE entries SET pinned = ? WHERE id = ?',
+        [newPinned, entryId]
+      )
+
+      // stateを更新してソート
+      const updatedItems = timelineItems.map(item =>
+        item.type === 'entry' && item.id === entryId
+          ? { ...item, pinned: newPinned === 1 }
+          : item
+      )
+
+      // ピン留め優先でソート
+      const sortedItems = updatedItems.sort((a, b) => {
+        // ピン留めされたエントリーを優先
+        const aPinned = a.type === 'entry' && a.pinned ? 1 : 0
+        const bPinned = b.type === 'entry' && b.pinned ? 1 : 0
+
+        if (aPinned !== bPinned) {
+          return bPinned - aPinned
+        }
+
+        // 同じピン留め状態の場合は時系列順（降順）
+        return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+      })
+
+      setTimelineItems(sortedItems)
+    } catch (error) {
+      console.error('ピン留め状態の切り替えに失敗しました:', error)
+    }
+  }
+
   return {
     // State
     currentEntry,
@@ -169,5 +217,6 @@ export function useEntries({ database, timelineItems, setTimelineItems, loadAvai
     openDeleteDialog,
     handleDeleteEntry,
     handleKeyDown,
+    handleTogglePin,
   }
 }
