@@ -580,3 +580,22 @@ textarea::placeholder {
 .timeline-item.highlight-flash .reply-card {
   animation: highlight-pulse 2s ease-in-out;
 }
+
+/* Tag Filter Section */
+.tag-filter-section {
+  margin-bottom: 1.5rem;
+  padding: 0.75rem 1rem;
+  background-color: #fafafa;
+  border-radius: 8px;
+  border: 1px solid #e5e5e5;
+}
+
+/* Entry Tags */
+.entry-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.75rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid #f5f5f5;
+}
