@@ -291,6 +291,42 @@ textarea::placeholder {
   color: #2196F3;
 }
 
+.pin-button {
+  position: absolute;
+  top: 0.5rem;
+  right: 5rem;
+  padding: 0.4rem;
+  background-color: transparent;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  color: #999;
+  opacity: 0;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.entry-card:hover .pin-button {
+  opacity: 1;
+}
+
+.pin-button:hover {
+  background-color: #fff8e1;
+  color: #f57c00;
+}
+
+.pin-button.pinned {
+  opacity: 1;
+  color: #f57c00;
+}
+
+.entry-card.pinned {
+  border-color: #f57c00;
+  background-color: #fffef5;
+}
+
 /* Edit Input Section */
 .edit-input-section {
   margin-top: 0;

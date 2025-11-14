@@ -8,6 +8,7 @@ export interface Entry {
   content: string
   timestamp: string
   tags?: Tag[]
+  pinned?: number
 }
 
 export interface Reply {
@@ -27,6 +28,7 @@ export interface TimelineItem {
   replies?: Reply[]
   replyCount?: number
   tags?: Tag[]
+  pinned?: boolean
   // reply specific fields
   replyId?: number
   entryId?: number

@@ -75,6 +75,7 @@ function App() {
     openDeleteDialog,
     handleDeleteEntry,
     handleKeyDown,
+    handleTogglePin,
   } = useEntries({
     database,
     timelineItems: filteredTimelineItems,
@@ -230,6 +231,7 @@ function App() {
           onAddReply={handleAddReply}
           onToggleReplies={toggleEntryReplies}
           onScrollToEntry={scrollToEntry}
+          onTogglePin={handleTogglePin}
         />
       </main>
 

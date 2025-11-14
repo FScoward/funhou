@@ -37,6 +37,7 @@ interface TimelineProps {
   onAddReply: (id: number) => void
   onToggleReplies: (id: number) => void
   onScrollToEntry: (entryId: number) => void
+  onTogglePin: (id: number) => void
 }
 
 export function Timeline({
@@ -75,6 +76,7 @@ export function Timeline({
   onAddReply,
   onToggleReplies,
   onScrollToEntry,
+  onTogglePin,
 }: TimelineProps) {
   return (
     <div className="timeline">
@@ -121,6 +123,7 @@ export function Timeline({
               onAddReply={onAddReply}
               onToggleReplies={onToggleReplies}
               onScrollToEntry={onScrollToEntry}
+              onTogglePin={onTogglePin}
             />
           ))}
         </div>
