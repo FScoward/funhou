@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import './App.css'
 import { SettingsDialog } from '@/components/SettingsDialog'
 import { TagFilter } from '@/components/TagFilter'
@@ -6,6 +6,7 @@ import { DateNavigation } from '@/components/DateNavigation'
 import { DeleteConfirmDialogs } from '@/components/DeleteConfirmDialogs'
 import { InputSection } from '@/components/InputSection'
 import { Timeline } from '@/components/Timeline'
+import { PinnedSidebar } from '@/components/PinnedSidebar'
 import { useDatabase } from '@/hooks/useDatabase'
 import { useDateNavigation } from '@/hooks/useDateNavigation'
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
@@ -16,6 +17,7 @@ import { useReplies } from '@/hooks/useReplies'
 
 function App() {
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [sidebarOpen, setSidebarOpen] = useState(true)
 
   // データベース
   const database = useDatabase()
@@ -121,9 +123,16 @@ function App() {
     goToToday,
   })
 
+  // ピン留めされたエントリーのみをフィルタリング
+  const pinnedEntries = useMemo(() => {
+    return filteredTimelineItems.filter(
+      (item) => item.type === 'entry' && item.pinned === true
+    )
+  }, [filteredTimelineItems])
+
   return (
     <div className="app">
-      <main>
+      <div className="app-layout">
         <DateNavigation
           selectedDate={selectedDate}
           calendarOpen={calendarOpen}
@@ -233,7 +242,14 @@ function App() {
           onScrollToEntry={scrollToEntry}
           onTogglePin={handleTogglePin}
         />
-      </main>
+      </div>
+
+      <PinnedSidebar
+        pinnedItems={pinnedEntries}
+        onItemClick={scrollToEntry}
+        isOpen={sidebarOpen}
+        onToggle={() => setSidebarOpen(!sidebarOpen)}
+      />
 
       <DeleteConfirmDialogs
         deleteDialogOpen={deleteDialogOpen}
