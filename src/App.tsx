@@ -1,20 +1,15 @@
 import { useState, useEffect } from 'react'
 import Database from '@tauri-apps/plugin-sql'
 import './App.css'
-import { Calendar } from '@/components/ui/calendar'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { Button } from '@/components/ui/button'
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
-import { Trash2, Settings, Pencil, X } from 'lucide-react'
-import { ja } from 'date-fns/locale'
 import { SettingsDialog } from '@/components/SettingsDialog'
 import { getSettings } from '@/lib/settings'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import CustomInput from '@/components/CustomInput'
 import { TagFilter } from '@/components/TagFilter'
-import { TagBadge } from '@/components/TagBadge'
+import { DateNavigation } from '@/components/DateNavigation'
+import { DeleteConfirmDialogs } from '@/components/DeleteConfirmDialogs'
+import { TimelineItemComponent } from '@/components/TimelineItemComponent'
 import {
-  extractTagsFromContent,
   associateTagsWithEntry,
   getTagsForEntry,
   associateTagsWithReply,
@@ -23,147 +18,10 @@ import {
   buildTagFilterCondition,
   buildReplyTagFilterCondition,
   deleteTag,
-  type Tag as TagType
 } from '@/lib/tags'
-
-interface Tag {
-  id: number
-  name: string
-}
-
-interface Entry {
-  id: number
-  content: string
-  timestamp: string
-  tags?: Tag[]
-}
-
-interface Reply {
-  id: number
-  entry_id: number
-  content: string
-  timestamp: string
-  tags?: Tag[]
-}
-
-interface TimelineItem {
-  type: 'entry' | 'reply'
-  id: number
-  content: string
-  timestamp: string
-  // entry specific fields
-  replies?: Reply[]
-  replyCount?: number
-  tags?: Tag[]
-  // reply specific fields
-  replyId?: number
-  entryId?: number
-  parentEntry?: {
-    id: number
-    content: string
-  }
-}
-
-let db: Database | null = null
-
-async function getDb() {
-  if (!db) {
-    db = await Database.load('sqlite:funhou.db')
-
-    // テーブルを作成
-    await db.execute(`
-      CREATE TABLE IF NOT EXISTS entries (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        content TEXT NOT NULL,
-        timestamp DATETIME NOT NULL
-      )
-    `)
-
-    // 設定テーブルを作成
-    await db.execute(`
-      CREATE TABLE IF NOT EXISTS settings (
-        key TEXT PRIMARY KEY,
-        value TEXT NOT NULL
-      )
-    `)
-
-    // デフォルト設定を挿入（既に存在しない場合のみ）
-    await db.execute(`
-      INSERT OR IGNORE INTO settings (key, value) VALUES ('always_on_top', 'false')
-    `)
-
-    // 返信テーブルを作成
-    await db.execute(`
-      CREATE TABLE IF NOT EXISTS replies (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        entry_id INTEGER NOT NULL,
-        content TEXT NOT NULL,
-        timestamp DATETIME NOT NULL,
-        FOREIGN KEY (entry_id) REFERENCES entries(id) ON DELETE CASCADE
-      )
-    `)
-
-    // インデックス作成
-    await db.execute(`
-      CREATE INDEX IF NOT EXISTS idx_replies_entry_id ON replies(entry_id)
-    `)
-
-    // タグテーブルを作成
-    await db.execute(`
-      CREATE TABLE IF NOT EXISTS tags (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL UNIQUE
-      )
-    `)
-
-    // エントリーとタグの中間テーブルを作成
-    await db.execute(`
-      CREATE TABLE IF NOT EXISTS entry_tags (
-        entry_id INTEGER NOT NULL,
-        tag_id INTEGER NOT NULL,
-        PRIMARY KEY (entry_id, tag_id),
-        FOREIGN KEY (entry_id) REFERENCES entries(id) ON DELETE CASCADE,
-        FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE
-      )
-    `)
-
-    // タグ検索用のインデックスを作成
-    await db.execute(`
-      CREATE INDEX IF NOT EXISTS idx_entry_tags_entry_id ON entry_tags(entry_id)
-    `)
-    await db.execute(`
-      CREATE INDEX IF NOT EXISTS idx_entry_tags_tag_id ON entry_tags(tag_id)
-    `)
-
-    // 返信とタグの中間テーブルを作成
-    await db.execute(`
-      CREATE TABLE IF NOT EXISTS reply_tags (
-        reply_id INTEGER NOT NULL,
-        tag_id INTEGER NOT NULL,
-        PRIMARY KEY (reply_id, tag_id),
-        FOREIGN KEY (reply_id) REFERENCES replies(id) ON DELETE CASCADE,
-        FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE
-      )
-    `)
-
-    // 返信タグ検索用のインデックスを作成
-    await db.execute(`
-      CREATE INDEX IF NOT EXISTS idx_reply_tags_reply_id ON reply_tags(reply_id)
-    `)
-    await db.execute(`
-      CREATE INDEX IF NOT EXISTS idx_reply_tags_tag_id ON reply_tags(tag_id)
-    `)
-  }
-  return db
-}
-
-// ローカルタイムゾーンを考慮した日付文字列を生成（YYYY-MM-DD形式）
-function formatDateToLocalYYYYMMDD(date: Date): string {
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  return `${year}-${month}-${day}`
-}
+import { getDb } from '@/lib/database'
+import { formatDateToLocalYYYYMMDD } from '@/utils/dateUtils'
+import { TimelineItem, Entry, Reply, Tag } from '@/types'
 
 function App() {
   const [timelineItems, setTimelineItems] = useState<TimelineItem[]>([])
@@ -716,16 +574,6 @@ function App() {
     }
   }
 
-  const formatTimestamp = (timestamp: string) => {
-    const date = new Date(timestamp)
-    return date.toLocaleTimeString('ja-JP')
-  }
-
-  const truncateText = (text: string, maxLength: number = 50) => {
-    if (text.length <= maxLength) return text
-    return text.substring(0, maxLength) + '...'
-  }
-
   const handleScrollToEntry = (entryId: number) => {
     const element = document.getElementById(`item-entry-${entryId}`)
     if (element) {
@@ -762,14 +610,12 @@ function App() {
     setSelectedDate(new Date())
   }
 
-  // 日本語の日付フォーマット（曜日付き）
-  const formatDateWithWeekday = (date: Date) => {
-    const year = date.getFullYear()
-    const month = date.getMonth() + 1
-    const day = date.getDate()
-    const weekdays = ['日', '月', '火', '水', '木', '金', '土']
-    const weekday = weekdays[date.getDay()]
-    return `${year}年${month}月${day}日（${weekday}）`
+  const handleTagClick = (tag: string) => {
+    if (selectedTags.includes(tag)) {
+      setSelectedTags(selectedTags.filter(t => t !== tag))
+    } else {
+      setSelectedTags([...selectedTags, tag])
+    }
   }
 
   // キーボードショートカット（矢印キーとTキー）
@@ -799,60 +645,16 @@ function App() {
   return (
     <div className="app">
       <main>
-        <div className="date-navigation">
-          <div className="settings-spacer"></div>
-          <div className="date-navigation-center">
-            <button onClick={goToPreviousDay} className="nav-button">
-              ◀
-            </button>
-            <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
-              <PopoverTrigger asChild>
-                <button className="date-display" style={{ cursor: 'pointer', background: 'none', border: 'none' }}>
-                  {formatDateWithWeekday(selectedDate)}
-                </button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="center">
-                <Calendar
-                  mode="single"
-                  selected={selectedDate}
-                  onSelect={(date) => {
-                    if (date) {
-                      setSelectedDate(date)
-                      setCalendarOpen(false)
-                    }
-                  }}
-                  locale={ja}
-                  captionLayout="dropdown"
-                  fromYear={2000}
-                  toYear={2050}
-                  initialFocus
-                />
-                <div className="p-3 border-t">
-                  <Button
-                    variant="outline"
-                    className="w-full"
-                    onClick={() => {
-                      setSelectedDate(new Date())
-                      setCalendarOpen(false)
-                    }}
-                  >
-                    今日
-                  </Button>
-                </div>
-              </PopoverContent>
-            </Popover>
-            <button onClick={goToNextDay} className="nav-button">
-              ▶
-            </button>
-          </div>
-          <button
-            onClick={() => setSettingsOpen(true)}
-            className="nav-button settings-button"
-            aria-label="設定"
-          >
-            <Settings size={20} />
-          </button>
-        </div>
+        <DateNavigation
+          selectedDate={selectedDate}
+          calendarOpen={calendarOpen}
+          onCalendarOpenChange={setCalendarOpen}
+          onDateSelect={setSelectedDate}
+          onPreviousDay={goToPreviousDay}
+          onNextDay={goToNextDay}
+          onToday={goToToday}
+          onSettingsClick={() => setSettingsOpen(true)}
+        />
 
         {/* タグフィルター */}
         <div className="tag-filter-section">
@@ -904,304 +706,83 @@ function App() {
             <p className="empty">この日の記録がありません</p>
           ) : (
             <div className="timeline-container">
-              {timelineItems.map((item, index) => {
-                const itemDate = new Date(item.timestamp)
-                const day = itemDate.getDate()
-                const month = itemDate.toLocaleDateString('ja-JP', { month: 'short' })
-
-                // 前のアイテムと日付を比較
-                const prevItem = index > 0 ? timelineItems[index - 1] : null
-                const prevDate = prevItem ? new Date(prevItem.timestamp).getDate() : null
-                const showDate = prevDate !== day
-
-                return (
-                  <div
-                    key={`${item.type}-${item.id}`}
-                    id={`item-${item.type}-${item.id}`}
-                    className={`timeline-item ${item.type === 'reply' ? 'is-reply' : ''}`}
-                  >
-                    <div className="timeline-date">
-                      {showDate ? (
-                        <>
-                          <div className="date-day">{day}</div>
-                          <div className="date-month">{month}</div>
-                        </>
-                      ) : null}
-                      <div className="entry-time">{formatTimestamp(item.timestamp)}</div>
-                    </div>
-                    <div className="timeline-line">
-                      <div className={`timeline-dot ${item.type === 'reply' ? 'is-reply' : ''}`}></div>
-                    </div>
-                    <div className="timeline-content">
-                      {item.type === 'entry' ? (
-                        <div className="entry-card">
-                          <button
-                            className="edit-button"
-                            onClick={() => editingEntryId === item.id ? cancelEditEntry() : startEditEntry(item.id, item.content)}
-                            aria-label={editingEntryId === item.id ? "キャンセル" : "編集"}
-                          >
-                            {editingEntryId === item.id ? <X size={16} /> : <Pencil size={16} />}
-                          </button>
-                          <button
-                            className="delete-button"
-                            onClick={() => openDeleteDialog(item.id)}
-                            aria-label="削除"
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                          {editingEntryId === item.id ? (
-                            <div className="edit-input-section">
-                              <CustomInput
-                                value={editContent}
-                                onChange={setEditContent}
-                                onSubmit={() => handleUpdateEntry(item.id)}
-                                onKeyDown={(e) => {
-                                  if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
-                                    e.preventDefault()
-                                    handleUpdateEntry(item.id)
-                                  } else if (e.key === 'Escape') {
-                                    e.preventDefault()
-                                    cancelEditEntry()
-                                  }
-                                }}
-                                placeholder="エントリーを編集..."
-                                availableTags={availableTags}
-                                selectedTags={editManualTags}
-                                onTagAdd={(tag) => {
-                                  if (!editManualTags.includes(tag)) {
-                                    setEditManualTags([...editManualTags, tag])
-                                  }
-                                }}
-                                onTagRemove={(tag) => {
-                                  setEditManualTags(editManualTags.filter(t => t !== tag))
-                                }}
-                              />
-                            </div>
-                          ) : (
-                            <>
-                              <div className="entry-text">{item.content}</div>
-                              {/* タグ表示 */}
-                              {item.tags && item.tags.length > 0 && (
-                                <div className="entry-tags">
-                                  {item.tags.map(tag => (
-                                    <TagBadge
-                                      key={tag.id}
-                                      tag={tag.name}
-                                      variant={selectedTags.includes(tag.name) ? 'selected' : 'default'}
-                                      onClick={(tagName) => {
-                                        if (selectedTags.includes(tagName)) {
-                                          setSelectedTags(selectedTags.filter(t => t !== tagName))
-                                        } else {
-                                          setSelectedTags([...selectedTags, tagName])
-                                        }
-                                      }}
-                                    />
-                                  ))}
-                                </div>
-                              )}
-                            </>
-                          )}
-
-                          {/* 返信ボタン */}
-                          <div className="entry-actions">
-                            <button
-                              className="reply-button"
-                              onClick={() => toggleReplyForm(item.id)}
-                            >
-                              {replyingToId === item.id ? (
-                                <>
-                                  <X size={16} style={{ display: 'inline-block', marginRight: '4px' }} /> キャンセル
-                                </>
-                              ) : (
-                                <>
-                                  💬 返信する{(item.replyCount ?? 0) > 0 && <span className="reply-count"> ({item.replyCount})</span>}
-                                </>
-                              )}
-                            </button>
-                            {(item.replyCount ?? 0) > 0 && (
-                              <button
-                                className="show-replies-button"
-                                onClick={() => toggleEntryReplies(item.id)}
-                              >
-                                {expandedEntryReplies.has(item.id) ? '▼' : '▶'} 返信を表示
-                              </button>
-                            )}
-                          </div>
-
-                          {/* 返信入力フォーム */}
-                          {replyingToId === item.id && (
-                            <div className="reply-input-section">
-                              <CustomInput
-                                value={replyContent}
-                                onChange={setReplyContent}
-                                onSubmit={() => handleAddReply(item.id)}
-                                onKeyDown={(e) => {
-                                  if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
-                                    e.preventDefault()
-                                    handleAddReply(item.id)
-                                  }
-                                }}
-                                placeholder="返信を入力..."
-                                availableTags={availableTags}
-                                selectedTags={replyManualTags}
-                                onTagAdd={(tag) => {
-                                  if (!replyManualTags.includes(tag)) {
-                                    setReplyManualTags([...replyManualTags, tag])
-                                  }
-                                }}
-                                onTagRemove={(tag) => {
-                                  setReplyManualTags(replyManualTags.filter(t => t !== tag))
-                                }}
-                              />
-                            </div>
-                          )}
-
-                          {/* 返信一覧 */}
-                          {expandedEntryReplies.has(item.id) && item.replies && item.replies.length > 0 && (
-                            <div className="entry-replies-list">
-                              {item.replies
-                                .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
-                                .map((reply) => (
-                                  <div key={reply.id} className="entry-reply-item">
-                                    <div className="entry-reply-time">{formatTimestamp(reply.timestamp)}</div>
-                                    <div className="entry-reply-text">{reply.content}</div>
-                                  </div>
-                                ))}
-                            </div>
-                          )}
-                        </div>
-                      ) : (
-                        <div className="reply-card">
-                          <button
-                            className="edit-button"
-                            onClick={() => editingReplyId === item.replyId ? cancelEditReply() : startEditReply(item.replyId!, item.content)}
-                            aria-label={editingReplyId === item.replyId ? "キャンセル" : "編集"}
-                          >
-                            {editingReplyId === item.replyId ? <X size={16} /> : <Pencil size={16} />}
-                          </button>
-                          <button
-                            className="delete-button"
-                            onClick={() => openDeleteReplyDialog(item.replyId!, item.entryId!)}
-                            aria-label="削除"
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                          {item.parentEntry && (
-                            <button
-                              className="reply-reference"
-                              onClick={() => handleScrollToEntry(item.parentEntry!.id)}
-                            >
-                              → 「{truncateText(item.parentEntry.content)}」への返信
-                            </button>
-                          )}
-                          {editingReplyId === item.replyId ? (
-                            <div className="edit-input-section">
-                              <CustomInput
-                                value={editReplyContent}
-                                onChange={setEditReplyContent}
-                                onSubmit={() => handleUpdateReply(item.replyId!, item.entryId!)}
-                                onKeyDown={(e) => {
-                                  if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
-                                    e.preventDefault()
-                                    handleUpdateReply(item.replyId!, item.entryId!)
-                                  } else if (e.key === 'Escape') {
-                                    e.preventDefault()
-                                    cancelEditReply()
-                                  }
-                                }}
-                                placeholder="返信を編集..."
-                                availableTags={availableTags}
-                                selectedTags={editReplyManualTags}
-                                onTagAdd={(tag) => {
-                                  if (!editReplyManualTags.includes(tag)) {
-                                    setEditReplyManualTags([...editReplyManualTags, tag])
-                                  }
-                                }}
-                                onTagRemove={(tag) => {
-                                  setEditReplyManualTags(editReplyManualTags.filter(t => t !== tag))
-                                }}
-                              />
-                            </div>
-                          ) : (
-                            <>
-                              <div className="reply-text">{item.content}</div>
-                              {/* タグ表示 */}
-                              {item.tags && item.tags.length > 0 && (
-                                <div className="entry-tags">
-                                  {item.tags.map(tag => (
-                                    <TagBadge
-                                      key={tag.id}
-                                      tag={tag.name}
-                                      variant={selectedTags.includes(tag.name) ? 'selected' : 'default'}
-                                      onClick={(tagName) => {
-                                        if (selectedTags.includes(tagName)) {
-                                          setSelectedTags(selectedTags.filter(t => t !== tagName))
-                                        } else {
-                                          setSelectedTags([...selectedTags, tagName])
-                                        }
-                                      }}
-                                    />
-                                  ))}
-                                </div>
-                              )}
-                            </>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )
-              })}
+              {timelineItems.map((item, index) => (
+                <TimelineItemComponent
+                  key={`${item.type}-${item.id}`}
+                  item={item}
+                  index={index}
+                  previousItem={index > 0 ? timelineItems[index - 1] : null}
+                  editingEntryId={editingEntryId}
+                  editContent={editContent}
+                  editManualTags={editManualTags}
+                  editingReplyId={editingReplyId}
+                  editReplyContent={editReplyContent}
+                  editReplyManualTags={editReplyManualTags}
+                  availableTags={availableTags}
+                  selectedTags={selectedTags}
+                  replyingToId={replyingToId}
+                  replyContent={replyContent}
+                  replyManualTags={replyManualTags}
+                  expandedEntryReplies={expandedEntryReplies}
+                  onEditEntry={startEditEntry}
+                  onCancelEditEntry={cancelEditEntry}
+                  onUpdateEntry={handleUpdateEntry}
+                  onDeleteEntry={openDeleteDialog}
+                  onEditContentChange={setEditContent}
+                  onEditTagAdd={(tag) => {
+                    if (!editManualTags.includes(tag)) {
+                      setEditManualTags([...editManualTags, tag])
+                    }
+                  }}
+                  onEditTagRemove={(tag) => {
+                    setEditManualTags(editManualTags.filter(t => t !== tag))
+                  }}
+                  onEditReply={startEditReply}
+                  onCancelEditReply={cancelEditReply}
+                  onUpdateReply={handleUpdateReply}
+                  onDeleteReply={openDeleteReplyDialog}
+                  onEditReplyContentChange={setEditReplyContent}
+                  onEditReplyTagAdd={(tag) => {
+                    if (!editReplyManualTags.includes(tag)) {
+                      setEditReplyManualTags([...editReplyManualTags, tag])
+                    }
+                  }}
+                  onEditReplyTagRemove={(tag) => {
+                    setEditReplyManualTags(editReplyManualTags.filter(t => t !== tag))
+                  }}
+                  onTagClick={handleTagClick}
+                  onReplyToggle={toggleReplyForm}
+                  onReplyContentChange={setReplyContent}
+                  onReplyTagAdd={(tag) => {
+                    if (!replyManualTags.includes(tag)) {
+                      setReplyManualTags([...replyManualTags, tag])
+                    }
+                  }}
+                  onReplyTagRemove={(tag) => {
+                    setReplyManualTags(replyManualTags.filter(t => t !== tag))
+                  }}
+                  onAddReply={handleAddReply}
+                  onToggleReplies={toggleEntryReplies}
+                  onScrollToEntry={handleScrollToEntry}
+                />
+              ))}
             </div>
           )}
         </div>
       </main>
 
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>エントリーを削除しますか？</AlertDialogTitle>
-            <AlertDialogDescription>
-              この操作は取り消せません。本当に削除してもよろしいですか？
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>キャンセル</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteEntry}>削除</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <AlertDialog open={deleteReplyDialogOpen} onOpenChange={setDeleteReplyDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>返信を削除しますか？</AlertDialogTitle>
-            <AlertDialogDescription>
-              この操作は取り消せません。本当に削除してもよろしいですか？
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>キャンセル</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteReply}>削除</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <AlertDialog open={deleteTagDialogOpen} onOpenChange={setDeleteTagDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>タグを削除しますか？</AlertDialogTitle>
-            <AlertDialogDescription>
-              タグ「{deleteTagTarget}」を削除します。このタグが付いているエントリーや返信からも削除されます。
-              この操作は取り消せません。本当に削除してもよろしいですか？
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>キャンセル</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeleteTag}>削除</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeleteConfirmDialogs
+        deleteDialogOpen={deleteDialogOpen}
+        onDeleteDialogOpenChange={setDeleteDialogOpen}
+        onDeleteEntry={handleDeleteEntry}
+        deleteReplyDialogOpen={deleteReplyDialogOpen}
+        onDeleteReplyDialogOpenChange={setDeleteReplyDialogOpen}
+        onDeleteReply={handleDeleteReply}
+        deleteTagDialogOpen={deleteTagDialogOpen}
+        onDeleteTagDialogOpenChange={setDeleteTagDialogOpen}
+        onDeleteTag={handleDeleteTag}
+        deleteTagTarget={deleteTagTarget}
+      />
 
       {database && (
         <SettingsDialog
