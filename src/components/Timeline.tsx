@@ -1,0 +1,131 @@
+import { TimelineItem, Tag } from '@/types'
+import { TimelineItemComponent } from './TimelineItemComponent'
+
+interface TimelineProps {
+  timelineItems: TimelineItem[]
+  editingEntryId: number | null
+  editContent: string
+  editManualTags: string[]
+  editingReplyId: number | null
+  editReplyContent: string
+  editReplyManualTags: string[]
+  availableTags: Tag[]
+  selectedTags: string[]
+  replyingToId: number | null
+  replyContent: string
+  replyManualTags: string[]
+  expandedEntryReplies: Set<number>
+  onEditEntry: (id: number, content: string) => void
+  onCancelEditEntry: () => void
+  onUpdateEntry: (id: number) => void
+  onDeleteEntry: (id: number) => void
+  onEditContentChange: (content: string) => void
+  onEditTagAdd: (tag: string) => void
+  onEditTagRemove: (tag: string) => void
+  onEditReply: (replyId: number, content: string) => void
+  onCancelEditReply: () => void
+  onUpdateReply: (replyId: number, entryId: number) => void
+  onDeleteReply: (replyId: number, entryId: number) => void
+  onEditReplyContentChange: (content: string) => void
+  onEditReplyTagAdd: (tag: string) => void
+  onEditReplyTagRemove: (tag: string) => void
+  onTagClick: (tag: string) => void
+  onReplyToggle: (id: number) => void
+  onReplyContentChange: (content: string) => void
+  onReplyTagAdd: (tag: string) => void
+  onReplyTagRemove: (tag: string) => void
+  onAddReply: (id: number) => void
+  onToggleReplies: (id: number) => void
+  onScrollToEntry: (entryId: number) => void
+}
+
+export function Timeline({
+  timelineItems,
+  editingEntryId,
+  editContent,
+  editManualTags,
+  editingReplyId,
+  editReplyContent,
+  editReplyManualTags,
+  availableTags,
+  selectedTags,
+  replyingToId,
+  replyContent,
+  replyManualTags,
+  expandedEntryReplies,
+  onEditEntry,
+  onCancelEditEntry,
+  onUpdateEntry,
+  onDeleteEntry,
+  onEditContentChange,
+  onEditTagAdd,
+  onEditTagRemove,
+  onEditReply,
+  onCancelEditReply,
+  onUpdateReply,
+  onDeleteReply,
+  onEditReplyContentChange,
+  onEditReplyTagAdd,
+  onEditReplyTagRemove,
+  onTagClick,
+  onReplyToggle,
+  onReplyContentChange,
+  onReplyTagAdd,
+  onReplyTagRemove,
+  onAddReply,
+  onToggleReplies,
+  onScrollToEntry,
+}: TimelineProps) {
+  return (
+    <div className="timeline">
+      {timelineItems.length === 0 ? (
+        <p className="empty">この日の記録がありません</p>
+      ) : (
+        <div className="timeline-container">
+          {timelineItems.map((item, index) => (
+            <TimelineItemComponent
+              key={`${item.type}-${item.id}`}
+              item={item}
+              index={index}
+              previousItem={index > 0 ? timelineItems[index - 1] : null}
+              editingEntryId={editingEntryId}
+              editContent={editContent}
+              editManualTags={editManualTags}
+              editingReplyId={editingReplyId}
+              editReplyContent={editReplyContent}
+              editReplyManualTags={editReplyManualTags}
+              availableTags={availableTags}
+              selectedTags={selectedTags}
+              replyingToId={replyingToId}
+              replyContent={replyContent}
+              replyManualTags={replyManualTags}
+              expandedEntryReplies={expandedEntryReplies}
+              onEditEntry={onEditEntry}
+              onCancelEditEntry={onCancelEditEntry}
+              onUpdateEntry={onUpdateEntry}
+              onDeleteEntry={onDeleteEntry}
+              onEditContentChange={onEditContentChange}
+              onEditTagAdd={onEditTagAdd}
+              onEditTagRemove={onEditTagRemove}
+              onEditReply={onEditReply}
+              onCancelEditReply={onCancelEditReply}
+              onUpdateReply={onUpdateReply}
+              onDeleteReply={onDeleteReply}
+              onEditReplyContentChange={onEditReplyContentChange}
+              onEditReplyTagAdd={onEditReplyTagAdd}
+              onEditReplyTagRemove={onEditReplyTagRemove}
+              onTagClick={onTagClick}
+              onReplyToggle={onReplyToggle}
+              onReplyContentChange={onReplyContentChange}
+              onReplyTagAdd={onReplyTagAdd}
+              onReplyTagRemove={onReplyTagRemove}
+              onAddReply={onAddReply}
+              onToggleReplies={onToggleReplies}
+              onScrollToEntry={onScrollToEntry}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
