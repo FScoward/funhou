@@ -1,0 +1,94 @@
+import Database from '@tauri-apps/plugin-sql'
+
+let db: Database | null = null
+
+export async function getDb() {
+  if (!db) {
+    db = await Database.load('sqlite:funhou.db')
+
+    // テーブルを作成
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS entries (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        content TEXT NOT NULL,
+        timestamp DATETIME NOT NULL
+      )
+    `)
+
+    // 設定テーブルを作成
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS settings (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL
+      )
+    `)
+
+    // デフォルト設定を挿入（既に存在しない場合のみ）
+    await db.execute(`
+      INSERT OR IGNORE INTO settings (key, value) VALUES ('always_on_top', 'false')
+    `)
+
+    // 返信テーブルを作成
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS replies (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        entry_id INTEGER NOT NULL,
+        content TEXT NOT NULL,
+        timestamp DATETIME NOT NULL,
+        FOREIGN KEY (entry_id) REFERENCES entries(id) ON DELETE CASCADE
+      )
+    `)
+
+    // インデックス作成
+    await db.execute(`
+      CREATE INDEX IF NOT EXISTS idx_replies_entry_id ON replies(entry_id)
+    `)
+
+    // タグテーブルを作成
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS tags (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL UNIQUE
+      )
+    `)
+
+    // エントリーとタグの中間テーブルを作成
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS entry_tags (
+        entry_id INTEGER NOT NULL,
+        tag_id INTEGER NOT NULL,
+        PRIMARY KEY (entry_id, tag_id),
+        FOREIGN KEY (entry_id) REFERENCES entries(id) ON DELETE CASCADE,
+        FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE
+      )
+    `)
+
+    // タグ検索用のインデックスを作成
+    await db.execute(`
+      CREATE INDEX IF NOT EXISTS idx_entry_tags_entry_id ON entry_tags(entry_id)
+    `)
+    await db.execute(`
+      CREATE INDEX IF NOT EXISTS idx_entry_tags_tag_id ON entry_tags(tag_id)
+    `)
+
+    // 返信とタグの中間テーブルを作成
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS reply_tags (
+        reply_id INTEGER NOT NULL,
+        tag_id INTEGER NOT NULL,
+        PRIMARY KEY (reply_id, tag_id),
+        FOREIGN KEY (reply_id) REFERENCES replies(id) ON DELETE CASCADE,
+        FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE
+      )
+    `)
+
+    // 返信タグ検索用のインデックスを作成
+    await db.execute(`
+      CREATE INDEX IF NOT EXISTS idx_reply_tags_reply_id ON reply_tags(reply_id)
+    `)
+    await db.execute(`
+      CREATE INDEX IF NOT EXISTS idx_reply_tags_tag_id ON reply_tags(tag_id)
+    `)
+  }
+  return db
+}

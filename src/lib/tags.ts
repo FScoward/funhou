@@ -45,7 +45,7 @@ export async function saveTag(db: Database, tagName: string): Promise<number> {
     [tagName]
   )
 
-  return result.lastInsertId
+  return Number(result.lastInsertId)
 }
 
 /**
