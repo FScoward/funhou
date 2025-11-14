@@ -1,5 +1,6 @@
 import * as React from 'react'
 import { cn } from '@/lib/utils'
+import { Tag as TagIcon } from 'lucide-react'
 
 interface TagBadgeProps {
   tag: string
@@ -32,7 +33,7 @@ export function TagBadge({ tag, onClick, onRemove, variant = 'default' }: TagBad
       }
     >
       <span
-        className={cn(isRemovable && isClickable && 'cursor-pointer')}
+        className={cn('flex items-center gap-1', isRemovable && isClickable && 'cursor-pointer')}
         onClick={
           isClickable && isRemovable
             ? (e) => {
@@ -42,7 +43,8 @@ export function TagBadge({ tag, onClick, onRemove, variant = 'default' }: TagBad
             : undefined
         }
       >
-        #{tag}
+        <TagIcon className="size-3 text-yellow-500" />
+        {tag}
       </span>
       {isRemovable && (
         <button

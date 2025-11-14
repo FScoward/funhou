@@ -126,7 +126,8 @@ export function TagFilter({
                 <div className="flex flex-wrap gap-1">
                   {availableTags.map((tag) => (
                     <div key={tag.id} className="flex items-center gap-1 bg-gray-50 border border-gray-200 rounded-md px-2 py-0.5">
-                      <span className="text-xs text-gray-600">#{tag.name}</span>
+                      <TagIcon className="size-3 text-yellow-500" />
+                      <span className="text-xs text-gray-600">{tag.name}</span>
                       <button
                         onClick={() => {
                           if (onTagDelete) {

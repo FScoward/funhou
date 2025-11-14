@@ -987,8 +987,11 @@ function App() {
                                     <TagBadge
                                       key={tag.id}
                                       tag={tag.name}
+                                      variant={selectedTags.includes(tag.name) ? 'selected' : 'default'}
                                       onClick={(tagName) => {
-                                        if (!selectedTags.includes(tagName)) {
+                                        if (selectedTags.includes(tagName)) {
+                                          setSelectedTags(selectedTags.filter(t => t !== tagName))
+                                        } else {
                                           setSelectedTags([...selectedTags, tagName])
                                         }
                                       }}
@@ -1129,8 +1132,11 @@ function App() {
                                     <TagBadge
                                       key={tag.id}
                                       tag={tag.name}
+                                      variant={selectedTags.includes(tag.name) ? 'selected' : 'default'}
                                       onClick={(tagName) => {
-                                        if (!selectedTags.includes(tagName)) {
+                                        if (selectedTags.includes(tagName)) {
+                                          setSelectedTags(selectedTags.filter(t => t !== tagName))
+                                        } else {
                                           setSelectedTags([...selectedTags, tagName])
                                         }
                                       }}
