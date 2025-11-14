@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Database from '@tauri-apps/plugin-sql'
 import { Tag } from '@/types'
 import { getAllTags, deleteTag } from '@/lib/tags'
@@ -25,6 +25,13 @@ export function useTags({ database, loadEntries }: UseTagsProps) {
       console.error('タグの読み込みに失敗しました:', error)
     }
   }
+
+  // データベースが利用可能になったら初期化時にタグを読み込む
+  useEffect(() => {
+    if (database) {
+      loadAvailableTags()
+    }
+  }, [database])
 
   const handleTagClick = (tag: string) => {
     if (selectedTags.includes(tag)) {
