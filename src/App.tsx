@@ -18,7 +18,7 @@ import { useReplies } from '@/hooks/useReplies'
 
 function App() {
   const [settingsOpen, setSettingsOpen] = useState(false)
-  const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   // データベース
   const database = useDatabase()
