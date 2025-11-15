@@ -11,14 +11,23 @@ interface UseTimelineProps {
   filterMode: 'AND' | 'OR'
 }
 
+const ITEMS_PER_PAGE = 20
+
 export function useTimeline({ database, selectedDate, selectedTags, filterMode }: UseTimelineProps) {
   const [timelineItems, setTimelineItems] = useState<TimelineItem[]>([])
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalItems, setTotalItems] = useState(0)
 
   useEffect(() => {
     if (database) {
       loadEntries()
     }
-  }, [selectedDate, database, selectedTags, filterMode])
+  }, [selectedDate, database, selectedTags, filterMode, currentPage])
+
+  useEffect(() => {
+    // タグやフィルタモードが変わったらページを1にリセット
+    setCurrentPage(1)
+  }, [selectedTags, filterMode])
 
   const loadEntries = async () => {
     if (!database) return
@@ -31,9 +40,18 @@ export function useTimeline({ database, selectedDate, selectedTags, filterMode }
       const tagFilter = buildTagFilterCondition(selectedTags, filterMode)
       const replyTagFilter = buildReplyTagFilterCondition(selectedTags, filterMode)
 
+      // タグフィルタリング時は日付を跨いで取得
+      const isTagFiltering = selectedTags.length > 0
+
       // エントリーをSQLクエリで取得（pinned状態も含める）
-      let entryQuery = 'SELECT id, content, timestamp, pinned FROM entries WHERE DATE(timestamp, \'localtime\') = DATE(?)'
-      const entryParams: (string | number)[] = [dateStr]
+      let entryQuery = 'SELECT id, content, timestamp, pinned FROM entries WHERE 1=1'
+      const entryParams: (string | number)[] = []
+
+      // タグフィルタリング時以外は日付条件を追加
+      if (!isTagFiltering) {
+        entryQuery += ' AND DATE(timestamp, \'localtime\') = DATE(?)'
+        entryParams.push(dateStr)
+      }
 
       if (tagFilter.condition) {
         entryQuery += ` AND ${tagFilter.condition}`
@@ -41,6 +59,26 @@ export function useTimeline({ database, selectedDate, selectedTags, filterMode }
       }
 
       entryQuery += ' ORDER BY timestamp DESC'
+
+      // ページネーション用の総件数を取得（タグフィルタリング時のみ）
+      if (isTagFiltering) {
+        let countQuery = 'SELECT COUNT(*) as count FROM entries WHERE 1=1'
+        const countParams: (string | number)[] = []
+
+        if (tagFilter.condition) {
+          countQuery += ` AND ${tagFilter.condition}`
+          countParams.push(...tagFilter.params)
+        }
+
+        const countResult = await database.select<{ count: number }[]>(countQuery, countParams)
+        setTotalItems(countResult[0]?.count || 0)
+
+        // ページネーション用のLIMITとOFFSETを追加
+        const offset = (currentPage - 1) * ITEMS_PER_PAGE
+        entryQuery += ` LIMIT ${ITEMS_PER_PAGE} OFFSET ${offset}`
+      } else {
+        setTotalItems(0) // タグフィルタリングしていない時はページネーションなし
+      }
 
       let loadedEntries = await database.select<Entry[]>(entryQuery, entryParams)
 
@@ -78,9 +116,18 @@ export function useTimeline({ database, selectedDate, selectedTags, filterMode }
         const additionalParentIds = tagMatchedReplyParentIds.filter(id => !loadedEntryIds.has(id))
 
         if (additionalParentIds.length > 0) {
+          // タグフィルタリング時は日付条件なしで親エントリーを取得
+          let additionalParentsQuery = `SELECT id, content, timestamp, pinned FROM entries WHERE id IN (${additionalParentIds.join(',')})`
+          const additionalParentsParams: (string | number)[] = []
+
+          if (!isTagFiltering) {
+            additionalParentsQuery += ' AND DATE(timestamp, \'localtime\') = DATE(?)'
+            additionalParentsParams.push(dateStr)
+          }
+
           const additionalParents = await database.select<Entry[]>(
-            `SELECT id, content, timestamp, pinned FROM entries WHERE id IN (${additionalParentIds.join(',')}) AND DATE(timestamp, 'localtime') = DATE(?)`,
-            [dateStr]
+            additionalParentsQuery,
+            additionalParentsParams
           )
 
           // 追加エントリーのタグを取得
@@ -177,10 +224,17 @@ export function useTimeline({ database, selectedDate, selectedTags, filterMode }
     }
   }
 
+  const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE)
+
   return {
     timelineItems,
     setTimelineItems,
     loadEntries,
     handleScrollToEntry,
+    currentPage,
+    setCurrentPage,
+    totalPages,
+    totalItems,
+    itemsPerPage: ITEMS_PER_PAGE,
   }
 }

@@ -839,3 +839,61 @@ textarea::placeholder {
   text-align: center;
   line-height: 1.2;
 }
+
+/* ページネーション */
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.pagination-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.page-number {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #555;
+}
+
+.item-count {
+  font-size: 0.75rem;
+  color: #888;
+}
+
+.pagination .nav-button:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.pagination .nav-button:disabled:hover {
+  background-color: transparent;
+  color: #888;
+}
+
+/* 日付別グループ化表示 */
+.timeline-date-group {
+  margin-bottom: 2rem;
+}
+
+.timeline-date-header {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #555;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+  background: linear-gradient(to right, #f8f9fa 0%, #e9ecef 100%);
+  border-left: 4px solid #5cb85c;
+  border-radius: 4px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}

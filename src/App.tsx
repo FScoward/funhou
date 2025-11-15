@@ -6,6 +6,7 @@ import { DateNavigation } from '@/components/DateNavigation'
 import { DeleteConfirmDialogs } from '@/components/DeleteConfirmDialogs'
 import { InputSection } from '@/components/InputSection'
 import { Timeline } from '@/components/Timeline'
+import { Pagination } from '@/components/Pagination'
 import { PinnedSidebar } from '@/components/PinnedSidebar'
 import { useDatabase } from '@/hooks/useDatabase'
 import { useDateNavigation } from '@/hooks/useDateNavigation'
@@ -50,7 +51,16 @@ function App() {
   } = useTags({ database, loadEntries: async () => {} })
 
   // タイムライン
-  const { timelineItems: filteredTimelineItems, setTimelineItems: setFilteredTimelineItems, handleScrollToEntry: scrollToEntry } = useTimeline({
+  const {
+    timelineItems: filteredTimelineItems,
+    setTimelineItems: setFilteredTimelineItems,
+    handleScrollToEntry: scrollToEntry,
+    currentPage,
+    setCurrentPage,
+    totalPages,
+    totalItems,
+    itemsPerPage,
+  } = useTimeline({
     database,
     selectedDate,
     selectedTags,
@@ -186,8 +196,19 @@ function App() {
           }}
         />
 
+        {selectedTags.length > 0 && (
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={totalItems}
+            itemsPerPage={itemsPerPage}
+            onPageChange={setCurrentPage}
+          />
+        )}
+
         <Timeline
           timelineItems={filteredTimelineItems}
+          isTagFiltering={selectedTags.length > 0}
           editingEntryId={editingEntryId}
           editContent={editContent}
           editManualTags={editManualTags}

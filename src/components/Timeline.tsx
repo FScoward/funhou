@@ -1,8 +1,10 @@
 import { TimelineItem, Tag } from '@/types'
 import { TimelineItemComponent } from './TimelineItemComponent'
+import { groupTimelineItemsByDate } from '@/utils/timelineUtils'
 
 interface TimelineProps {
   timelineItems: TimelineItem[]
+  isTagFiltering: boolean
   editingEntryId: number | null
   editContent: string
   editManualTags: string[]
@@ -42,6 +44,7 @@ interface TimelineProps {
 
 export function Timeline({
   timelineItems,
+  isTagFiltering,
   editingEntryId,
   editContent,
   editManualTags,
@@ -78,11 +81,70 @@ export function Timeline({
   onScrollToEntry,
   onTogglePin,
 }: TimelineProps) {
+  // タグフィルタリング時は日付別にグループ化
+  const groupedItems = isTagFiltering ? groupTimelineItemsByDate(timelineItems) : null
+
   return (
     <div className="timeline">
       {timelineItems.length === 0 ? (
-        <p className="empty">この日の記録がありません</p>
+        <p className="empty">
+          {isTagFiltering ? 'タグに一致する記録がありません' : 'この日の記録がありません'}
+        </p>
+      ) : isTagFiltering && groupedItems ? (
+        // タグフィルタリング時: 日付別グループ化表示
+        <div className="timeline-container">
+          {groupedItems.map((group) => (
+            <div key={group.date} className="timeline-date-group">
+              <div className="timeline-date-header">
+                {group.displayDate}
+              </div>
+              {group.items.map((item, index) => (
+                <TimelineItemComponent
+                  key={`${item.type}-${item.id}`}
+                  item={item}
+                  previousItem={index > 0 ? group.items[index - 1] : null}
+                  editingEntryId={editingEntryId}
+                  editContent={editContent}
+                  editManualTags={editManualTags}
+                  editingReplyId={editingReplyId}
+                  editReplyContent={editReplyContent}
+                  editReplyManualTags={editReplyManualTags}
+                  availableTags={availableTags}
+                  selectedTags={selectedTags}
+                  replyingToId={replyingToId}
+                  replyContent={replyContent}
+                  replyManualTags={replyManualTags}
+                  expandedEntryReplies={expandedEntryReplies}
+                  onEditEntry={onEditEntry}
+                  onCancelEditEntry={onCancelEditEntry}
+                  onUpdateEntry={onUpdateEntry}
+                  onDeleteEntry={onDeleteEntry}
+                  onEditContentChange={onEditContentChange}
+                  onEditTagAdd={onEditTagAdd}
+                  onEditTagRemove={onEditTagRemove}
+                  onEditReply={onEditReply}
+                  onCancelEditReply={onCancelEditReply}
+                  onUpdateReply={onUpdateReply}
+                  onDeleteReply={onDeleteReply}
+                  onEditReplyContentChange={onEditReplyContentChange}
+                  onEditReplyTagAdd={onEditReplyTagAdd}
+                  onEditReplyTagRemove={onEditReplyTagRemove}
+                  onTagClick={onTagClick}
+                  onReplyToggle={onReplyToggle}
+                  onReplyContentChange={onReplyContentChange}
+                  onReplyTagAdd={onReplyTagAdd}
+                  onReplyTagRemove={onReplyTagRemove}
+                  onAddReply={onAddReply}
+                  onToggleReplies={onToggleReplies}
+                  onScrollToEntry={onScrollToEntry}
+                  onTogglePin={onTogglePin}
+                />
+              ))}
+            </div>
+          ))}
+        </div>
       ) : (
+        // 通常表示: 日付別グループ化なし
         <div className="timeline-container">
           {timelineItems.map((item, index) => (
             <TimelineItemComponent
