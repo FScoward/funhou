@@ -2,6 +2,8 @@ import Database from '@tauri-apps/plugin-sql'
 
 export interface Settings {
   alwaysOnTop: boolean
+  fontFamily?: string
+  fontSize?: string
 }
 
 export async function getSettings(db: Database): Promise<Settings> {
@@ -12,11 +14,17 @@ export async function getSettings(db: Database): Promise<Settings> {
 
     const settings: Settings = {
       alwaysOnTop: false,
+      fontFamily: undefined,
+      fontSize: undefined,
     }
 
     result.forEach((row) => {
       if (row.key === 'always_on_top') {
         settings.alwaysOnTop = row.value === 'true'
+      } else if (row.key === 'font_family') {
+        settings.fontFamily = row.value
+      } else if (row.key === 'font_size') {
+        settings.fontSize = row.value
       }
     })
 
@@ -25,6 +33,8 @@ export async function getSettings(db: Database): Promise<Settings> {
     console.error('設定の読み込みに失敗しました:', error)
     return {
       alwaysOnTop: false,
+      fontFamily: undefined,
+      fontSize: undefined,
     }
   }
 }
@@ -50,4 +60,18 @@ export async function setAlwaysOnTop(
   value: boolean
 ): Promise<void> {
   await saveSetting(db, 'always_on_top', value ? 'true' : 'false')
+}
+
+export async function setFontFamily(
+  db: Database,
+  value: string
+): Promise<void> {
+  await saveSetting(db, 'font_family', value)
+}
+
+export async function setFontSize(
+  db: Database,
+  value: string
+): Promise<void> {
+  await saveSetting(db, 'font_size', value)
 }
