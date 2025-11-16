@@ -111,7 +111,7 @@ textarea {
   font-size: 0.85rem;
   border: none;
   resize: none;
-  font-family: inherit;
+  font-family: var(--font-family, inherit);
   background-color: transparent;
   color: #555;
   min-height: 60px;
@@ -348,7 +348,7 @@ textarea::placeholder {
   border: 1px solid #e5e5e5;
   border-radius: 4px;
   resize: none;
-  font-family: inherit;
+  font-family: var(--font-family, inherit);
   background-color: #fff;
   color: #555;
   min-height: 80px;
@@ -403,6 +403,7 @@ textarea::placeholder {
   color: #555;
   line-height: 1.5;
   white-space: pre-wrap;
+  font-family: var(--font-family, inherit);
 }
 
 .empty {
@@ -480,7 +481,7 @@ textarea::placeholder {
   border: 1px solid #e0e0e0;
   border-radius: 4px;
   resize: none;
-  font-family: inherit;
+  font-family: var(--font-family, inherit);
   background-color: #fff;
   color: #555;
   min-height: 40px;
@@ -571,6 +572,7 @@ textarea::placeholder {
   color: #555;
   line-height: 1.5;
   white-space: pre-wrap;
+  font-family: var(--font-family, inherit);
 }
 
 /* Entry Replies List */
@@ -603,6 +605,7 @@ textarea::placeholder {
   color: #555;
   line-height: 1.5;
   white-space: pre-wrap;
+  font-family: var(--font-family, inherit);
 }
 
 /* Highlight animation for scroll target */
@@ -782,6 +785,7 @@ textarea::placeholder {
   color: #555;
   line-height: 1.4;
   word-break: break-word;
+  font-family: var(--font-family, inherit);
 }
 
 .pinned-item-tags {

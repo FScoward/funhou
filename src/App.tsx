@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import './App.css'
 import { SettingsDialog } from '@/components/SettingsDialog'
 import { TagFilter } from '@/components/TagFilter'
@@ -15,6 +15,7 @@ import { useTimeline } from '@/hooks/useTimeline'
 import { useTags } from '@/hooks/useTags'
 import { useEntries } from '@/hooks/useEntries'
 import { useReplies } from '@/hooks/useReplies'
+import { getSettings } from '@/lib/settings'
 
 function App() {
   const [settingsOpen, setSettingsOpen] = useState(false)
@@ -22,6 +23,28 @@ function App() {
 
   // データベース
   const database = useDatabase()
+
+  // フォント設定の読み込みと適用
+  useEffect(() => {
+    const loadAndApplyFont = async () => {
+      if (!database) return
+
+      const settings = await getSettings(database)
+      if (settings.fontFamily) {
+        applyFont(settings.fontFamily)
+      }
+    }
+
+    loadAndApplyFont()
+  }, [database])
+
+  const applyFont = (fontFamily: string) => {
+    if (fontFamily) {
+      document.documentElement.style.setProperty('--font-family', fontFamily)
+    } else {
+      document.documentElement.style.removeProperty('--font-family')
+    }
+  }
 
   // 日付ナビゲーション
   const {
@@ -290,6 +313,7 @@ function App() {
           open={settingsOpen}
           onOpenChange={setSettingsOpen}
           db={database}
+          onFontChange={applyFont}
         />
       )}
     </div>

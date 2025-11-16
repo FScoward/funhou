@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import Database from '@tauri-apps/plugin-sql'
 import { getCurrentWindow } from '@tauri-apps/api/window'
+import { invoke } from '@tauri-apps/api/core'
 import {
   Dialog,
   DialogContent,
@@ -10,26 +11,52 @@ import {
 } from '@/components/ui/dialog'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
-import { getSettings, setAlwaysOnTop } from '@/lib/settings'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { getSettings, setAlwaysOnTop, setFontFamily } from '@/lib/settings'
 
 interface SettingsDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   db: Database
+  onFontChange?: (fontFamily: string) => void
 }
 
-export function SettingsDialog({ open, onOpenChange, db }: SettingsDialogProps) {
+export function SettingsDialog({ open, onOpenChange, db, onFontChange }: SettingsDialogProps) {
   const [alwaysOnTop, setAlwaysOnTopState] = useState(false)
+  const [fonts, setFonts] = useState<string[]>([])
+  const [selectedFont, setSelectedFont] = useState<string>('')
+  const [isLoadingFonts, setIsLoadingFonts] = useState(false)
 
   useEffect(() => {
     if (open) {
       loadSettings()
+      loadFonts()
     }
   }, [open])
 
   const loadSettings = async () => {
     const settings = await getSettings(db)
     setAlwaysOnTopState(settings.alwaysOnTop)
+    setSelectedFont(settings.fontFamily || 'default')
+  }
+
+  const loadFonts = async () => {
+    try {
+      setIsLoadingFonts(true)
+      const systemFonts = await invoke<string[]>('get_system_fonts')
+      setFonts(systemFonts)
+    } catch (error) {
+      console.error('フォントリストの取得に失敗しました:', error)
+      setFonts([])
+    } finally {
+      setIsLoadingFonts(false)
+    }
   }
 
   const handleAlwaysOnTopChange = async (checked: boolean) => {
@@ -44,6 +71,30 @@ export function SettingsDialog({ open, onOpenChange, db }: SettingsDialogProps) 
       console.error('設定の変更に失敗しました:', error)
       // エラーが発生した場合は元の状態に戻す
       setAlwaysOnTopState(!checked)
+    }
+  }
+
+  const handleFontChange = async (fontFamily: string) => {
+    try {
+      setSelectedFont(fontFamily)
+
+      // "default"の場合はデフォルトに戻す
+      if (fontFamily === 'default') {
+        await setFontFamily(db, '')
+        if (onFontChange) {
+          onFontChange('')
+        }
+        return
+      }
+
+      await setFontFamily(db, fontFamily)
+
+      // 親コンポーネントに通知してフォントを適用
+      if (onFontChange) {
+        onFontChange(fontFamily)
+      }
+    } catch (error) {
+      console.error('フォント設定の変更に失敗しました:', error)
     }
   }
 
@@ -69,6 +120,37 @@ export function SettingsDialog({ open, onOpenChange, db }: SettingsDialogProps) 
               checked={alwaysOnTop}
               onCheckedChange={handleAlwaysOnTopChange}
             />
+          </div>
+
+          <div className="flex flex-col space-y-2">
+            <Label htmlFor="font-family">フォント</Label>
+            <Select
+              value={selectedFont}
+              onValueChange={handleFontChange}
+              disabled={isLoadingFonts}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="デフォルト" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="default">デフォルト</SelectItem>
+                {fonts.map((font) => (
+                  <SelectItem key={font} value={font}>
+                    {font}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {selectedFont && selectedFont !== 'default' && (
+              <div
+                className="mt-2 p-4 rounded-md border border-border bg-muted"
+                style={{ fontFamily: selectedFont }}
+              >
+                <p className="text-sm">プレビュー: {selectedFont}</p>
+                <p className="mt-2">ABCDEFGabcdefg 12345</p>
+                <p>あいうえお漢字サンプル</p>
+              </div>
+            )}
           </div>
         </div>
       </DialogContent>
