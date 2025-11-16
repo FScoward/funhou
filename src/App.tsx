@@ -33,6 +33,9 @@ function App() {
       if (settings.fontFamily) {
         applyFont(settings.fontFamily)
       }
+      if (settings.fontSize) {
+        applyFontSize(settings.fontSize)
+      }
     }
 
     loadAndApplyFont()
@@ -43,6 +46,14 @@ function App() {
       document.documentElement.style.setProperty('--font-family', fontFamily)
     } else {
       document.documentElement.style.removeProperty('--font-family')
+    }
+  }
+
+  const applyFontSize = (fontSize: string) => {
+    if (fontSize) {
+      document.documentElement.style.setProperty('--font-size', fontSize)
+    } else {
+      document.documentElement.style.removeProperty('--font-size')
     }
   }
 
@@ -314,6 +325,7 @@ function App() {
           onOpenChange={setSettingsOpen}
           db={database}
           onFontChange={applyFont}
+          onFontSizeChange={applyFontSize}
         />
       )}
     </div>

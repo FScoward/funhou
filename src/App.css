@@ -108,7 +108,7 @@ textarea {
   width: 100%;
   padding: 0;
   padding-bottom: 2.5rem;
-  font-size: 0.85rem;
+  font-size: var(--font-size, 0.85rem);
   border: none;
   resize: none;
   font-family: var(--font-family, inherit);
@@ -344,7 +344,7 @@ textarea::placeholder {
 .edit-textarea {
   width: 100%;
   padding: 0.25rem;
-  font-size: 0.9rem;
+  font-size: var(--font-size, 0.9rem);
   border: 1px solid #e5e5e5;
   border-radius: 4px;
   resize: none;
@@ -399,7 +399,7 @@ textarea::placeholder {
 }
 
 .entry-text {
-  font-size: 0.9rem;
+  font-size: var(--font-size, 0.9rem);
   color: #555;
   line-height: 1.5;
   white-space: pre-wrap;
@@ -477,7 +477,7 @@ textarea::placeholder {
 .reply-textarea {
   width: 100%;
   padding: 0.5rem;
-  font-size: 0.8rem;
+  font-size: var(--font-size, 0.8rem);
   border: 1px solid #e0e0e0;
   border-radius: 4px;
   resize: none;
@@ -568,7 +568,7 @@ textarea::placeholder {
 }
 
 .reply-text {
-  font-size: 0.9rem;
+  font-size: var(--font-size, 0.9rem);
   color: #555;
   line-height: 1.5;
   white-space: pre-wrap;
@@ -601,7 +601,7 @@ textarea::placeholder {
 }
 
 .entry-reply-text {
-  font-size: 0.85rem;
+  font-size: var(--font-size, 0.85rem);
   color: #555;
   line-height: 1.5;
   white-space: pre-wrap;
@@ -781,7 +781,7 @@ textarea::placeholder {
 }
 
 .pinned-item-content {
-  font-size: 0.85rem;
+  font-size: var(--font-size, 0.85rem);
   color: #555;
   line-height: 1.4;
   word-break: break-word;

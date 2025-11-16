@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/dialog'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
+import { Button } from '@/components/ui/button'
 import {
   Select,
   SelectContent,
@@ -18,19 +19,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { getSettings, setAlwaysOnTop, setFontFamily } from '@/lib/settings'
+import { getSettings, setAlwaysOnTop, setFontFamily, setFontSize } from '@/lib/settings'
 
 interface SettingsDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   db: Database
   onFontChange?: (fontFamily: string) => void
+  onFontSizeChange?: (fontSize: string) => void
 }
 
-export function SettingsDialog({ open, onOpenChange, db, onFontChange }: SettingsDialogProps) {
+export function SettingsDialog({ open, onOpenChange, db, onFontChange, onFontSizeChange }: SettingsDialogProps) {
   const [alwaysOnTop, setAlwaysOnTopState] = useState(false)
   const [fonts, setFonts] = useState<string[]>([])
   const [selectedFont, setSelectedFont] = useState<string>('')
+  const [selectedFontSize, setSelectedFontSize] = useState<string>('default')
   const [isLoadingFonts, setIsLoadingFonts] = useState(false)
 
   useEffect(() => {
@@ -44,6 +47,7 @@ export function SettingsDialog({ open, onOpenChange, db, onFontChange }: Setting
     const settings = await getSettings(db)
     setAlwaysOnTopState(settings.alwaysOnTop)
     setSelectedFont(settings.fontFamily || 'default')
+    setSelectedFontSize(settings.fontSize || 'default')
   }
 
   const loadFonts = async () => {
@@ -98,6 +102,50 @@ export function SettingsDialog({ open, onOpenChange, db, onFontChange }: Setting
     }
   }
 
+  const handleFontSizeChange = async (fontSize: string) => {
+    try {
+      setSelectedFontSize(fontSize)
+
+      // "default"の場合はデフォルトに戻す
+      if (fontSize === 'default') {
+        await setFontSize(db, '')
+        if (onFontSizeChange) {
+          onFontSizeChange('')
+        }
+        return
+      }
+
+      await setFontSize(db, fontSize)
+
+      // 親コンポーネントに通知してフォントサイズを適用
+      if (onFontSizeChange) {
+        onFontSizeChange(fontSize)
+      }
+    } catch (error) {
+      console.error('フォントサイズ設定の変更に失敗しました:', error)
+    }
+  }
+
+  const handleResetFont = async () => {
+    try {
+      // フォントとフォントサイズを両方デフォルトに戻す
+      setSelectedFont('default')
+      setSelectedFontSize('default')
+
+      await setFontFamily(db, '')
+      await setFontSize(db, '')
+
+      if (onFontChange) {
+        onFontChange('')
+      }
+      if (onFontSizeChange) {
+        onFontSizeChange('')
+      }
+    } catch (error) {
+      console.error('フォント設定のリセットに失敗しました:', error)
+    }
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
@@ -141,17 +189,55 @@ export function SettingsDialog({ open, onOpenChange, db, onFontChange }: Setting
                 ))}
               </SelectContent>
             </Select>
-            {selectedFont && selectedFont !== 'default' && (
+          </div>
+
+          <div className="flex flex-col space-y-2">
+            <Label htmlFor="font-size">フォントサイズ</Label>
+            <Select
+              value={selectedFontSize}
+              onValueChange={handleFontSizeChange}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="デフォルト" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="default">デフォルト</SelectItem>
+                <SelectItem value="8pt">8pt</SelectItem>
+                <SelectItem value="9pt">9pt</SelectItem>
+                <SelectItem value="10pt">10pt</SelectItem>
+                <SelectItem value="11pt">11pt</SelectItem>
+                <SelectItem value="12pt">12pt</SelectItem>
+                <SelectItem value="14pt">14pt</SelectItem>
+                <SelectItem value="16pt">16pt</SelectItem>
+                <SelectItem value="18pt">18pt</SelectItem>
+                <SelectItem value="20pt">20pt</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {(selectedFont !== 'default' || selectedFontSize !== 'default') && (
+            <>
               <div
                 className="mt-2 p-4 rounded-md border border-border bg-muted"
-                style={{ fontFamily: selectedFont }}
+                style={{
+                  fontFamily: selectedFont !== 'default' ? selectedFont : undefined,
+                  fontSize: selectedFontSize !== 'default' ? selectedFontSize : undefined,
+                }}
               >
-                <p className="text-sm">プレビュー: {selectedFont}</p>
+                <p className="text-sm mb-2">プレビュー</p>
                 <p className="mt-2">ABCDEFGabcdefg 12345</p>
                 <p>あいうえお漢字サンプル</p>
               </div>
-            )}
-          </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleResetFont}
+                className="w-full"
+              >
+                フォント設定をリセット
+              </Button>
+            </>
+          )}
         </div>
       </DialogContent>
     </Dialog>
