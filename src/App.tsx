@@ -1,13 +1,13 @@
 import { useState, useMemo, useEffect } from 'react'
 import './App.css'
 import { SettingsDialog } from '@/components/SettingsDialog'
-import { TagFilter } from '@/components/TagFilter'
 import { DateNavigation } from '@/components/DateNavigation'
 import { DeleteConfirmDialogs } from '@/components/DeleteConfirmDialogs'
 import { InputSection } from '@/components/InputSection'
 import { Timeline } from '@/components/Timeline'
 import { Pagination } from '@/components/Pagination'
 import { PinnedSidebar } from '@/components/PinnedSidebar'
+import { FilterBar } from '@/components/FilterBar'
 import { useDatabase } from '@/hooks/useDatabase'
 import { useDateNavigation } from '@/hooks/useDateNavigation'
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
@@ -20,6 +20,7 @@ import { getSettings } from '@/lib/settings'
 function App() {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [searchText, setSearchText] = useState('')
 
   // データベース
   const database = useDatabase()
@@ -99,6 +100,7 @@ function App() {
     selectedDate,
     selectedTags,
     filterMode,
+    searchText,
   })
 
   // エントリー
@@ -188,30 +190,30 @@ function App() {
           onSettingsClick={() => setSettingsOpen(true)}
         />
 
-        <div className="tag-filter-section">
-          <TagFilter
-            availableTags={availableTags}
-            selectedTags={selectedTags}
-            filterMode={filterMode}
-            onTagSelect={(tag) => {
-              if (selectedTags.includes(tag)) {
-                setSelectedTags(selectedTags.filter(t => t !== tag))
-              } else {
-                setSelectedTags([...selectedTags, tag])
-              }
-            }}
-            onTagRemove={(tag) => {
+        <FilterBar
+          availableTags={availableTags}
+          selectedTags={selectedTags}
+          filterMode={filterMode}
+          onTagSelect={(tag) => {
+            if (selectedTags.includes(tag)) {
               setSelectedTags(selectedTags.filter(t => t !== tag))
-            }}
-            onFilterModeChange={(mode) => {
-              setFilterMode(mode)
-            }}
-            onClearAll={() => {
-              setSelectedTags([])
-            }}
-            onTagDelete={openDeleteTagDialog}
-          />
-        </div>
+            } else {
+              setSelectedTags([...selectedTags, tag])
+            }
+          }}
+          onTagRemove={(tag) => {
+            setSelectedTags(selectedTags.filter(t => t !== tag))
+          }}
+          onFilterModeChange={(mode) => {
+            setFilterMode(mode)
+          }}
+          onTagsClearAll={() => {
+            setSelectedTags([])
+          }}
+          onTagDelete={openDeleteTagDialog}
+          onSearch={setSearchText}
+          searchText={searchText}
+        />
 
         <InputSection
           currentEntry={currentEntry}
@@ -230,7 +232,7 @@ function App() {
           }}
         />
 
-        {selectedTags.length > 0 && (
+        {(selectedTags.length > 0 || searchText.trim().length > 0) && (
           <Pagination
             currentPage={currentPage}
             totalPages={totalPages}
@@ -242,7 +244,7 @@ function App() {
 
         <Timeline
           timelineItems={filteredTimelineItems}
-          isTagFiltering={selectedTags.length > 0}
+          isTagFiltering={selectedTags.length > 0 || searchText.trim().length > 0}
           editingEntryId={editingEntryId}
           editContent={editContent}
           editManualTags={editManualTags}
