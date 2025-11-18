@@ -9,11 +9,12 @@ interface UseTimelineProps {
   selectedDate: Date
   selectedTags: string[]
   filterMode: 'AND' | 'OR'
+  searchText?: string
 }
 
 const ITEMS_PER_PAGE = 20
 
-export function useTimeline({ database, selectedDate, selectedTags, filterMode }: UseTimelineProps) {
+export function useTimeline({ database, selectedDate, selectedTags, filterMode, searchText = '' }: UseTimelineProps) {
   const [timelineItems, setTimelineItems] = useState<TimelineItem[]>([])
   const [currentPage, setCurrentPage] = useState(1)
   const [totalItems, setTotalItems] = useState(0)
@@ -22,12 +23,12 @@ export function useTimeline({ database, selectedDate, selectedTags, filterMode }
     if (database) {
       loadEntries()
     }
-  }, [selectedDate, database, selectedTags, filterMode, currentPage])
+  }, [selectedDate, database, selectedTags, filterMode, searchText, currentPage])
 
   useEffect(() => {
-    // タグやフィルタモードが変わったらページを1にリセット
+    // タグやフィルタモード、検索テキストが変わったらページを1にリセット
     setCurrentPage(1)
-  }, [selectedTags, filterMode])
+  }, [selectedTags, filterMode, searchText])
 
   const loadEntries = async () => {
     if (!database) return
@@ -40,15 +41,17 @@ export function useTimeline({ database, selectedDate, selectedTags, filterMode }
       const tagFilter = buildTagFilterCondition(selectedTags, filterMode)
       const replyTagFilter = buildReplyTagFilterCondition(selectedTags, filterMode)
 
-      // タグフィルタリング時は日付を跨いで取得
+      // タグフィルタリングまたは検索時は日付を跨いで取得
       const isTagFiltering = selectedTags.length > 0
+      const isSearching = searchText.trim().length > 0
+      const isCrossDateQuery = isTagFiltering || isSearching
 
       // エントリーをSQLクエリで取得（pinned状態も含める）
       let entryQuery = 'SELECT id, content, timestamp, pinned FROM entries WHERE 1=1'
       const entryParams: (string | number)[] = []
 
-      // タグフィルタリング時以外は日付条件を追加
-      if (!isTagFiltering) {
+      // タグフィルタリングまたは検索時以外は日付条件を追加
+      if (!isCrossDateQuery) {
         entryQuery += ' AND DATE(timestamp, \'localtime\') = DATE(?)'
         entryParams.push(dateStr)
       }
@@ -58,16 +61,27 @@ export function useTimeline({ database, selectedDate, selectedTags, filterMode }
         entryParams.push(...tagFilter.params)
       }
 
+      // 検索条件を追加
+      if (isSearching) {
+        entryQuery += ' AND content LIKE ?'
+        entryParams.push(`%${searchText.trim()}%`)
+      }
+
       entryQuery += ' ORDER BY timestamp DESC'
 
-      // ページネーション用の総件数を取得（タグフィルタリング時のみ）
-      if (isTagFiltering) {
+      // ページネーション用の総件数を取得（タグフィルタリングまたは検索時のみ）
+      if (isCrossDateQuery) {
         let countQuery = 'SELECT COUNT(*) as count FROM entries WHERE 1=1'
         const countParams: (string | number)[] = []
 
         if (tagFilter.condition) {
           countQuery += ` AND ${tagFilter.condition}`
           countParams.push(...tagFilter.params)
+        }
+
+        if (isSearching) {
+          countQuery += ' AND content LIKE ?'
+          countParams.push(`%${searchText.trim()}%`)
         }
 
         const countResult = await database.select<{ count: number }[]>(countQuery, countParams)
@@ -77,7 +91,7 @@ export function useTimeline({ database, selectedDate, selectedTags, filterMode }
         const offset = (currentPage - 1) * ITEMS_PER_PAGE
         entryQuery += ` LIMIT ${ITEMS_PER_PAGE} OFFSET ${offset}`
       } else {
-        setTotalItems(0) // タグフィルタリングしていない時はページネーションなし
+        setTotalItems(0) // タグフィルタリング・検索していない時はページネーションなし
       }
 
       let loadedEntries = await database.select<Entry[]>(entryQuery, entryParams)
@@ -90,15 +104,20 @@ export function useTimeline({ database, selectedDate, selectedTags, filterMode }
       // 返信の取得とフィルタリング
       let replies: Reply[] = []
 
-      if (selectedTags.length > 0) {
-        // タグフィルタが有効な場合：返信もタグでフィルタリング
-        // タグフィルタを適用した返信を抽出
+      if (selectedTags.length > 0 || isSearching) {
+        // タグフィルタまたは検索が有効な場合：返信もフィルタリング
         let replyQuery = 'SELECT id, entry_id, content, timestamp FROM replies WHERE 1=1'
         const replyParams: (string | number)[] = []
 
         if (replyTagFilter.condition) {
           replyQuery += ` AND ${replyTagFilter.condition}`
           replyParams.push(...replyTagFilter.params)
+        }
+
+        // 検索条件を追加
+        if (isSearching) {
+          replyQuery += ' AND content LIKE ?'
+          replyParams.push(`%${searchText.trim()}%`)
         }
 
         const tagMatchedReplies = await database.select<Reply[]>(replyQuery, replyParams)
@@ -116,11 +135,11 @@ export function useTimeline({ database, selectedDate, selectedTags, filterMode }
         const additionalParentIds = tagMatchedReplyParentIds.filter(id => !loadedEntryIds.has(id))
 
         if (additionalParentIds.length > 0) {
-          // タグフィルタリング時は日付条件なしで親エントリーを取得
+          // タグフィルタリングまたは検索時は日付条件なしで親エントリーを取得
           let additionalParentsQuery = `SELECT id, content, timestamp, pinned FROM entries WHERE id IN (${additionalParentIds.join(',')})`
           const additionalParentsParams: (string | number)[] = []
 
-          if (!isTagFiltering) {
+          if (!isCrossDateQuery) {
             additionalParentsQuery += ' AND DATE(timestamp, \'localtime\') = DATE(?)'
             additionalParentsParams.push(dateStr)
           }
