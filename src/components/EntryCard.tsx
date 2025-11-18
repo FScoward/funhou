@@ -1,8 +1,10 @@
-import { Trash2, Pencil, X, Pin } from 'lucide-react'
+import { useState } from 'react'
+import { Trash2, Pencil, X, Pin, FileCode, Type } from 'lucide-react'
 import CustomInput from '@/components/CustomInput'
 import { TagBadge } from '@/components/TagBadge'
 import { formatTimestamp } from '@/utils/dateUtils'
 import { Reply, Tag } from '@/types'
+import MarkdownPreview from '@/components/MarkdownPreview'
 
 interface EntryCardProps {
   id: number
@@ -69,6 +71,8 @@ export function EntryCard({
   onToggleReplies,
   onTogglePin,
 }: EntryCardProps) {
+  const [showMarkdown, setShowMarkdown] = useState(true)
+
   return (
     <div className={`entry-card ${pinned ? 'pinned' : ''}`}>
       <button
@@ -84,6 +88,13 @@ export function EntryCard({
         aria-label="削除"
       >
         <Trash2 size={16} />
+      </button>
+      <button
+        className="markdown-toggle-button"
+        onClick={() => setShowMarkdown(!showMarkdown)}
+        aria-label={showMarkdown ? "プレーンテキスト表示" : "Markdown表示"}
+      >
+        {showMarkdown ? <Type size={16} /> : <FileCode size={16} />}
       </button>
       <button
         className={`pin-button ${pinned ? 'pinned' : ''}`}
@@ -116,7 +127,11 @@ export function EntryCard({
         </div>
       ) : (
         <>
-          <div className="entry-text">{content}</div>
+          {showMarkdown ? (
+            <MarkdownPreview content={content} className="entry-text" />
+          ) : (
+            <div className="entry-text">{content}</div>
+          )}
           {tags && tags.length > 0 && (
             <div className="entry-tags">
               {tags.map(tag => (
