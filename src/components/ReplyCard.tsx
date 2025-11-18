@@ -1,8 +1,10 @@
-import { Trash2, Pencil, X } from 'lucide-react'
+import { useState } from 'react'
+import { Trash2, Pencil, X, FileCode, Type } from 'lucide-react'
 import CustomInput from '@/components/CustomInput'
 import { TagBadge } from '@/components/TagBadge'
 import { truncateText } from '@/utils/textUtils'
 import { Tag } from '@/types'
+import MarkdownPreview from '@/components/MarkdownPreview'
 
 interface ReplyCardProps {
   replyId: number
@@ -50,6 +52,8 @@ export function ReplyCard({
   onTagClick,
   onScrollToEntry,
 }: ReplyCardProps) {
+  const [showMarkdown, setShowMarkdown] = useState(true)
+
   return (
     <div className="reply-card">
       <button
@@ -65,6 +69,13 @@ export function ReplyCard({
         aria-label="削除"
       >
         <Trash2 size={16} />
+      </button>
+      <button
+        className="markdown-toggle-button"
+        onClick={() => setShowMarkdown(!showMarkdown)}
+        aria-label={showMarkdown ? "プレーンテキスト表示" : "Markdown表示"}
+      >
+        {showMarkdown ? <Type size={16} /> : <FileCode size={16} />}
       </button>
       {parentEntry && (
         <button
@@ -98,7 +109,11 @@ export function ReplyCard({
         </div>
       ) : (
         <>
-          <div className="reply-text">{content}</div>
+          {showMarkdown ? (
+            <MarkdownPreview content={content} className="reply-text" />
+          ) : (
+            <div className="reply-text">{content}</div>
+          )}
           {tags && tags.length > 0 && (
             <div className="entry-tags">
               {tags.map(tag => (
