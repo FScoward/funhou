@@ -1,12 +1,16 @@
-import { useState } from 'react'
-import { Trash2, Pencil, X, Pin, FileCode, Type } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Trash2, Pencil, X, Pin, FileCode, Type, Terminal as TerminalIcon } from 'lucide-react'
 import CustomInput from '@/components/CustomInput'
 import { TagBadge } from '@/components/TagBadge'
 import { formatTimestamp } from '@/utils/dateUtils'
 import { Reply, Tag } from '@/types'
 import MarkdownPreview from '@/components/MarkdownPreview'
+import { Terminal } from '@/components/Terminal'
+import { useTerminalSessions } from '@/hooks/useTerminalSessions'
+import Database from '@tauri-apps/plugin-sql'
 
 interface EntryCardProps {
+  database: Database | null
   id: number
   content: string
   tags?: Tag[]
@@ -40,6 +44,7 @@ interface EntryCardProps {
 }
 
 export function EntryCard({
+  database,
   id,
   content,
   tags,
@@ -72,6 +77,33 @@ export function EntryCard({
   onTogglePin,
 }: EntryCardProps) {
   const [showMarkdown, setShowMarkdown] = useState(true)
+  const [terminalOpen, setTerminalOpen] = useState(false)
+  const { loadSession, createSession, updateSessionOutput } = useTerminalSessions(database)
+  const [session, setSession] = useState<{ id: number, output: string } | null>(null)
+
+  useEffect(() => {
+    if (terminalOpen) {
+      loadSession(id).then(s => {
+        if (s) {
+          setSession(s)
+        } else {
+          // Create new session if none exists
+          // We don't create it immediately here, we let Terminal component handle initial command
+          // But we need a session ID to save output.
+          // So we create a session first.
+          createSession(id, '').then(newSession => {
+            if (newSession) setSession(newSession)
+          })
+        }
+      })
+    }
+  }, [terminalOpen, id, loadSession, createSession])
+
+  const handleTerminalOutput = (output: string) => {
+    if (session) {
+      updateSessionOutput(session.id, id, output)
+    }
+  }
 
   return (
     <div className={`entry-card ${pinned ? 'pinned' : ''}`}>
@@ -103,6 +135,15 @@ export function EntryCard({
       >
         <Pin size={16} />
       </button>
+      <button
+        className={`terminal-button ${terminalOpen ? 'active' : ''}`}
+        onClick={() => setTerminalOpen(!terminalOpen)}
+        aria-label="Claudeで実行"
+        style={{ position: 'absolute', top: '8px', right: '104px', background: 'none', border: 'none', cursor: 'pointer', color: terminalOpen ? '#4ade80' : '#6b7280' }}
+      >
+        <TerminalIcon size={16} />
+      </button>
+
       {isEditing ? (
         <div className="edit-input-section">
           <CustomInput
@@ -145,6 +186,16 @@ export function EntryCard({
             </div>
           )}
         </>
+      )}
+
+      {terminalOpen && session && (
+        <div className="entry-terminal" style={{ height: '300px', marginTop: '10px', border: '1px solid #333', borderRadius: '4px', overflow: 'hidden' }}>
+          <Terminal
+            initialCommand={session.output ? undefined : `claude -p "${content.replace(/"/g, '\\"')}"`}
+            initialContent={session.output}
+            onOutput={handleTerminalOutput}
+          />
+        </div>
       )}
 
       <div className="entry-actions">

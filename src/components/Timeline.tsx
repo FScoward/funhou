@@ -2,7 +2,10 @@ import { TimelineItem, Tag } from '@/types'
 import { TimelineItemComponent } from './TimelineItemComponent'
 import { groupTimelineItemsByDate } from '@/utils/timelineUtils'
 
+import Database from '@tauri-apps/plugin-sql'
+
 interface TimelineProps {
+  database: Database | null
   timelineItems: TimelineItem[]
   isTagFiltering: boolean
   editingEntryId: number | null
@@ -43,6 +46,7 @@ interface TimelineProps {
 }
 
 export function Timeline({
+  database,
   timelineItems,
   isTagFiltering,
   editingEntryId,
@@ -101,6 +105,7 @@ export function Timeline({
               {group.items.map((item, index) => (
                 <TimelineItemComponent
                   key={`${item.type}-${item.id}`}
+                  database={database}
                   item={item}
                   previousItem={index > 0 ? group.items[index - 1] : null}
                   editingEntryId={editingEntryId}
@@ -149,6 +154,7 @@ export function Timeline({
           {timelineItems.map((item, index) => (
             <TimelineItemComponent
               key={`${item.type}-${item.id}`}
+              database={database}
               item={item}
               previousItem={index > 0 ? timelineItems[index - 1] : null}
               editingEntryId={editingEntryId}

@@ -16,6 +16,7 @@ import { useTags } from '@/hooks/useTags'
 import { useEntries } from '@/hooks/useEntries'
 import { useReplies } from '@/hooks/useReplies'
 import { getSettings } from '@/lib/settings'
+import { Terminal } from '@/components/Terminal'
 
 function App() {
   const [settingsOpen, setSettingsOpen] = useState(false)
@@ -83,7 +84,7 @@ function App() {
     handleTagClick,
     openDeleteTagDialog,
     handleDeleteTag,
-  } = useTags({ database, loadEntries: async () => {} })
+  } = useTags({ database, loadEntries: async () => { } })
 
   // タイムライン
   const {
@@ -176,6 +177,9 @@ function App() {
     )
   }, [filteredTimelineItems])
 
+  // ターミナル表示
+  const [terminalOpen, setTerminalOpen] = useState(false)
+
   return (
     <div className="app">
       <div className="app-layout">
@@ -190,115 +194,133 @@ function App() {
           onSettingsClick={() => setSettingsOpen(true)}
         />
 
-        <FilterBar
-          availableTags={availableTags}
-          selectedTags={selectedTags}
-          filterMode={filterMode}
-          onTagSelect={(tag) => {
-            if (selectedTags.includes(tag)) {
-              setSelectedTags(selectedTags.filter(t => t !== tag))
-            } else {
-              setSelectedTags([...selectedTags, tag])
-            }
-          }}
-          onTagRemove={(tag) => {
-            setSelectedTags(selectedTags.filter(t => t !== tag))
-          }}
-          onFilterModeChange={(mode) => {
-            setFilterMode(mode)
-          }}
-          onTagsClearAll={() => {
-            setSelectedTags([])
-          }}
-          onTagDelete={openDeleteTagDialog}
-          onSearch={setSearchText}
-          searchText={searchText}
-        />
+        <div className="flex justify-end px-4 py-2">
+          <button
+            onClick={() => setTerminalOpen(!terminalOpen)}
+            className="px-3 py-1 text-sm bg-gray-800 text-white rounded hover:bg-gray-700"
+          >
+            {terminalOpen ? 'Close Terminal' : 'Open Terminal'}
+          </button>
+        </div>
 
-        <InputSection
-          currentEntry={currentEntry}
-          onEntryChange={setCurrentEntry}
-          onSubmit={handleAddEntry}
-          onKeyDown={handleKeyDown}
-          availableTags={availableTags}
-          selectedTags={manualTags}
-          onTagAdd={(tag) => {
-            if (!manualTags.includes(tag)) {
-              setManualTags([...manualTags, tag])
-            }
-          }}
-          onTagRemove={(tag) => {
-            setManualTags(manualTags.filter(t => t !== tag))
-          }}
-        />
+        {terminalOpen ? (
+          <div className="h-[calc(100vh-100px)] p-4">
+            <Terminal />
+          </div>
+        ) : (
+          <>
+            <FilterBar
+              availableTags={availableTags}
+              selectedTags={selectedTags}
+              filterMode={filterMode}
+              onTagSelect={(tag) => {
+                if (selectedTags.includes(tag)) {
+                  setSelectedTags(selectedTags.filter(t => t !== tag))
+                } else {
+                  setSelectedTags([...selectedTags, tag])
+                }
+              }}
+              onTagRemove={(tag) => {
+                setSelectedTags(selectedTags.filter(t => t !== tag))
+              }}
+              onFilterModeChange={(mode) => {
+                setFilterMode(mode)
+              }}
+              onTagsClearAll={() => {
+                setSelectedTags([])
+              }}
+              onTagDelete={openDeleteTagDialog}
+              onSearch={setSearchText}
+              searchText={searchText}
+            />
 
-        {(selectedTags.length > 0 || searchText.trim().length > 0) && (
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            totalItems={totalItems}
-            itemsPerPage={itemsPerPage}
-            onPageChange={setCurrentPage}
-          />
+            <InputSection
+              currentEntry={currentEntry}
+              onEntryChange={setCurrentEntry}
+              onSubmit={handleAddEntry}
+              onKeyDown={handleKeyDown}
+              availableTags={availableTags}
+              selectedTags={manualTags}
+              onTagAdd={(tag) => {
+                if (!manualTags.includes(tag)) {
+                  setManualTags([...manualTags, tag])
+                }
+              }}
+              onTagRemove={(tag) => {
+                setManualTags(manualTags.filter(t => t !== tag))
+              }}
+            />
+
+            {(selectedTags.length > 0 || searchText.trim().length > 0) && (
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={totalItems}
+                itemsPerPage={itemsPerPage}
+                onPageChange={setCurrentPage}
+              />
+            )}
+
+            <Timeline
+              database={database}
+              timelineItems={filteredTimelineItems}
+              isTagFiltering={selectedTags.length > 0 || searchText.trim().length > 0}
+              editingEntryId={editingEntryId}
+              editContent={editContent}
+              editManualTags={editManualTags}
+              editingReplyId={editingReplyId}
+              editReplyContent={editReplyContent}
+              editReplyManualTags={editReplyManualTags}
+              availableTags={availableTags}
+              selectedTags={selectedTags}
+              replyingToId={replyingToId}
+              replyContent={replyContent}
+              replyManualTags={replyManualTags}
+              expandedEntryReplies={expandedEntryReplies}
+              onEditEntry={startEditEntry}
+              onCancelEditEntry={cancelEditEntry}
+              onUpdateEntry={handleUpdateEntry}
+              onDeleteEntry={openDeleteDialog}
+              onEditContentChange={setEditContent}
+              onEditTagAdd={(tag) => {
+                if (!editManualTags.includes(tag)) {
+                  setEditManualTags([...editManualTags, tag])
+                }
+              }}
+              onEditTagRemove={(tag) => {
+                setEditManualTags(editManualTags.filter(t => t !== tag))
+              }}
+              onEditReply={startEditReply}
+              onCancelEditReply={cancelEditReply}
+              onUpdateReply={handleUpdateReply}
+              onDeleteReply={openDeleteReplyDialog}
+              onEditReplyContentChange={setEditReplyContent}
+              onEditReplyTagAdd={(tag) => {
+                if (!editReplyManualTags.includes(tag)) {
+                  setEditReplyManualTags([...editReplyManualTags, tag])
+                }
+              }}
+              onEditReplyTagRemove={(tag) => {
+                setEditReplyManualTags(editReplyManualTags.filter(t => t !== tag))
+              }}
+              onTagClick={handleTagClick}
+              onReplyToggle={toggleReplyForm}
+              onReplyContentChange={setReplyContent}
+              onReplyTagAdd={(tag) => {
+                if (!replyManualTags.includes(tag)) {
+                  setReplyManualTags([...replyManualTags, tag])
+                }
+              }}
+              onReplyTagRemove={(tag) => {
+                setReplyManualTags(replyManualTags.filter(t => t !== tag))
+              }}
+              onAddReply={handleAddReply}
+              onToggleReplies={toggleEntryReplies}
+              onScrollToEntry={scrollToEntry}
+              onTogglePin={handleTogglePin}
+            />
+          </>
         )}
-
-        <Timeline
-          timelineItems={filteredTimelineItems}
-          isTagFiltering={selectedTags.length > 0 || searchText.trim().length > 0}
-          editingEntryId={editingEntryId}
-          editContent={editContent}
-          editManualTags={editManualTags}
-          editingReplyId={editingReplyId}
-          editReplyContent={editReplyContent}
-          editReplyManualTags={editReplyManualTags}
-          availableTags={availableTags}
-          selectedTags={selectedTags}
-          replyingToId={replyingToId}
-          replyContent={replyContent}
-          replyManualTags={replyManualTags}
-          expandedEntryReplies={expandedEntryReplies}
-          onEditEntry={startEditEntry}
-          onCancelEditEntry={cancelEditEntry}
-          onUpdateEntry={handleUpdateEntry}
-          onDeleteEntry={openDeleteDialog}
-          onEditContentChange={setEditContent}
-          onEditTagAdd={(tag) => {
-            if (!editManualTags.includes(tag)) {
-              setEditManualTags([...editManualTags, tag])
-            }
-          }}
-          onEditTagRemove={(tag) => {
-            setEditManualTags(editManualTags.filter(t => t !== tag))
-          }}
-          onEditReply={startEditReply}
-          onCancelEditReply={cancelEditReply}
-          onUpdateReply={handleUpdateReply}
-          onDeleteReply={openDeleteReplyDialog}
-          onEditReplyContentChange={setEditReplyContent}
-          onEditReplyTagAdd={(tag) => {
-            if (!editReplyManualTags.includes(tag)) {
-              setEditReplyManualTags([...editReplyManualTags, tag])
-            }
-          }}
-          onEditReplyTagRemove={(tag) => {
-            setEditReplyManualTags(editReplyManualTags.filter(t => t !== tag))
-          }}
-          onTagClick={handleTagClick}
-          onReplyToggle={toggleReplyForm}
-          onReplyContentChange={setReplyContent}
-          onReplyTagAdd={(tag) => {
-            if (!replyManualTags.includes(tag)) {
-              setReplyManualTags([...replyManualTags, tag])
-            }
-          }}
-          onReplyTagRemove={(tag) => {
-            setReplyManualTags(replyManualTags.filter(t => t !== tag))
-          }}
-          onAddReply={handleAddReply}
-          onToggleReplies={toggleEntryReplies}
-          onScrollToEntry={scrollToEntry}
-          onTogglePin={handleTogglePin}
-        />
       </div>
 
       <PinnedSidebar

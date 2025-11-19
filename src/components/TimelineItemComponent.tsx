@@ -3,7 +3,10 @@ import { TimelineItem, Tag } from '@/types'
 import { EntryCard } from './EntryCard'
 import { ReplyCard } from './ReplyCard'
 
+import Database from '@tauri-apps/plugin-sql'
+
 interface TimelineItemComponentProps {
+  database: Database | null
   item: TimelineItem
   previousItem: TimelineItem | null
   editingEntryId: number | null
@@ -44,6 +47,7 @@ interface TimelineItemComponentProps {
 }
 
 export function TimelineItemComponent({
+  database,
   item,
   previousItem,
   editingEntryId,
@@ -111,6 +115,7 @@ export function TimelineItemComponent({
       <div className="timeline-content">
         {item.type === 'entry' ? (
           <EntryCard
+            database={database}
             id={item.id}
             content={item.content}
             tags={item.tags}
