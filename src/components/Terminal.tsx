@@ -92,6 +92,7 @@ export const Terminal: React.FC<TerminalProps> = ({
           unlisten();
           window.removeEventListener("resize", handleResize);
           term.dispose();
+          invoke("kill_pty");
         };
       } catch (e) {
         console.error("Failed to initialize PTY:", e);

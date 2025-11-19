@@ -52,7 +52,8 @@ fn main() {
             get_system_fonts,
             pty::spawn_pty,
             pty::write_pty,
-            pty::resize_pty
+            pty::resize_pty,
+            pty::kill_pty
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
