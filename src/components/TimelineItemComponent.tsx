@@ -41,6 +41,7 @@ interface TimelineItemComponentProps {
   onToggleReplies: (id: number) => void
   onScrollToEntry: (entryId: number) => void
   onTogglePin: (id: number) => void
+  onUpdateEntryDirectly: (entryId: number, newContent: string) => void
 }
 
 export function TimelineItemComponent({
@@ -81,6 +82,7 @@ export function TimelineItemComponent({
   onToggleReplies,
   onScrollToEntry,
   onTogglePin,
+  onUpdateEntryDirectly,
 }: TimelineItemComponentProps) {
   const itemDate = new Date(item.timestamp)
   const day = itemDate.getDate()
@@ -141,6 +143,7 @@ export function TimelineItemComponent({
             onAddReply={onAddReply}
             onToggleReplies={onToggleReplies}
             onTogglePin={onTogglePin}
+            onUpdateEntryDirectly={onUpdateEntryDirectly}
           />
         ) : (
           <ReplyCard

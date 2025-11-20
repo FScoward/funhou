@@ -37,6 +37,7 @@ interface EntryCardProps {
   onAddReply: (id: number) => void
   onToggleReplies: (id: number) => void
   onTogglePin: (id: number) => void
+  onUpdateEntryDirectly: (entryId: number, newContent: string) => void
 }
 
 export function EntryCard({
@@ -70,6 +71,7 @@ export function EntryCard({
   onAddReply,
   onToggleReplies,
   onTogglePin,
+  onUpdateEntryDirectly,
 }: EntryCardProps) {
   const [showMarkdown, setShowMarkdown] = useState(true)
 
@@ -128,7 +130,11 @@ export function EntryCard({
       ) : (
         <>
           {showMarkdown ? (
-            <MarkdownPreview content={content} className="entry-text" />
+            <MarkdownPreview
+              content={content}
+              className="entry-text"
+              onContentUpdate={(newContent) => onUpdateEntryDirectly(id, newContent)}
+            />
           ) : (
             <div className="entry-text">{content}</div>
           )}
