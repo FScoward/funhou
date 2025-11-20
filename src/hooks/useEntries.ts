@@ -110,6 +110,26 @@ export function useEntries({ database, timelineItems, setTimelineItems, loadAvai
     }
   }
 
+  const handleDirectUpdateEntry = async (entryId: number, newContent: string) => {
+    if (database) {
+      try {
+        await database.execute(
+          'UPDATE entries SET content = ? WHERE id = ?',
+          [newContent, entryId]
+        )
+
+        // stateを更新
+        setTimelineItems(timelineItems.map(item =>
+          item.type === 'entry' && item.id === entryId
+            ? { ...item, content: newContent }
+            : item
+        ))
+      } catch (error) {
+        console.error('エントリーの直接更新に失敗しました:', error)
+      }
+    }
+  }
+
   const cancelEditEntry = () => {
     setEditingEntryId(null)
     setEditContent('')
@@ -218,5 +238,6 @@ export function useEntries({ database, timelineItems, setTimelineItems, loadAvai
     handleDeleteEntry,
     handleKeyDown,
     handleTogglePin,
+    handleDirectUpdateEntry,
   }
 }

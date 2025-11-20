@@ -83,7 +83,7 @@ function App() {
     handleTagClick,
     openDeleteTagDialog,
     handleDeleteTag,
-  } = useTags({ database, loadEntries: async () => {} })
+  } = useTags({ database, loadEntries: async () => { } })
 
   // タイムライン
   const {
@@ -124,6 +124,7 @@ function App() {
     handleDeleteEntry,
     handleKeyDown,
     handleTogglePin,
+    handleDirectUpdateEntry,
   } = useEntries({
     database,
     timelineItems: filteredTimelineItems,
@@ -298,6 +299,7 @@ function App() {
           onToggleReplies={toggleEntryReplies}
           onScrollToEntry={scrollToEntry}
           onTogglePin={handleTogglePin}
+          onUpdateEntryDirectly={handleDirectUpdateEntry}
         />
       </div>
 
