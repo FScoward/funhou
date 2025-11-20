@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Trash2, Pencil, X, Pin, FileCode, Type } from 'lucide-react'
 import CustomInput from '@/components/CustomInput'
 import { TagBadge } from '@/components/TagBadge'
+import { TagSelector } from '@/components/TagSelector'
 import { formatTimestamp } from '@/utils/dateUtils'
 import { Reply, Tag } from '@/types'
 import MarkdownPreview from '@/components/MarkdownPreview'
@@ -38,6 +39,8 @@ interface EntryCardProps {
   onToggleReplies: (id: number) => void
   onTogglePin: (id: number) => void
   onUpdateEntryDirectly: (entryId: number, newContent: string) => void
+  onDirectTagAdd: (tag: string) => void
+  onDirectTagRemove: (tag: string) => void
 }
 
 export function EntryCard({
@@ -72,6 +75,8 @@ export function EntryCard({
   onToggleReplies,
   onTogglePin,
   onUpdateEntryDirectly,
+  onDirectTagAdd,
+  onDirectTagRemove,
 }: EntryCardProps) {
   const [showMarkdown, setShowMarkdown] = useState(true)
 
@@ -139,15 +144,30 @@ export function EntryCard({
             <div className="entry-text">{content}</div>
           )}
           {tags && tags.length > 0 && (
-            <div className="entry-tags">
+            <div className="entry-tags flex items-center gap-2 flex-wrap">
               {tags.map(tag => (
                 <TagBadge
                   key={tag.id}
                   tag={tag.name}
                   variant={selectedTags.includes(tag.name) ? 'selected' : 'default'}
                   onClick={onTagClick}
+                  onRemove={onDirectTagRemove}
                 />
               ))}
+              <TagSelector
+                availableTags={availableTags}
+                selectedTags={tags.map(t => t.name)}
+                onTagAdd={onDirectTagAdd}
+              />
+            </div>
+          )}
+          {(!tags || tags.length === 0) && (
+            <div className="entry-tags flex items-center gap-2 flex-wrap">
+              <TagSelector
+                availableTags={availableTags}
+                selectedTags={[]}
+                onTagAdd={onDirectTagAdd}
+              />
             </div>
           )}
         </>

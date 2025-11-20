@@ -125,6 +125,8 @@ function App() {
     handleKeyDown,
     handleTogglePin,
     handleDirectUpdateEntry,
+    handleDirectTagAdd,
+    handleDirectTagRemove,
   } = useEntries({
     database,
     timelineItems: filteredTimelineItems,
@@ -300,6 +302,8 @@ function App() {
           onScrollToEntry={scrollToEntry}
           onTogglePin={handleTogglePin}
           onUpdateEntryDirectly={handleDirectUpdateEntry}
+          onDirectTagAdd={handleDirectTagAdd}
+          onDirectTagRemove={handleDirectTagRemove}
         />
       </div>
 

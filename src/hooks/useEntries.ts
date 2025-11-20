@@ -130,6 +130,57 @@ export function useEntries({ database, timelineItems, setTimelineItems, loadAvai
     }
   }
 
+  const handleDirectTagAdd = async (entryId: number, tagName: string) => {
+    if (database) {
+      try {
+        const currentTags = await getTagsForEntry(database, entryId)
+        const currentTagNames = currentTags.map(t => t.name)
+
+        if (!currentTagNames.includes(tagName)) {
+          const newTagNames = [...currentTagNames, tagName]
+          await associateTagsWithEntry(database, entryId, newTagNames)
+
+          const updatedTags = await getTagsForEntry(database, entryId)
+
+          setTimelineItems(timelineItems.map(item =>
+            item.type === 'entry' && item.id === entryId
+              ? { ...item, tags: updatedTags }
+              : item
+          ))
+
+          loadAvailableTags()
+        }
+      } catch (error) {
+        console.error('タグの追加に失敗しました:', error)
+      }
+    }
+  }
+
+  const handleDirectTagRemove = async (entryId: number, tagName: string) => {
+    if (database) {
+      try {
+        const currentTags = await getTagsForEntry(database, entryId)
+        const newTagNames = currentTags
+          .map(t => t.name)
+          .filter(t => t !== tagName)
+
+        await associateTagsWithEntry(database, entryId, newTagNames)
+
+        const updatedTags = await getTagsForEntry(database, entryId)
+
+        setTimelineItems(timelineItems.map(item =>
+          item.type === 'entry' && item.id === entryId
+            ? { ...item, tags: updatedTags }
+            : item
+        ))
+
+        loadAvailableTags()
+      } catch (error) {
+        console.error('タグの削除に失敗しました:', error)
+      }
+    }
+  }
+
   const cancelEditEntry = () => {
     setEditingEntryId(null)
     setEditContent('')
@@ -239,5 +290,7 @@ export function useEntries({ database, timelineItems, setTimelineItems, loadAvai
     handleKeyDown,
     handleTogglePin,
     handleDirectUpdateEntry,
+    handleDirectTagAdd,
+    handleDirectTagRemove,
   }
 }
