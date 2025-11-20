@@ -42,6 +42,8 @@ interface TimelineItemComponentProps {
   onScrollToEntry: (entryId: number) => void
   onTogglePin: (id: number) => void
   onUpdateEntryDirectly: (entryId: number, newContent: string) => void
+  onDirectTagAdd: (entryId: number, tag: string) => void
+  onDirectTagRemove: (entryId: number, tag: string) => void
 }
 
 export function TimelineItemComponent({
@@ -83,6 +85,8 @@ export function TimelineItemComponent({
   onScrollToEntry,
   onTogglePin,
   onUpdateEntryDirectly,
+  onDirectTagAdd,
+  onDirectTagRemove,
 }: TimelineItemComponentProps) {
   const itemDate = new Date(item.timestamp)
   const day = itemDate.getDate()
@@ -144,6 +148,8 @@ export function TimelineItemComponent({
             onToggleReplies={onToggleReplies}
             onTogglePin={onTogglePin}
             onUpdateEntryDirectly={onUpdateEntryDirectly}
+            onDirectTagAdd={(tag) => onDirectTagAdd(item.id, tag)}
+            onDirectTagRemove={(tag) => onDirectTagRemove(item.id, tag)}
           />
         ) : (
           <ReplyCard

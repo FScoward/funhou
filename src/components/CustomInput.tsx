@@ -1,5 +1,5 @@
 import TextareaAutosize from "react-textarea-autosize"
-import { ArrowUp, Tag as TagIcon, Plus } from "lucide-react"
+import { ArrowUp } from "lucide-react"
 import { useState } from "react"
 
 import {
@@ -7,10 +7,7 @@ import {
   InputGroupAddon,
   InputGroupButton,
 } from "@/components/ui/input-group"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { TagBadge } from "@/components/TagBadge"
+import { TagSelector } from "@/components/TagSelector"
 
 interface Tag {
   id: number
@@ -41,23 +38,9 @@ export default function CustomInput({
   onTagRemove
 }: CustomInputProps) {
   const hasContent = value.trim().length > 0
-  const [tagPopoverOpen, setTagPopoverOpen] = useState(false)
-  const [newTagInput, setNewTagInput] = useState("")
-
   const showTagSelector = onTagAdd && onTagRemove
 
-  // 選択されていないタグのみを表示
-  const unselectedTags = availableTags.filter(
-    (tag) => !selectedTags.includes(tag.name)
-  )
 
-  const handleAddNewTag = () => {
-    const trimmedTag = newTagInput.trim()
-    if (trimmedTag && onTagAdd) {
-      onTagAdd(trimmedTag)
-      setNewTagInput("")
-    }
-  }
 
   return (
     <div className="w-full space-y-2">
@@ -85,71 +68,13 @@ export default function CustomInput({
 
       {/* タグ選択エリア */}
       {showTagSelector && (
-        <div className="flex items-center gap-2 flex-wrap px-1">
-          {/* タグ追加ボタン */}
-          <Popover open={tagPopoverOpen} onOpenChange={setTagPopoverOpen}>
-            <PopoverTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-7 text-xs">
-                <TagIcon className="size-3 mr-1" />
-                タグを追加
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-64 p-2" align="start">
-              <div className="space-y-2">
-                {/* 新規タグ作成 */}
-                <div className="flex gap-1">
-                  <Input
-                    placeholder="新しいタグ名"
-                    value={newTagInput}
-                    onChange={(e) => setNewTagInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault()
-                        handleAddNewTag()
-                      }
-                    }}
-                    className="h-8 text-xs"
-                  />
-                  <Button
-                    size="sm"
-                    variant="default"
-                    onClick={handleAddNewTag}
-                    className="h-8 px-2"
-                  >
-                    <Plus className="size-4" />
-                  </Button>
-                </div>
-
-                {/* 既存タグ一覧 */}
-                {unselectedTags.length > 0 && (
-                  <>
-                    <div className="text-xs text-muted-foreground px-1">既存のタグから選択</div>
-                    <div className="flex flex-wrap gap-1">
-                      {unselectedTags.map((tag) => (
-                        <TagBadge
-                          key={tag.id}
-                          tag={tag.name}
-                          onClick={(tagName) => {
-                            onTagAdd(tagName)
-                          }}
-                        />
-                      ))}
-                    </div>
-                  </>
-                )}
-              </div>
-            </PopoverContent>
-          </Popover>
-
-          {/* 選択されたタグの表示 */}
-          {selectedTags.map((tag) => (
-            <TagBadge
-              key={tag}
-              tag={tag}
-              variant="selected"
-              onRemove={onTagRemove}
-            />
-          ))}
+        <div className="px-1">
+          <TagSelector
+            availableTags={availableTags}
+            selectedTags={selectedTags}
+            onTagAdd={onTagAdd}
+            onTagRemove={onTagRemove}
+          />
         </div>
       )}
     </div>

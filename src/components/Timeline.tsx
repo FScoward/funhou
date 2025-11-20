@@ -41,6 +41,8 @@ interface TimelineProps {
   onScrollToEntry: (entryId: number) => void
   onTogglePin: (id: number) => void
   onUpdateEntryDirectly: (entryId: number, newContent: string) => void
+  onDirectTagAdd: (entryId: number, tag: string) => void
+  onDirectTagRemove: (entryId: number, tag: string) => void
 }
 
 export function Timeline({
@@ -82,6 +84,8 @@ export function Timeline({
   onScrollToEntry,
   onTogglePin,
   onUpdateEntryDirectly,
+  onDirectTagAdd,
+  onDirectTagRemove,
 }: TimelineProps) {
   // タグフィルタリング時は日付別にグループ化
   const groupedItems = isTagFiltering ? groupTimelineItemsByDate(timelineItems) : null
@@ -141,6 +145,8 @@ export function Timeline({
                   onScrollToEntry={onScrollToEntry}
                   onTogglePin={onTogglePin}
                   onUpdateEntryDirectly={onUpdateEntryDirectly}
+                  onDirectTagAdd={onDirectTagAdd}
+                  onDirectTagRemove={onDirectTagRemove}
                 />
               ))}
             </div>
@@ -190,6 +196,8 @@ export function Timeline({
               onScrollToEntry={onScrollToEntry}
               onTogglePin={onTogglePin}
               onUpdateEntryDirectly={onUpdateEntryDirectly}
+              onDirectTagAdd={onDirectTagAdd}
+              onDirectTagRemove={onDirectTagRemove}
             />
           ))}
         </div>
