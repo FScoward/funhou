@@ -17,6 +17,8 @@ interface FilterBarProps {
   onFilterModeChange: (mode: 'AND' | 'OR') => void
   onTagsClearAll: () => void
   onTagDelete: (tag: string) => void
+  frequentTags?: Tag[]
+  recentTags?: Tag[]
   // 検索関連
   onSearch: (searchText: string) => void
   searchText: string
@@ -33,6 +35,8 @@ export function FilterBar({
   onFilterModeChange,
   onTagsClearAll,
   onTagDelete,
+  frequentTags,
+  recentTags,
   onSearch,
   searchText,
 }: FilterBarProps) {
@@ -104,6 +108,8 @@ export function FilterBar({
               onFilterModeChange={onFilterModeChange}
               onClearAll={onTagsClearAll}
               onTagDelete={onTagDelete}
+              frequentTags={frequentTags}
+              recentTags={recentTags}
             />
           </div>
         </Collapsible.Content>

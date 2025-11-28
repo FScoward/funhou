@@ -99,6 +99,51 @@ export async function getDb() {
       // カラムが既に存在する場合はエラーを無視
       console.log('pinned column already exists or migration error:', error)
     }
+
+    // タグ使用統計カラムを追加（既に存在する場合はエラーを無視）
+    try {
+      await db.execute(`
+        ALTER TABLE tags ADD COLUMN usage_count INTEGER DEFAULT 0
+      `)
+    } catch (error) {
+      console.log('usage_count column already exists or migration error:', error)
+    }
+
+    try {
+      await db.execute(`
+        ALTER TABLE tags ADD COLUMN last_used_at DATETIME DEFAULT NULL
+      `)
+    } catch (error) {
+      console.log('last_used_at column already exists or migration error:', error)
+    }
+
+    // 既存データのマイグレーション: usage_countを集計して更新
+    await db.execute(`
+      UPDATE tags SET usage_count = (
+        SELECT COUNT(*) FROM (
+          SELECT tag_id FROM entry_tags WHERE tag_id = tags.id
+          UNION ALL
+          SELECT tag_id FROM reply_tags WHERE tag_id = tags.id
+        )
+      )
+      WHERE usage_count = 0 OR usage_count IS NULL
+    `)
+
+    // 既存データのマイグレーション: last_used_atを集計して更新
+    await db.execute(`
+      UPDATE tags SET last_used_at = (
+        SELECT MAX(timestamp) FROM (
+          SELECT e.timestamp FROM entries e
+          JOIN entry_tags et ON e.id = et.entry_id
+          WHERE et.tag_id = tags.id
+          UNION ALL
+          SELECT r.timestamp FROM replies r
+          JOIN reply_tags rt ON r.id = rt.reply_id
+          WHERE rt.tag_id = tags.id
+        )
+      )
+      WHERE last_used_at IS NULL
+    `)
   }
   return db
 }

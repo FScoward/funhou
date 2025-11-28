@@ -4,11 +4,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Input } from '@/components/ui/input'
 import { TagBadge } from '@/components/TagBadge'
 import { Tag as TagIcon, Plus, Trash2 } from 'lucide-react'
-
-interface Tag {
-  id: number
-  name: string
-}
+import type { Tag } from '@/types'
 
 interface TagFilterProps {
   availableTags: Tag[]
@@ -19,6 +15,8 @@ interface TagFilterProps {
   onFilterModeChange: (mode: 'AND' | 'OR') => void
   onClearAll: () => void
   onTagDelete?: (tag: string) => void
+  frequentTags?: Tag[]
+  recentTags?: Tag[]
 }
 
 export function TagFilter({
@@ -30,6 +28,8 @@ export function TagFilter({
   onFilterModeChange,
   onClearAll,
   onTagDelete,
+  frequentTags = [],
+  recentTags = [],
 }: TagFilterProps) {
   const [open, setOpen] = React.useState(false)
   const [newTagInput, setNewTagInput] = React.useState("")
@@ -38,6 +38,23 @@ export function TagFilter({
   // 選択されていないタグのみを表示
   const unselectedTags = availableTags.filter(
     (tag) => !selectedTags.includes(tag.name)
+  )
+
+  // よく使うタグ（選択されていないもののみ）
+  const unselectedFrequentTags = frequentTags.filter(
+    (tag) => !selectedTags.includes(tag.name)
+  )
+
+  // 最近使ったタグ（選択されていないもののみ）
+  const unselectedRecentTags = recentTags.filter(
+    (tag) => !selectedTags.includes(tag.name)
+  )
+
+  // frequentとrecentに含まれないタグ
+  const frequentIds = new Set(frequentTags.map(t => t.id))
+  const recentIds = new Set(recentTags.map(t => t.id))
+  const otherTags = unselectedTags.filter(
+    (tag) => !frequentIds.has(tag.id) && !recentIds.has(tag.id)
   )
 
   const handleAddNewTag = () => {
@@ -101,12 +118,48 @@ export function TagFilter({
               </div>
             )}
 
-            {/* 既存タグ一覧 */}
-            {!managementMode && unselectedTags.length > 0 && (
+            {/* よく使うタグ */}
+            {!managementMode && unselectedFrequentTags.length > 0 && (
               <>
-                <div className="text-xs text-muted-foreground px-1">既存のタグから選択</div>
+                <div className="text-xs text-muted-foreground px-1">よく使うタグ</div>
                 <div className="flex flex-wrap gap-1">
-                  {unselectedTags.map((tag) => (
+                  {unselectedFrequentTags.map((tag) => (
+                    <TagBadge
+                      key={tag.id}
+                      tag={tag.name}
+                      onClick={(tagName) => {
+                        onTagSelect(tagName)
+                      }}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
+
+            {/* 最近使ったタグ */}
+            {!managementMode && unselectedRecentTags.length > 0 && (
+              <>
+                <div className="text-xs text-muted-foreground px-1">最近使ったタグ</div>
+                <div className="flex flex-wrap gap-1">
+                  {unselectedRecentTags.map((tag) => (
+                    <TagBadge
+                      key={tag.id}
+                      tag={tag.name}
+                      onClick={(tagName) => {
+                        onTagSelect(tagName)
+                      }}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
+
+            {/* その他のタグ */}
+            {!managementMode && otherTags.length > 0 && (
+              <>
+                <div className="text-xs text-muted-foreground px-1">その他のタグ</div>
+                <div className="flex flex-wrap gap-1">
+                  {otherTags.map((tag) => (
                     <TagBadge
                       key={tag.id}
                       tag={tag.name}

@@ -12,6 +12,8 @@ interface TagSelectorProps {
   onTagAdd: (tag: string) => void
   onTagRemove?: (tag: string) => void
   trigger?: React.ReactNode
+  frequentTags?: Tag[]
+  recentTags?: Tag[]
 }
 
 export function TagSelector({
@@ -19,7 +21,9 @@ export function TagSelector({
   selectedTags,
   onTagAdd,
   onTagRemove,
-  trigger
+  trigger,
+  frequentTags = [],
+  recentTags = []
 }: TagSelectorProps) {
   const [open, setOpen] = useState(false)
   const [newTagInput, setNewTagInput] = useState("")
@@ -27,6 +31,23 @@ export function TagSelector({
   // 選択されていないタグのみを表示
   const unselectedTags = availableTags.filter(
     (tag) => !selectedTags.includes(tag.name)
+  )
+
+  // よく使うタグ（選択されていないもののみ）
+  const unselectedFrequentTags = frequentTags.filter(
+    (tag) => !selectedTags.includes(tag.name)
+  )
+
+  // 最近使ったタグ（選択されていないもののみ）
+  const unselectedRecentTags = recentTags.filter(
+    (tag) => !selectedTags.includes(tag.name)
+  )
+
+  // frequentとrecentに含まれないタグ
+  const frequentIds = new Set(frequentTags.map(t => t.id))
+  const recentIds = new Set(recentTags.map(t => t.id))
+  const otherTags = unselectedTags.filter(
+    (tag) => !frequentIds.has(tag.id) && !recentIds.has(tag.id)
   )
 
   const handleAddNewTag = () => {
@@ -75,12 +96,48 @@ export function TagSelector({
               </Button>
             </div>
 
-            {/* 既存タグ一覧 */}
-            {unselectedTags.length > 0 && (
+            {/* よく使うタグ */}
+            {unselectedFrequentTags.length > 0 && (
               <>
-                <div className="text-xs text-muted-foreground px-1">既存のタグから選択</div>
+                <div className="text-xs text-muted-foreground px-1">よく使うタグ</div>
                 <div className="flex flex-wrap gap-1">
-                  {unselectedTags.map((tag) => (
+                  {unselectedFrequentTags.map((tag) => (
+                    <TagBadge
+                      key={tag.id}
+                      tag={tag.name}
+                      onClick={(tagName) => {
+                        onTagAdd(tagName)
+                      }}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
+
+            {/* 最近使ったタグ */}
+            {unselectedRecentTags.length > 0 && (
+              <>
+                <div className="text-xs text-muted-foreground px-1">最近使ったタグ</div>
+                <div className="flex flex-wrap gap-1">
+                  {unselectedRecentTags.map((tag) => (
+                    <TagBadge
+                      key={tag.id}
+                      tag={tag.name}
+                      onClick={(tagName) => {
+                        onTagAdd(tagName)
+                      }}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
+
+            {/* その他のタグ */}
+            {otherTags.length > 0 && (
+              <>
+                <div className="text-xs text-muted-foreground px-1">その他のタグ</div>
+                <div className="flex flex-wrap gap-1">
+                  {otherTags.map((tag) => (
                     <TagBadge
                       key={tag.id}
                       tag={tag.name}

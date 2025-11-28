@@ -1,9 +1,7 @@
 import Database from '@tauri-apps/plugin-sql'
+import type { Tag, CategorizedTags } from '../types'
 
-export interface Tag {
-  id: number
-  name: string
-}
+export type { Tag, CategorizedTags }
 
 /**
  * コンテンツから#で始まるタグを抽出する
@@ -59,8 +57,23 @@ export async function associateTagsWithEntry(
   entryId: number,
   tagNames: string[]
 ): Promise<void> {
+  // 既存の関連のタグIDを取得（usage_count更新用）
+  const existingTags = await db.select<{ tag_id: number }[]>(
+    'SELECT tag_id FROM entry_tags WHERE entry_id = ?',
+    [entryId]
+  )
+  const existingTagIds = new Set(existingTags.map(t => t.tag_id))
+
   // 既存の関連を削除
   await db.execute('DELETE FROM entry_tags WHERE entry_id = ?', [entryId])
+
+  // 削除されたタグのusage_countを減らす
+  for (const tagId of existingTagIds) {
+    await db.execute(
+      'UPDATE tags SET usage_count = MAX(0, usage_count - 1) WHERE id = ?',
+      [tagId]
+    )
+  }
 
   // 新しい関連を作成
   for (const tagName of tagNames) {
@@ -69,6 +82,8 @@ export async function associateTagsWithEntry(
       'INSERT INTO entry_tags (entry_id, tag_id) VALUES (?, ?)',
       [entryId, tagId]
     )
+    // usage_countを増やしてlast_used_atを更新
+    await updateTagUsage(db, tagId)
   }
 }
 
@@ -92,16 +107,100 @@ export async function getTagsForEntry(db: Database, entryId: number): Promise<Ta
 }
 
 /**
- * すべてのタグを取得する
+ * すべてのタグを取得する（統計情報付き）
  * @param db データベースインスタンス
- * @returns タグの配列
+ * @returns タグの配列（usageCount, lastUsedAt付き）
  */
 export async function getAllTags(db: Database): Promise<Tag[]> {
   const tags = await db.select<Tag[]>(
-    'SELECT id, name FROM tags ORDER BY name'
+    'SELECT id, name, usage_count as usageCount, last_used_at as lastUsedAt FROM tags ORDER BY name'
   )
 
   return tags
+}
+
+/**
+ * 使用頻度の高いタグを取得する
+ * @param db データベースインスタンス
+ * @param limit 取得件数（デフォルト: 5）
+ * @returns 使用頻度順にソートされたタグの配列
+ */
+export async function getFrequentTags(db: Database, limit: number = 5): Promise<Tag[]> {
+  const tags = await db.select<Tag[]>(
+    `SELECT id, name, usage_count as usageCount, last_used_at as lastUsedAt
+     FROM tags
+     WHERE usage_count > 0
+     ORDER BY usage_count DESC, name ASC
+     LIMIT ?`,
+    [limit]
+  )
+
+  return tags
+}
+
+/**
+ * 最近使用したタグを取得する
+ * @param db データベースインスタンス
+ * @param limit 取得件数（デフォルト: 5）
+ * @returns 最近使用された順にソートされたタグの配列
+ */
+export async function getRecentTags(db: Database, limit: number = 5): Promise<Tag[]> {
+  const tags = await db.select<Tag[]>(
+    `SELECT id, name, usage_count as usageCount, last_used_at as lastUsedAt
+     FROM tags
+     WHERE last_used_at IS NOT NULL
+     ORDER BY last_used_at DESC
+     LIMIT ?`,
+    [limit]
+  )
+
+  return tags
+}
+
+/**
+ * タグの使用統計を更新する
+ * @param db データベースインスタンス
+ * @param tagId タグID
+ */
+export async function updateTagUsage(db: Database, tagId: number): Promise<void> {
+  await db.execute(
+    `UPDATE tags
+     SET usage_count = usage_count + 1,
+         last_used_at = datetime('now')
+     WHERE id = ?`,
+    [tagId]
+  )
+}
+
+/**
+ * タグをカテゴリ分けする（純粋関数）
+ * @param tags 全タグの配列
+ * @param limit カテゴリごとの表示件数（デフォルト: 5）
+ * @returns カテゴリ分けされたタグ
+ */
+export function categorizeTagsByUsage(tags: Tag[], limit: number = 5): CategorizedTags {
+  // 使用頻度が高いタグ（usage_count > 0 のもの、上位limit件）
+  const frequentTags = [...tags]
+    .filter(tag => (tag.usageCount ?? 0) > 0)
+    .sort((a, b) => (b.usageCount ?? 0) - (a.usageCount ?? 0))
+    .slice(0, limit)
+
+  // 最近使用したタグ（lastUsedAtがあるもの、上位limit件）
+  const recentTags = [...tags]
+    .filter(tag => tag.lastUsedAt != null)
+    .sort((a, b) => {
+      const dateA = a.lastUsedAt ? new Date(a.lastUsedAt).getTime() : 0
+      const dateB = b.lastUsedAt ? new Date(b.lastUsedAt).getTime() : 0
+      return dateB - dateA
+    })
+    .slice(0, limit)
+
+  // frequentとrecentに含まれないタグ
+  const frequentIds = new Set(frequentTags.map(t => t.id))
+  const recentIds = new Set(recentTags.map(t => t.id))
+  const others = tags.filter(tag => !frequentIds.has(tag.id) && !recentIds.has(tag.id))
+
+  return { frequent: frequentTags, recent: recentTags, others }
 }
 
 /**
@@ -124,8 +223,23 @@ export async function associateTagsWithReply(
   replyId: number,
   tagNames: string[]
 ): Promise<void> {
+  // 既存の関連のタグIDを取得（usage_count更新用）
+  const existingTags = await db.select<{ tag_id: number }[]>(
+    'SELECT tag_id FROM reply_tags WHERE reply_id = ?',
+    [replyId]
+  )
+  const existingTagIds = new Set(existingTags.map(t => t.tag_id))
+
   // 既存の関連を削除
   await db.execute('DELETE FROM reply_tags WHERE reply_id = ?', [replyId])
+
+  // 削除されたタグのusage_countを減らす
+  for (const tagId of existingTagIds) {
+    await db.execute(
+      'UPDATE tags SET usage_count = MAX(0, usage_count - 1) WHERE id = ?',
+      [tagId]
+    )
+  }
 
   // 新しい関連を作成
   for (const tagName of tagNames) {
@@ -134,6 +248,8 @@ export async function associateTagsWithReply(
       'INSERT INTO reply_tags (reply_id, tag_id) VALUES (?, ?)',
       [replyId, tagId]
     )
+    // usage_countを増やしてlast_used_atを更新
+    await updateTagUsage(db, tagId)
   }
 }
 

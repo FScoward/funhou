@@ -7,6 +7,7 @@ import * as tagsLib from '@/lib/tags'
 vi.mock('@/lib/tags', () => ({
   getAllTags: vi.fn(),
   deleteTag: vi.fn(),
+  categorizeTagsByUsage: vi.fn().mockReturnValue({ frequent: [], recent: [], others: [] }),
 }))
 
 describe('useTags', () => {

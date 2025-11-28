@@ -17,6 +17,8 @@ interface TimelineProps {
   replyContent: string
   replyManualTags: string[]
   expandedEntryReplies: Set<number>
+  frequentTags?: Tag[]
+  recentTags?: Tag[]
   onEditEntry: (id: number, content: string) => void
   onCancelEditEntry: () => void
   onUpdateEntry: (id: number) => void
@@ -60,6 +62,8 @@ export function Timeline({
   replyContent,
   replyManualTags,
   expandedEntryReplies,
+  frequentTags = [],
+  recentTags = [],
   onEditEntry,
   onCancelEditEntry,
   onUpdateEntry,
@@ -121,6 +125,8 @@ export function Timeline({
                   replyContent={replyContent}
                   replyManualTags={replyManualTags}
                   expandedEntryReplies={expandedEntryReplies}
+                  frequentTags={frequentTags}
+                  recentTags={recentTags}
                   onEditEntry={onEditEntry}
                   onCancelEditEntry={onCancelEditEntry}
                   onUpdateEntry={onUpdateEntry}
@@ -172,6 +178,8 @@ export function Timeline({
               replyContent={replyContent}
               replyManualTags={replyManualTags}
               expandedEntryReplies={expandedEntryReplies}
+              frequentTags={frequentTags}
+              recentTags={recentTags}
               onEditEntry={onEditEntry}
               onCancelEditEntry={onCancelEditEntry}
               onUpdateEntry={onUpdateEntry}

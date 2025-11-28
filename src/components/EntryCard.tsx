@@ -23,6 +23,8 @@ interface EntryCardProps {
   replyContent: string
   replyManualTags: string[]
   expandedReplies: boolean
+  frequentTags?: Tag[]
+  recentTags?: Tag[]
   onEdit: (id: number, content: string) => void
   onCancelEdit: () => void
   onUpdateEntry: (id: number) => void
@@ -59,6 +61,8 @@ export function EntryCard({
   replyContent,
   replyManualTags,
   expandedReplies,
+  frequentTags = [],
+  recentTags = [],
   onEdit,
   onCancelEdit,
   onUpdateEntry,
@@ -130,6 +134,8 @@ export function EntryCard({
             selectedTags={editManualTags}
             onTagAdd={onEditTagAdd}
             onTagRemove={onEditTagRemove}
+            frequentTags={frequentTags}
+            recentTags={recentTags}
           />
         </div>
       ) : (
@@ -158,6 +164,8 @@ export function EntryCard({
                 availableTags={availableTags}
                 selectedTags={tags.map(t => t.name)}
                 onTagAdd={onDirectTagAdd}
+                frequentTags={frequentTags}
+                recentTags={recentTags}
               />
             </div>
           )}
@@ -167,6 +175,8 @@ export function EntryCard({
                 availableTags={availableTags}
                 selectedTags={[]}
                 onTagAdd={onDirectTagAdd}
+                frequentTags={frequentTags}
+                recentTags={recentTags}
               />
             </div>
           )}
@@ -215,6 +225,8 @@ export function EntryCard({
             selectedTags={replyManualTags}
             onTagAdd={onReplyTagAdd}
             onTagRemove={onReplyTagRemove}
+            frequentTags={frequentTags}
+            recentTags={recentTags}
           />
         </div>
       )}

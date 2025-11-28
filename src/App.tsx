@@ -83,6 +83,8 @@ function App() {
     handleTagClick,
     openDeleteTagDialog,
     handleDeleteTag,
+    frequentTags,
+    recentTags,
   } = useTags({ database, loadEntries: async () => { } })
 
   // タイムライン
@@ -214,6 +216,8 @@ function App() {
             setSelectedTags([])
           }}
           onTagDelete={openDeleteTagDialog}
+          frequentTags={frequentTags}
+          recentTags={recentTags}
           onSearch={setSearchText}
           searchText={searchText}
         />
@@ -233,6 +237,8 @@ function App() {
           onTagRemove={(tag) => {
             setManualTags(manualTags.filter(t => t !== tag))
           }}
+          frequentTags={frequentTags}
+          recentTags={recentTags}
         />
 
         {(selectedTags.length > 0 || searchText.trim().length > 0) && (
@@ -260,6 +266,8 @@ function App() {
           replyContent={replyContent}
           replyManualTags={replyManualTags}
           expandedEntryReplies={expandedEntryReplies}
+          frequentTags={frequentTags}
+          recentTags={recentTags}
           onEditEntry={startEditEntry}
           onCancelEditEntry={cancelEditEntry}
           onUpdateEntry={handleUpdateEntry}

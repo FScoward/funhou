@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import Database from '@tauri-apps/plugin-sql'
-import { Tag } from '@/types'
-import { getAllTags, deleteTag } from '@/lib/tags'
+import type { Tag, CategorizedTags } from '@/types'
+import { getAllTags, deleteTag, categorizeTagsByUsage } from '@/lib/tags'
 
 interface UseTagsProps {
   database: Database | null
@@ -14,6 +14,15 @@ export function useTags({ database, loadEntries }: UseTagsProps) {
   const [availableTags, setAvailableTags] = useState<Tag[]>([])
   const [deleteTagTarget, setDeleteTagTarget] = useState<string | null>(null)
   const [deleteTagDialogOpen, setDeleteTagDialogOpen] = useState(false)
+
+  // カテゴリ分けされたタグをメモ化
+  const categorizedTags: CategorizedTags = useMemo(() => {
+    return categorizeTagsByUsage(availableTags, 5)
+  }, [availableTags])
+
+  // よく使うタグと最近使ったタグ
+  const frequentTags = categorizedTags.frequent
+  const recentTags = categorizedTags.recent
 
   const loadAvailableTags = async () => {
     if (!database) return
@@ -79,6 +88,10 @@ export function useTags({ database, loadEntries }: UseTagsProps) {
     deleteTagDialogOpen,
     setDeleteTagDialogOpen,
     deleteTagTarget,
+    // Categorized tags
+    categorizedTags,
+    frequentTags,
+    recentTags,
     // Handlers
     loadAvailableTags,
     handleTagClick,
