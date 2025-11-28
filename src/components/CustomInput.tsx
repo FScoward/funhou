@@ -8,11 +8,7 @@ import {
   InputGroupButton,
 } from "@/components/ui/input-group"
 import { TagSelector } from "@/components/TagSelector"
-
-interface Tag {
-  id: number
-  name: string
-}
+import type { Tag } from "@/types"
 
 interface CustomInputProps {
   value: string
@@ -24,6 +20,8 @@ interface CustomInputProps {
   selectedTags?: string[]
   onTagAdd?: (tag: string) => void
   onTagRemove?: (tag: string) => void
+  frequentTags?: Tag[]
+  recentTags?: Tag[]
 }
 
 export default function CustomInput({
@@ -35,7 +33,9 @@ export default function CustomInput({
   availableTags = [],
   selectedTags = [],
   onTagAdd,
-  onTagRemove
+  onTagRemove,
+  frequentTags = [],
+  recentTags = []
 }: CustomInputProps) {
   const hasContent = value.trim().length > 0
   const showTagSelector = onTagAdd && onTagRemove
@@ -74,6 +74,8 @@ export default function CustomInput({
             selectedTags={selectedTags}
             onTagAdd={onTagAdd}
             onTagRemove={onTagRemove}
+            frequentTags={frequentTags}
+            recentTags={recentTags}
           />
         </div>
       )}

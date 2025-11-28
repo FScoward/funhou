@@ -10,6 +10,8 @@ interface InputSectionProps {
   selectedTags: string[]
   onTagAdd: (tag: string) => void
   onTagRemove: (tag: string) => void
+  frequentTags?: Tag[]
+  recentTags?: Tag[]
 }
 
 export function InputSection({
@@ -21,6 +23,8 @@ export function InputSection({
   selectedTags,
   onTagAdd,
   onTagRemove,
+  frequentTags,
+  recentTags,
 }: InputSectionProps) {
   return (
     <div className="input-section">
@@ -33,6 +37,8 @@ export function InputSection({
         selectedTags={selectedTags}
         onTagAdd={onTagAdd}
         onTagRemove={onTagRemove}
+        frequentTags={frequentTags}
+        recentTags={recentTags}
       />
     </div>
   )

@@ -18,6 +18,8 @@ interface TimelineItemComponentProps {
   replyContent: string
   replyManualTags: string[]
   expandedEntryReplies: Set<number>
+  frequentTags?: Tag[]
+  recentTags?: Tag[]
   onEditEntry: (id: number, content: string) => void
   onCancelEditEntry: () => void
   onUpdateEntry: (id: number) => void
@@ -61,6 +63,8 @@ export function TimelineItemComponent({
   replyContent,
   replyManualTags,
   expandedEntryReplies,
+  frequentTags = [],
+  recentTags = [],
   onEditEntry,
   onCancelEditEntry,
   onUpdateEntry,
@@ -132,6 +136,8 @@ export function TimelineItemComponent({
             replyContent={replyContent}
             replyManualTags={replyManualTags}
             expandedReplies={expandedEntryReplies.has(item.id)}
+            frequentTags={frequentTags}
+            recentTags={recentTags}
             onEdit={onEditEntry}
             onCancelEdit={onCancelEditEntry}
             onUpdateEntry={onUpdateEntry}

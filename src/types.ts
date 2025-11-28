@@ -1,6 +1,14 @@
 export interface Tag {
   id: number
   name: string
+  usageCount?: number
+  lastUsedAt?: string | null
+}
+
+export interface CategorizedTags {
+  frequent: Tag[]
+  recent: Tag[]
+  others: Tag[]
 }
 
 export interface Entry {
