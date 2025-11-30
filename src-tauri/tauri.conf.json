@@ -29,6 +29,7 @@
         "visible": true,
         "decorations": false,
         "transparent": true,
+        "visibleOnAllWorkspaces": true,
         "windowEffects": {
           "effects": ["sidebar"],
           "radius": 20
@@ -47,7 +48,8 @@
         "transparent": true,
         "alwaysOnTop": true,
         "skipTaskbar": true,
-        "visible": true
+        "visible": true,
+        "visibleOnAllWorkspaces": true
       }
     ],
     "security": {
