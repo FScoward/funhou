@@ -136,14 +136,14 @@ fn main() {
                     let screen_size = monitor.size();
                     let scale_factor = monitor.scale_factor();
 
-                    // Calculate height (leave some margin for menu bar and dock)
-                    let margin = 80.0 * scale_factor;
-                    let window_height = (screen_size.height as f64 - margin) as u32;
+                    // Calculate height (leave 100px margin top and bottom)
+                    let vertical_margin = 100.0;
+                    let window_height = (screen_size.height as f64 - vertical_margin * 2.0 * scale_factor) as u32;
 
                     // Set main window size and position
-                    let main_width = 380;
+                    let main_width = 430;
                     let main_x = 20;
-                    let main_y = 30;
+                    let main_y = 100; // 100px from top
 
                     let _ = main_window.set_size(tauri::PhysicalSize::new(
                         (main_width as f64 * scale_factor) as u32,
