@@ -12,21 +12,29 @@
       width: 100%;
       height: 100%;
       overflow: hidden;
+      background: transparent;
     }
     body {
-      background: rgba(76, 175, 80, 0.8);
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
-      transition: background 0.15s ease;
     }
-    body:hover {
-      background: rgba(76, 175, 80, 1);
+    .tab-handle {
+      width: 4px;
+      height: 100%;
+      background: rgba(120, 120, 120, 0.6);
+      border-radius: 2px;
+      transition: all 0.15s ease;
+    }
+    body:hover .tab-handle {
+      background: rgba(80, 80, 80, 0.9);
+      width: 6px;
     }
   </style>
 </head>
 <body>
+  <div class="tab-handle"></div>
   <script type="module" src="/src/tab.ts"></script>
 </body>
 </html>

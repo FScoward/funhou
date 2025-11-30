@@ -129,6 +129,47 @@ fn main() {
         .manage(AppState {
             autohide_manager: Mutex::new(AutohideManager::new()),
         })
+        .setup(|app| {
+            // Get primary monitor size and adjust window heights
+            if let Some(main_window) = app.get_webview_window("main") {
+                if let Some(monitor) = main_window.primary_monitor().ok().flatten() {
+                    let screen_size = monitor.size();
+                    let scale_factor = monitor.scale_factor();
+
+                    // Calculate height (leave some margin for menu bar and dock)
+                    let margin = 80.0 * scale_factor;
+                    let window_height = (screen_size.height as f64 - margin) as u32;
+
+                    // Set main window size and position
+                    let main_width = 380;
+                    let main_x = 20;
+                    let main_y = 30;
+
+                    let _ = main_window.set_size(tauri::PhysicalSize::new(
+                        (main_width as f64 * scale_factor) as u32,
+                        window_height,
+                    ));
+                    let _ = main_window.set_position(tauri::PhysicalPosition::new(
+                        (main_x as f64 * scale_factor) as i32,
+                        (main_y as f64 * scale_factor) as i32,
+                    ));
+
+                    // Set tab window size and position
+                    if let Some(tab_window) = app.get_webview_window("tab") {
+                        let tab_width = 12;
+                        let _ = tab_window.set_size(tauri::PhysicalSize::new(
+                            (tab_width as f64 * scale_factor) as u32,
+                            window_height,
+                        ));
+                        let _ = tab_window.set_position(tauri::PhysicalPosition::new(
+                            0,
+                            (main_y as f64 * scale_factor) as i32,
+                        ));
+                    }
+                }
+            }
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             get_system_fonts,
             set_autohide_enabled,
