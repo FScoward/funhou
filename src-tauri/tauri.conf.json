@@ -28,7 +28,10 @@
         "fullscreen": false,
         "visible": true,
         "decorations": false,
-        "transparent": true
+        "transparent": true,
+        "windowEffects": {
+          "effects": ["sidebar"]
+        }
       },
       {
         "label": "tab",

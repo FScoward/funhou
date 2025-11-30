@@ -1,10 +1,9 @@
 .app {
   margin: 0;
   padding: 0.75rem;
-  color: #555;
-  background: rgba(255, 255, 255, 0.95);
+  color: #333;
+  background: transparent;
   border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
   height: 100vh;
   overflow: hidden;
   display: flex;
@@ -121,9 +120,9 @@ h1 {
 .input-section {
   margin-bottom: 0.75rem;
   position: relative;
-  border: 1px solid #e5e5e5;
+  border: 1px solid rgba(229, 229, 229, 0.8);
   border-radius: 8px;
-  background-color: #fff;
+  background-color: rgba(255, 255, 255, 0.6);
   padding: 0.75rem;
   transition: border-color 0.15s;
   display: flex;
@@ -262,8 +261,8 @@ textarea::placeholder {
 
 .entry-card {
   position: relative;
-  background-color: #fff;
-  border: 1px solid #e5e5e5;
+  background-color: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(229, 229, 229, 0.8);
   border-radius: 8px;
   padding: 1rem;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
@@ -588,8 +587,8 @@ textarea::placeholder {
 /* Reply Card */
 .reply-card {
   position: relative;
-  background-color: #fff;
-  border: 1px solid #e5e5e5;
+  background-color: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(229, 229, 229, 0.8);
   border-radius: 8px;
   padding: 1rem;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
