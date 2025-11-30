@@ -2,12 +2,17 @@
   margin: 0;
   padding: 1rem;
   color: #333;
-  background: transparent;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
   border-radius: 20px;
   height: 100vh;
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  box-shadow: 0 8px 32px rgba(31, 38, 135, 0.15),
+              inset 0 2px 20px rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
 .app-layout {
@@ -120,13 +125,17 @@ h1 {
 .input-section {
   margin-bottom: 0.75rem;
   position: relative;
-  border: 1px solid rgba(229, 229, 229, 0.6);
-  border-radius: 16px;
-  background-color: rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(12px) saturate(180%);
+  -webkit-backdrop-filter: blur(12px) saturate(180%);
   padding: 1rem;
   transition: all 0.2s ease;
   display: flex;
   flex-direction: column;
+  box-shadow: 0 4px 16px rgba(31, 38, 135, 0.1),
+              inset 0 2px 10px rgba(255, 255, 255, 0.25);
 }
 
 .input-section:focus-within {
@@ -261,16 +270,21 @@ textarea::placeholder {
 
 .entry-card {
   position: relative;
-  background-color: rgba(255, 255, 255, 0.5);
-  border: 1px solid rgba(229, 229, 229, 0.6);
-  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(12px) saturate(180%);
+  -webkit-backdrop-filter: blur(12px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 20px;
   padding: 1rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 4px 16px rgba(31, 38, 135, 0.1),
+              inset 0 2px 10px rgba(255, 255, 255, 0.25);
   transition: all 0.2s ease;
 }
 
 .entry-card:hover {
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 6px 20px rgba(31, 38, 135, 0.15),
+              inset 0 2px 10px rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px);
 }
 
 .delete-button {
@@ -587,16 +601,21 @@ textarea::placeholder {
 /* Reply Card */
 .reply-card {
   position: relative;
-  background-color: rgba(255, 255, 255, 0.5);
-  border: 1px solid rgba(229, 229, 229, 0.6);
-  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(12px) saturate(180%);
+  -webkit-backdrop-filter: blur(12px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 20px;
   padding: 1rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 4px 16px rgba(31, 38, 135, 0.1),
+              inset 0 2px 10px rgba(255, 255, 255, 0.25);
   transition: all 0.2s ease;
 }
 
 .reply-card:hover {
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 6px 20px rgba(31, 38, 135, 0.15),
+              inset 0 2px 10px rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px);
 }
 
 .reply-card:hover .delete-button {
@@ -730,13 +749,17 @@ textarea::placeholder {
   right: 0;
   bottom: 0;
   width: 350px;
-  background-color: #fff;
-  box-shadow: -4px 0 12px rgba(0, 0, 0, 0.15);
+  background: rgba(255, 255, 255, 0.25);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-left: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow: -8px 0 32px rgba(31, 38, 135, 0.15),
+              inset 2px 0 20px rgba(255, 255, 255, 0.2);
   z-index: 1001;
   padding: 1.5rem;
   overflow-y: auto;
   transition: transform 0.3s ease-in-out;
-  border-radius: 20px 0 0 20px;
+  border-radius: 24px 0 0 24px;
 }
 
 .pinned-sidebar-drawer.open {
