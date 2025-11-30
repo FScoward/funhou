@@ -23,14 +23,11 @@
     .tab-handle {
       width: 8px;
       height: 120px;
-      background: linear-gradient(180deg, rgba(76, 175, 80, 0.85), rgba(129, 199, 132, 0.85));
+      background: linear-gradient(180deg, rgb(76, 175, 80), rgb(129, 199, 132));
       border-radius: 0 20px 20px 0;
       transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3);
       position: relative;
       overflow: hidden;
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
     }
     .tab-handle::before {
       content: '';
@@ -61,8 +58,7 @@
     body:hover .tab-handle {
       width: 24px;
       height: 160px;
-      background: linear-gradient(180deg, rgba(76, 175, 80, 0.95), rgba(129, 199, 132, 0.95));
-      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4);
+      background: linear-gradient(180deg, rgb(76, 175, 80), rgb(129, 199, 132));
     }
     body:hover .tab-handle::after {
       width: 6px;
@@ -75,6 +71,15 @@
     /* シマー無効時 */
     .tab-handle.no-shimmer::before {
       display: none;
+    }
+    /* クリック後はホバー効果を無効化 */
+    .tab-handle.clicked {
+      width: 8px !important;
+      height: 120px !important;
+    }
+    .tab-handle.clicked::after {
+      width: 4px !important;
+      height: 4px !important;
     }
   </style>
 </head>

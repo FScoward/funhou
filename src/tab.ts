@@ -83,7 +83,18 @@ document.body.addEventListener('click', async (e) => {
 
   try {
     await invoke('toggle_main_window')
+    // クリック後にタブを元のサイズに戻す
+    if (tabHandle) {
+      tabHandle.classList.add('clicked')
+    }
   } catch (e) {
     console.error('Failed to toggle main window:', e)
+  }
+})
+
+// マウスがタブから離れたらclickedクラスを削除
+document.body.addEventListener('mouseleave', () => {
+  if (tabHandle) {
+    tabHandle.classList.remove('clicked')
   }
 })
