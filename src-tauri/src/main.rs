@@ -156,7 +156,7 @@ fn main() {
 
                     // Set tab window size and position
                     if let Some(tab_window) = app.get_webview_window("tab") {
-                        let tab_width = 12;
+                        let tab_width = 20;
                         let _ = tab_window.set_size(tauri::PhysicalSize::new(
                             (tab_width as f64 * scale_factor) as u32,
                             window_height,
