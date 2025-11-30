@@ -1,13 +1,46 @@
 .app {
-  margin: 0 auto;
-  padding: 2rem 2rem 2rem 2rem;
-  color: #555;
+  margin: 0;
+  padding: 1rem;
+  color: #333;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-radius: 20px;
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 8px 32px rgba(31, 38, 135, 0.15),
+              inset 0 2px 20px rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
 .app-layout {
-  max-width: 800px;
-  margin: 0 auto;
   width: 100%;
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* Draggable title bar area */
+.drag-region {
+  -webkit-app-region: drag;
+  height: 24px;
+  width: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  cursor: grab;
+}
+
+/* Prevent buttons from being draggable */
+.drag-region button,
+.app button,
+.app input,
+.app textarea,
+.app select {
+  -webkit-app-region: no-drag;
 }
 
 
@@ -25,9 +58,10 @@ h1 {
   align-items: center;
   justify-content: center;
   position: relative;
-  margin-bottom: 2rem;
-  padding: 0.75rem;
+  margin-bottom: 0.75rem;
+  padding: 0.5rem 0.25rem;
   border-bottom: 1px solid #e0e0e0;
+  -webkit-app-region: drag;
 }
 
 .date-navigation-center {
@@ -56,14 +90,14 @@ h1 {
 }
 
 .nav-button {
-  padding: 0.3rem 0.6rem;
+  padding: 0.4rem 0.7rem;
   font-size: 0.9rem;
   background-color: transparent;
   color: #888;
   border: none;
-  border-radius: 4px;
+  border-radius: 10px;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: all 0.2s ease;
 }
 
 .nav-button:hover {
@@ -89,15 +123,19 @@ h1 {
 }
 
 .input-section {
-  margin-bottom: 2rem;
+  margin-bottom: 0.75rem;
   position: relative;
-  border: 1px solid #e5e5e5;
-  border-radius: 12px;
-  background-color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(12px) saturate(180%);
+  -webkit-backdrop-filter: blur(12px) saturate(180%);
   padding: 1rem;
-  transition: border-color 0.15s;
+  transition: all 0.2s ease;
   display: flex;
   flex-direction: column;
+  box-shadow: 0 4px 16px rgba(31, 38, 135, 0.1),
+              inset 0 2px 10px rgba(255, 255, 255, 0.25);
 }
 
 .input-section:focus-within {
@@ -158,9 +196,9 @@ textarea::placeholder {
 
 .timeline-item {
   display: grid;
-  grid-template-columns: 60px 40px 1fr;
+  grid-template-columns: 50px 30px 1fr;
   gap: 0;
-  margin-bottom: 1.5rem;
+  margin-bottom: 1rem;
   position: relative;
 }
 
@@ -205,7 +243,7 @@ textarea::placeholder {
   position: absolute;
   left: 50%;
   top: 0;
-  bottom: -1.5rem;
+  bottom: -1rem;
   width: 2px;
   background-color: #e0e0e0;
   transform: translateX(-50%);
@@ -232,16 +270,21 @@ textarea::placeholder {
 
 .entry-card {
   position: relative;
-  background-color: #fff;
-  border: 1px solid #e5e5e5;
-  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(12px) saturate(180%);
+  -webkit-backdrop-filter: blur(12px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 20px;
   padding: 1rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-  transition: box-shadow 0.15s;
+  box-shadow: 0 4px 16px rgba(31, 38, 135, 0.1),
+              inset 0 2px 10px rgba(255, 255, 255, 0.25);
+  transition: all 0.2s ease;
 }
 
 .entry-card:hover {
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 6px 20px rgba(31, 38, 135, 0.15),
+              inset 0 2px 10px rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px);
 }
 
 .delete-button {
@@ -251,7 +294,7 @@ textarea::placeholder {
   padding: 0.4rem;
   background-color: transparent;
   border: none;
-  border-radius: 4px;
+  border-radius: 10px;
   cursor: pointer;
   color: #999;
   opacity: 0;
@@ -277,7 +320,7 @@ textarea::placeholder {
   padding: 0.4rem;
   background-color: transparent;
   border: none;
-  border-radius: 4px;
+  border-radius: 10px;
   cursor: pointer;
   color: #999;
   opacity: 0;
@@ -304,7 +347,7 @@ textarea::placeholder {
   padding: 0.4rem;
   background-color: transparent;
   border: none;
-  border-radius: 4px;
+  border-radius: 10px;
   cursor: pointer;
   color: #999;
   opacity: 0;
@@ -331,7 +374,7 @@ textarea::placeholder {
   padding: 0.4rem;
   background-color: transparent;
   border: none;
-  border-radius: 4px;
+  border-radius: 10px;
   cursor: pointer;
   color: #999;
   opacity: 0;
@@ -373,7 +416,7 @@ textarea::placeholder {
   padding: 0.25rem;
   font-size: var(--font-size, 0.9rem);
   border: 1px solid #e5e5e5;
-  border-radius: 4px;
+  border-radius: 12px;
   resize: none;
   font-family: var(--font-family, inherit);
   background-color: #fff;
@@ -458,7 +501,7 @@ textarea::placeholder {
   font-size: 0.75rem;
   background-color: transparent;
   border: 1px solid #e0e0e0;
-  border-radius: 4px;
+  border-radius: 12px;
   cursor: pointer;
   color: #666;
   transition: all 0.15s;
@@ -475,7 +518,7 @@ textarea::placeholder {
   font-size: 0.7rem;
   background-color: transparent;
   border: none;
-  border-radius: 4px;
+  border-radius: 10px;
   cursor: pointer;
   color: #999;
   transition: all 0.15s;
@@ -497,7 +540,7 @@ textarea::placeholder {
   margin-top: 0.75rem;
   padding: 0.75rem;
   background-color: #f9f9f9;
-  border-radius: 6px;
+  border-radius: 14px;
   border: 1px solid #e5e5e5;
 }
 
@@ -506,7 +549,7 @@ textarea::placeholder {
   padding: 0.5rem;
   font-size: var(--font-size, 0.8rem);
   border: 1px solid #e0e0e0;
-  border-radius: 4px;
+  border-radius: 12px;
   resize: none;
   font-family: var(--font-family, inherit);
   background-color: #fff;
@@ -558,16 +601,21 @@ textarea::placeholder {
 /* Reply Card */
 .reply-card {
   position: relative;
-  background-color: #fff;
-  border: 1px solid #e5e5e5;
-  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(12px) saturate(180%);
+  -webkit-backdrop-filter: blur(12px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 20px;
   padding: 1rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-  transition: box-shadow 0.15s;
+  box-shadow: 0 4px 16px rgba(31, 38, 135, 0.1),
+              inset 0 2px 10px rgba(255, 255, 255, 0.25);
+  transition: all 0.2s ease;
 }
 
 .reply-card:hover {
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 6px 20px rgba(31, 38, 135, 0.15),
+              inset 0 2px 10px rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px);
 }
 
 .reply-card:hover .delete-button {
@@ -580,7 +628,7 @@ textarea::placeholder {
   margin-bottom: 0.5rem;
   padding: 0.4rem 0.6rem;
   background-color: #f5f5f5;
-  border-radius: 4px;
+  border-radius: 10px;
   border: 1px solid #e0e0e0;
   cursor: pointer;
   transition: all 0.15s;
@@ -613,7 +661,7 @@ textarea::placeholder {
   padding: 0.5rem 0.75rem;
   margin-bottom: 0.5rem;
   background-color: #f9f9f9;
-  border-radius: 6px;
+  border-radius: 12px;
   border: 1px solid #e5e5e5;
 }
 
@@ -658,7 +706,7 @@ textarea::placeholder {
   margin-bottom: 1.5rem;
   padding: 0.75rem 1rem;
   background-color: #fafafa;
-  border-radius: 8px;
+  border-radius: 14px;
   border: 1px solid #e5e5e5;
 }
 
@@ -701,12 +749,17 @@ textarea::placeholder {
   right: 0;
   bottom: 0;
   width: 350px;
-  background-color: #fff;
-  box-shadow: -4px 0 12px rgba(0, 0, 0, 0.15);
+  background: rgba(255, 255, 255, 0.25);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-left: 1px solid rgba(255, 255, 255, 0.4);
+  box-shadow: -8px 0 32px rgba(31, 38, 135, 0.15),
+              inset 2px 0 20px rgba(255, 255, 255, 0.2);
   z-index: 1001;
   padding: 1.5rem;
   overflow-y: auto;
   transition: transform 0.3s ease-in-out;
+  border-radius: 24px 0 0 24px;
 }
 
 .pinned-sidebar-drawer.open {
@@ -726,7 +779,7 @@ textarea::placeholder {
   background-color: transparent;
   color: #999;
   border: none;
-  border-radius: 6px;
+  border-radius: 10px;
   width: 32px;
   height: 32px;
   display: flex;
@@ -766,7 +819,7 @@ textarea::placeholder {
   font-size: 0.75rem;
   font-weight: 600;
   padding: 0.2rem 0.5rem;
-  border-radius: 12px;
+  border-radius: 14px;
 }
 
 /* 空の状態 */
@@ -788,7 +841,7 @@ textarea::placeholder {
 .pinned-sidebar-item {
   background-color: #f1f8f4;
   border: 1px solid #4CAF50;
-  border-radius: 8px;
+  border-radius: 14px;
   padding: 0.75rem;
   cursor: pointer;
   transition: all 0.15s;
@@ -827,7 +880,7 @@ textarea::placeholder {
   color: #666;
   background-color: #f5f5f5;
   padding: 0.15rem 0.4rem;
-  border-radius: 4px;
+  border-radius: 8px;
 }
 
 /* FAB（トグルボタン） */
@@ -838,7 +891,7 @@ textarea::placeholder {
   background-color: rgba(76, 175, 80, 0.9);
   color: white;
   border: none;
-  border-radius: 8px;
+  border-radius: 12px;
   width: 36px;
   height: 36px;
   display: flex;
@@ -865,7 +918,7 @@ textarea::placeholder {
   font-size: 0.6rem;
   font-weight: 600;
   padding: 0.1rem 0.35rem;
-  border-radius: 10px;
+  border-radius: 12px;
   min-width: 18px;
   text-align: center;
   line-height: 1.2;
@@ -923,7 +976,7 @@ textarea::placeholder {
   margin-bottom: 1rem;
   background: linear-gradient(to right, #f8f9fa 0%, #e9ecef 100%);
   border-left: 4px solid #5cb85c;
-  border-radius: 4px;
+  border-radius: 10px;
   position: sticky;
   top: 0;
   z-index: 10;
@@ -1034,14 +1087,14 @@ textarea::placeholder {
   background-color: #f5f5f5;
   color: #e53e3e;
   padding: 0.15em 0.4em;
-  border-radius: 3px;
+  border-radius: 6px;
   border: 1px solid #e0e0e0;
 }
 
 .markdown-preview pre {
   background-color: #f8f8f8;
   border: 1px solid #e0e0e0;
-  border-radius: 6px;
+  border-radius: 12px;
   padding: 0.75rem;
   margin: 0.75em 0;
   overflow-x: auto;
@@ -1085,7 +1138,7 @@ textarea::placeholder {
 .markdown-preview img {
   max-width: 100%;
   height: auto;
-  border-radius: 4px;
+  border-radius: 10px;
   margin: 0.5em 0;
 }
 

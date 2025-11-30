@@ -1,9 +1,14 @@
 import Database from '@tauri-apps/plugin-sql'
 
+export type ScreenEdge = 'left' | 'right'
+
 export interface Settings {
   alwaysOnTop: boolean
   fontFamily?: string
   fontSize?: string
+  autohideEnabled?: boolean
+  autohideEdge?: ScreenEdge
+  tabShimmerEnabled?: boolean
 }
 
 export async function getSettings(db: Database): Promise<Settings> {
@@ -16,6 +21,9 @@ export async function getSettings(db: Database): Promise<Settings> {
       alwaysOnTop: false,
       fontFamily: undefined,
       fontSize: undefined,
+      autohideEnabled: false,
+      autohideEdge: 'left',
+      tabShimmerEnabled: true,
     }
 
     result.forEach((row) => {
@@ -25,6 +33,12 @@ export async function getSettings(db: Database): Promise<Settings> {
         settings.fontFamily = row.value
       } else if (row.key === 'font_size') {
         settings.fontSize = row.value
+      } else if (row.key === 'autohide_enabled') {
+        settings.autohideEnabled = row.value === 'true'
+      } else if (row.key === 'autohide_edge') {
+        settings.autohideEdge = row.value as ScreenEdge
+      } else if (row.key === 'tab_shimmer_enabled') {
+        settings.tabShimmerEnabled = row.value === 'true'
       }
     })
 
@@ -35,6 +49,9 @@ export async function getSettings(db: Database): Promise<Settings> {
       alwaysOnTop: false,
       fontFamily: undefined,
       fontSize: undefined,
+      autohideEnabled: false,
+      autohideEdge: 'left',
+      tabShimmerEnabled: true,
     }
   }
 }
@@ -74,4 +91,27 @@ export async function setFontSize(
   value: string
 ): Promise<void> {
   await saveSetting(db, 'font_size', value)
+}
+
+export async function setAutohideEnabled(
+  db: Database,
+  value: boolean
+): Promise<void> {
+  await saveSetting(db, 'autohide_enabled', value ? 'true' : 'false')
+}
+
+export async function setAutohideEdge(
+  db: Database,
+  value: ScreenEdge
+): Promise<void> {
+  await saveSetting(db, 'autohide_edge', value)
+}
+
+export async function setTabShimmerEnabled(
+  db: Database,
+  value: boolean
+): Promise<void> {
+  await saveSetting(db, 'tab_shimmer_enabled', value ? 'true' : 'false')
+  // localStorageにも保存してtabウィンドウと共有
+  localStorage.setItem('tab_shimmer_enabled', value ? 'true' : 'false')
 }

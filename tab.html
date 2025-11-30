@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: transparent;
+    }
+    body {
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+    }
+    .tab-handle {
+      width: 8px;
+      height: 120px;
+      background: linear-gradient(180deg, rgb(129, 199, 132), rgb(165, 214, 167));
+      border-radius: 0 20px 20px 0;
+      transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+      position: relative;
+      overflow: hidden;
+    }
+    .tab-handle::before {
+      content: '';
+      position: absolute;
+      top: -100%;
+      left: 0;
+      width: 100%;
+      height: 50%;
+      background: linear-gradient(180deg, transparent, rgba(255, 255, 255, 0.5), transparent);
+      animation: shimmer 4s infinite;
+    }
+    .tab-handle::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 4px;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.9);
+      border-radius: 50%;
+      transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    }
+    @keyframes shimmer {
+      0% { top: -100%; }
+      100% { top: 200%; }
+    }
+    body:hover .tab-handle {
+      width: 24px;
+      height: 160px;
+      background: linear-gradient(180deg, rgb(129, 199, 132), rgb(165, 214, 167));
+    }
+    body:hover .tab-handle::after {
+      width: 6px;
+      height: 6px;
+      background: rgba(255, 255, 255, 1);
+    }
+    body:hover .tab-handle::before {
+      animation: shimmer 2s infinite;
+    }
+    /* シマー無効時 */
+    .tab-handle.no-shimmer::before {
+      display: none;
+    }
+    /* クリック後はホバー効果を無効化 */
+    .tab-handle.clicked {
+      width: 8px !important;
+      height: 120px !important;
+    }
+    .tab-handle.clicked::after {
+      width: 4px !important;
+      height: 4px !important;
+    }
+  </style>
+</head>
+<body>
+  <div class="tab-handle"></div>
+  <script type="module" src="/src/tab.ts"></script>
+</body>
+</html>

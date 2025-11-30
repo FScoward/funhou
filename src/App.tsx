@@ -25,9 +25,9 @@ function App() {
   // データベース
   const database = useDatabase()
 
-  // フォント設定の読み込みと適用
+  // フォント設定の読み込み・適用
   useEffect(() => {
-    const loadAndApplyFont = async () => {
+    const loadAndApplySettings = async () => {
       if (!database) return
 
       const settings = await getSettings(database)
@@ -37,9 +37,11 @@ function App() {
       if (settings.fontSize) {
         applyFontSize(settings.fontSize)
       }
+      // タブのシマー設定をlocalStorageに保存（tabウィンドウと共有）
+      localStorage.setItem('tab_shimmer_enabled', (settings.tabShimmerEnabled ?? true) ? 'true' : 'false')
     }
 
-    loadAndApplyFont()
+    loadAndApplySettings()
   }, [database])
 
   const applyFont = (fontFamily: string) => {

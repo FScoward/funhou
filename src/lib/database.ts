@@ -27,6 +27,12 @@ export async function getDb() {
     await db.execute(`
       INSERT OR IGNORE INTO settings (key, value) VALUES ('always_on_top', 'false')
     `)
+    await db.execute(`
+      INSERT OR IGNORE INTO settings (key, value) VALUES ('autohide_enabled', 'false')
+    `)
+    await db.execute(`
+      INSERT OR IGNORE INTO settings (key, value) VALUES ('autohide_edge', 'left')
+    `)
 
     // 返信テーブルを作成
     await db.execute(`
