@@ -8,6 +8,7 @@ export interface Settings {
   fontSize?: string
   autohideEnabled?: boolean
   autohideEdge?: ScreenEdge
+  tabShimmerEnabled?: boolean
 }
 
 export async function getSettings(db: Database): Promise<Settings> {
@@ -22,6 +23,7 @@ export async function getSettings(db: Database): Promise<Settings> {
       fontSize: undefined,
       autohideEnabled: false,
       autohideEdge: 'left',
+      tabShimmerEnabled: true,
     }
 
     result.forEach((row) => {
@@ -35,6 +37,8 @@ export async function getSettings(db: Database): Promise<Settings> {
         settings.autohideEnabled = row.value === 'true'
       } else if (row.key === 'autohide_edge') {
         settings.autohideEdge = row.value as ScreenEdge
+      } else if (row.key === 'tab_shimmer_enabled') {
+        settings.tabShimmerEnabled = row.value === 'true'
       }
     })
 
@@ -47,6 +51,7 @@ export async function getSettings(db: Database): Promise<Settings> {
       fontSize: undefined,
       autohideEnabled: false,
       autohideEdge: 'left',
+      tabShimmerEnabled: true,
     }
   }
 }
@@ -100,4 +105,13 @@ export async function setAutohideEdge(
   value: ScreenEdge
 ): Promise<void> {
   await saveSetting(db, 'autohide_edge', value)
+}
+
+export async function setTabShimmerEnabled(
+  db: Database,
+  value: boolean
+): Promise<void> {
+  await saveSetting(db, 'tab_shimmer_enabled', value ? 'true' : 'false')
+  // localStorageにも保存してtabウィンドウと共有
+  localStorage.setItem('tab_shimmer_enabled', value ? 'true' : 'false')
 }

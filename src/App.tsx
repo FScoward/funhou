@@ -37,6 +37,8 @@ function App() {
       if (settings.fontSize) {
         applyFontSize(settings.fontSize)
       }
+      // タブのシマー設定をlocalStorageに保存（tabウィンドウと共有）
+      localStorage.setItem('tab_shimmer_enabled', (settings.tabShimmerEnabled ?? true) ? 'true' : 'false')
     }
 
     loadAndApplySettings()
