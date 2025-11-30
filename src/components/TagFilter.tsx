@@ -178,7 +178,7 @@ export function TagFilter({
                 <div className="text-xs text-muted-foreground px-1">削除するタグをクリック</div>
                 <div className="flex flex-wrap gap-1">
                   {availableTags.map((tag) => (
-                    <div key={tag.id} className="flex items-center gap-1 bg-gray-50 border border-gray-200 rounded-md px-2 py-0.5">
+                    <div key={tag.id} className="flex items-center gap-1 bg-gray-50 border border-gray-200 rounded-xl px-2 py-0.5">
                       <TagIcon className="size-3 text-yellow-500" />
                       <span className="text-xs text-gray-600">{tag.name}</span>
                       <button

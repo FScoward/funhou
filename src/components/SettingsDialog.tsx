@@ -222,7 +222,7 @@ export function SettingsDialog({ open, onOpenChange, db, onFontChange, onFontSiz
           {(selectedFont !== 'default' || selectedFontSize !== 'default') && (
             <>
               <div
-                className="mt-2 p-4 rounded-md border border-border bg-muted"
+                className="mt-2 p-4 rounded-2xl border border-border bg-muted"
                 style={{
                   fontFamily: selectedFont !== 'default' ? selectedFont : undefined,
                   fontSize: selectedFontSize !== 'default' ? selectedFontSize : undefined,
