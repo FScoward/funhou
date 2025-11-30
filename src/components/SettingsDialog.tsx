@@ -19,7 +19,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { getSettings, setAlwaysOnTop, setFontFamily, setFontSize } from '@/lib/settings'
+import {
+  getSettings,
+  setAlwaysOnTop,
+  setFontFamily,
+  setFontSize,
+  setAutohideEnabled,
+  setAutohideEdge,
+  ScreenEdge,
+} from '@/lib/settings'
 
 interface SettingsDialogProps {
   open: boolean
@@ -35,6 +43,8 @@ export function SettingsDialog({ open, onOpenChange, db, onFontChange, onFontSiz
   const [selectedFont, setSelectedFont] = useState<string>('')
   const [selectedFontSize, setSelectedFontSize] = useState<string>('default')
   const [isLoadingFonts, setIsLoadingFonts] = useState(false)
+  const [autohideEnabled, setAutohideEnabledState] = useState(false)
+  const [autohideEdge, setAutohideEdgeState] = useState<ScreenEdge>('left')
 
   useEffect(() => {
     if (open) {
@@ -48,6 +58,8 @@ export function SettingsDialog({ open, onOpenChange, db, onFontChange, onFontSiz
     setAlwaysOnTopState(settings.alwaysOnTop)
     setSelectedFont(settings.fontFamily || 'default')
     setSelectedFontSize(settings.fontSize || 'default')
+    setAutohideEnabledState(settings.autohideEnabled || false)
+    setAutohideEdgeState(settings.autohideEdge || 'left')
   }
 
   const loadFonts = async () => {
@@ -146,6 +158,32 @@ export function SettingsDialog({ open, onOpenChange, db, onFontChange, onFontSiz
     }
   }
 
+  const handleAutohideEnabledChange = async (checked: boolean) => {
+    try {
+      setAutohideEnabledState(checked)
+      await setAutohideEnabled(db, checked)
+
+      // Rust側のオートハイド機能を有効/無効にする
+      await invoke('set_autohide_enabled', { enabled: checked })
+    } catch (error) {
+      console.error('オートハイド設定の変更に失敗しました:', error)
+      // エラーが発生した場合は元の状態に戻す
+      setAutohideEnabledState(!checked)
+    }
+  }
+
+  const handleAutohideEdgeChange = async (edge: ScreenEdge) => {
+    try {
+      setAutohideEdgeState(edge)
+      await setAutohideEdge(db, edge)
+
+      // Rust側の画面端設定を変更
+      await invoke('set_autohide_edge', { edge })
+    } catch (error) {
+      console.error('画面端設定の変更に失敗しました:', error)
+    }
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
@@ -169,6 +207,38 @@ export function SettingsDialog({ open, onOpenChange, db, onFontChange, onFontSiz
               onCheckedChange={handleAlwaysOnTopChange}
             />
           </div>
+
+          <div className="flex items-center justify-between space-x-2">
+            <Label htmlFor="autohide" className="flex flex-col space-y-1">
+              <span>サイドバーモード</span>
+              <span className="font-normal text-sm text-muted-foreground">
+                画面端にハンドルを表示し、クリックで表示/非表示を切り替えます
+              </span>
+            </Label>
+            <Switch
+              id="autohide"
+              checked={autohideEnabled}
+              onCheckedChange={handleAutohideEnabledChange}
+            />
+          </div>
+
+          {autohideEnabled && (
+            <div className="flex flex-col space-y-2">
+              <Label htmlFor="autohide-edge">隠す画面端</Label>
+              <Select
+                value={autohideEdge}
+                onValueChange={(value) => handleAutohideEdgeChange(value as ScreenEdge)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="左端" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="left">左端</SelectItem>
+                  <SelectItem value="right">右端</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           <div className="flex flex-col space-y-2">
             <Label htmlFor="font-family">フォント</Label>

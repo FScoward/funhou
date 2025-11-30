@@ -25,9 +25,9 @@ function App() {
   // データベース
   const database = useDatabase()
 
-  // フォント設定の読み込みと適用
+  // フォント設定の読み込み・適用
   useEffect(() => {
-    const loadAndApplyFont = async () => {
+    const loadAndApplySettings = async () => {
       if (!database) return
 
       const settings = await getSettings(database)
@@ -39,7 +39,7 @@ function App() {
       }
     }
 
-    loadAndApplyFont()
+    loadAndApplySettings()
   }, [database])
 
   const applyFont = (fontFamily: string) => {

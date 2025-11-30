@@ -1,8 +1,18 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod autohide;
+
+use autohide::{AutohideConfig, AutohideManager, ScreenEdge};
 use font_kit::source::SystemSource;
 use std::collections::HashSet;
+use std::sync::Mutex;
+use tauri::{Manager, State};
+
+/// Application state
+pub struct AppState {
+    autohide_manager: Mutex<AutohideManager>,
+}
 
 #[tauri::command]
 fn get_system_fonts() -> Result<Vec<String>, String> {
@@ -23,11 +33,111 @@ fn get_system_fonts() -> Result<Vec<String>, String> {
     Ok(fonts)
 }
 
+/// Enable or disable autohide mode
+#[tauri::command]
+fn set_autohide_enabled(
+    enabled: bool,
+    window: tauri::Window,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
+    let manager = state
+        .autohide_manager
+        .lock()
+        .map_err(|e| e.to_string())?;
+
+    if enabled {
+        manager.enable(&window)?;
+    } else {
+        manager.disable(&window)?;
+    }
+
+    Ok(())
+}
+
+/// Toggle sidebar visibility (Sidenotes-style)
+/// Returns true if now visible, false if now hidden
+#[tauri::command]
+fn toggle_sidebar(
+    window: tauri::Window,
+    state: State<'_, AppState>,
+) -> Result<bool, String> {
+    let manager = state
+        .autohide_manager
+        .lock()
+        .map_err(|e| e.to_string())?;
+
+    manager.toggle(&window)
+}
+
+/// Set autohide edge (left or right)
+#[tauri::command]
+fn set_autohide_edge(edge: String, state: State<'_, AppState>) -> Result<(), String> {
+    let manager = state
+        .autohide_manager
+        .lock()
+        .map_err(|e| e.to_string())?;
+
+    let screen_edge = ScreenEdge::from_str(&edge);
+    manager.set_edge(screen_edge)?;
+
+    Ok(())
+}
+
+/// Get current autohide config
+#[tauri::command]
+fn get_autohide_config(state: State<'_, AppState>) -> Result<AutohideConfig, String> {
+    let manager = state
+        .autohide_manager
+        .lock()
+        .map_err(|e| e.to_string())?;
+
+    manager.get_config()
+}
+
+/// Check if sidebar is currently visible
+#[tauri::command]
+fn is_sidebar_visible(state: State<'_, AppState>) -> Result<bool, String> {
+    let manager = state
+        .autohide_manager
+        .lock()
+        .map_err(|e| e.to_string())?;
+
+    Ok(manager.is_visible())
+}
+
+/// Toggle main window visibility (TabTab-style)
+#[tauri::command]
+fn toggle_main_window(app: tauri::AppHandle) -> Result<(), String> {
+    let main_window = app
+        .get_webview_window("main")
+        .ok_or("Main window not found")?;
+
+    if main_window.is_visible().unwrap_or(false) {
+        main_window.hide().map_err(|e| e.to_string())?;
+    } else {
+        main_window.show().map_err(|e| e.to_string())?;
+        main_window.set_focus().map_err(|e| e.to_string())?;
+    }
+
+    Ok(())
+}
+
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_sql::Builder::default().build())
-        .invoke_handler(tauri::generate_handler![get_system_fonts])
+        .manage(AppState {
+            autohide_manager: Mutex::new(AutohideManager::new()),
+        })
+        .invoke_handler(tauri::generate_handler![
+            get_system_fonts,
+            set_autohide_enabled,
+            toggle_sidebar,
+            set_autohide_edge,
+            get_autohide_config,
+            is_sidebar_visible,
+            toggle_main_window,
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
