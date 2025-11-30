@@ -23,33 +23,8 @@ window.addEventListener('storage', (e) => {
   }
 })
 
-// ホバーで自動オープン用のタイマー
-let hoverTimer: number | null = null
-const HOVER_DELAY = 500 // ミリ秒
-
-document.body.addEventListener('mouseenter', () => {
-  hoverTimer = window.setTimeout(async () => {
-    try {
-      await invoke('toggle_main_window')
-    } catch (e) {
-      console.error('Failed to toggle main window:', e)
-    }
-  }, HOVER_DELAY)
-})
-
-document.body.addEventListener('mouseleave', () => {
-  if (hoverTimer) {
-    clearTimeout(hoverTimer)
-    hoverTimer = null
-  }
-})
-
+// クリックでメインウィンドウをトグル
 document.body.addEventListener('click', async () => {
-  // クリック時はタイマーをキャンセルして即座に開く
-  if (hoverTimer) {
-    clearTimeout(hoverTimer)
-    hoverTimer = null
-  }
   try {
     await invoke('toggle_main_window')
   } catch (e) {
