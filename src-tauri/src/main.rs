@@ -122,6 +122,24 @@ fn toggle_main_window(app: tauri::AppHandle) -> Result<(), String> {
     Ok(())
 }
 
+/// Set main window Y position (for tab drag sync)
+#[tauri::command]
+fn set_main_window_y(app: tauri::AppHandle, y: i32) -> Result<(), String> {
+    let main_window = app
+        .get_webview_window("main")
+        .ok_or("Main window not found")?;
+
+    let position = main_window
+        .outer_position()
+        .map_err(|e| e.to_string())?;
+
+    main_window
+        .set_position(tauri::PhysicalPosition::new(position.x, y))
+        .map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
@@ -142,7 +160,7 @@ fn main() {
 
                     // Set main window size and position
                     let main_width = 430;
-                    let main_x = 20;
+                    let main_x = 10; // タブの横に寄せる
                     let main_y = 100; // 100px from top
 
                     let _ = main_window.set_size(tauri::PhysicalSize::new(
@@ -155,11 +173,12 @@ fn main() {
                     ));
 
                     // Set tab window size and position
-                    let tab_width = 20;
+                    let tab_width = 30; // ホバー時にメインウィンドウに被さるよう広めに
+                    let tab_height = 160; // タブハンドルのサイズに合わせた小さいウィンドウ
                     if let Some(tab_window) = app.get_webview_window("tab") {
                         let _ = tab_window.set_size(tauri::PhysicalSize::new(
                             (tab_width as f64 * scale_factor) as u32,
-                            window_height,
+                            (tab_height as f64 * scale_factor) as u32,
                         ));
                         let _ = tab_window.set_position(tauri::PhysicalPosition::new(
                             0,
@@ -179,6 +198,7 @@ fn main() {
             get_autohide_config,
             is_sidebar_visible,
             toggle_main_window,
+            set_main_window_y,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
