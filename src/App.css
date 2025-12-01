@@ -962,30 +962,53 @@ textarea::placeholder {
   border-radius: 8px;
 }
 
-/* FAB（トグルボタン） */
+/* FAB（トグルボタン） - Liquid Glass Style */
 .sidebar-toggle-fab {
   position: fixed;
   top: 4rem;
   right: 1rem;
-  background-color: rgba(76, 175, 80, 0.9);
-  color: white;
-  border: none;
-  border-radius: 12px;
-  width: 36px;
-  height: 36px;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.4) 0%,
+    rgba(255, 255, 255, 0.1) 50%,
+    rgba(255, 255, 255, 0.2) 100%
+  );
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  color: rgba(76, 175, 80, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 14px;
+  width: 40px;
+  height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.2s;
-  box-shadow: 0 2px 8px rgba(76, 175, 80, 0.3);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.1),
+    0 1px 3px rgba(0, 0, 0, 0.08),
+    inset 0 1px 1px rgba(255, 255, 255, 0.5);
   z-index: 999;
 }
 
 .sidebar-toggle-fab:hover {
-  background-color: #4CAF50;
-  transform: scale(1.05);
-  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.4);
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.5) 0%,
+    rgba(255, 255, 255, 0.2) 50%,
+    rgba(255, 255, 255, 0.3) 100%
+  );
+  transform: scale(1.08);
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.15),
+    0 2px 6px rgba(0, 0, 0, 0.1),
+    inset 0 1px 2px rgba(255, 255, 255, 0.6);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.sidebar-toggle-fab:active {
+  transform: scale(0.95);
 }
 
 .sidebar-toggle-count {
@@ -1699,30 +1722,53 @@ textarea::placeholder {
    DONE Sidebar - 完了タスクサイドバー
    ======================================== */
 
-/* トグルボタン - ピン留めボタンの下に配置 */
+/* トグルボタン - ピン留めボタンの下に配置 - Liquid Glass Style */
 .done-sidebar-toggle-fab {
   position: fixed;
-  top: 7rem;
+  top: 7.5rem;
   right: 1rem;
-  width: 36px;
-  height: 36px;
-  border-radius: 12px;
-  background-color: rgba(76, 175, 80, 0.9);
-  color: white;
-  border: none;
-  box-shadow: 0 2px 8px rgba(76, 175, 80, 0.3);
+  width: 40px;
+  height: 40px;
+  border-radius: 14px;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.4) 0%,
+    rgba(255, 255, 255, 0.1) 50%,
+    rgba(255, 255, 255, 0.2) 100%
+  );
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  color: rgba(76, 175, 80, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.1),
+    0 1px 3px rgba(0, 0, 0, 0.08),
+    inset 0 1px 1px rgba(255, 255, 255, 0.5);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   z-index: 999;
 }
 
 .done-sidebar-toggle-fab:hover {
-  background-color: #4CAF50;
-  transform: scale(1.05);
-  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.4);
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.5) 0%,
+    rgba(255, 255, 255, 0.2) 50%,
+    rgba(255, 255, 255, 0.3) 100%
+  );
+  transform: scale(1.08);
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.15),
+    0 2px 6px rgba(0, 0, 0, 0.1),
+    inset 0 1px 2px rgba(255, 255, 255, 0.6);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.done-sidebar-toggle-fab:active {
+  transform: scale(0.95);
 }
 
 .done-sidebar-toggle-count {
@@ -1892,30 +1938,53 @@ textarea::placeholder {
    Settings Sidebar - 設定サイドバー
    ======================================== */
 
-/* トグルボタン - DONEボタンの下に配置 */
+/* トグルボタン - DONEボタンの下に配置 - Liquid Glass Style */
 .settings-sidebar-toggle-fab {
   position: fixed;
-  top: 10rem;
+  top: 11rem;
   right: 1rem;
-  width: 36px;
-  height: 36px;
-  border-radius: 12px;
-  background-color: rgba(100, 100, 100, 0.9);
-  color: white;
-  border: none;
-  box-shadow: 0 2px 8px rgba(100, 100, 100, 0.3);
+  width: 40px;
+  height: 40px;
+  border-radius: 14px;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.4) 0%,
+    rgba(255, 255, 255, 0.1) 50%,
+    rgba(255, 255, 255, 0.2) 100%
+  );
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  color: rgba(100, 100, 100, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.1),
+    0 1px 3px rgba(0, 0, 0, 0.08),
+    inset 0 1px 1px rgba(255, 255, 255, 0.5);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   z-index: 999;
 }
 
 .settings-sidebar-toggle-fab:hover {
-  background-color: #666;
-  transform: scale(1.05);
-  box-shadow: 0 4px 12px rgba(100, 100, 100, 0.4);
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.5) 0%,
+    rgba(255, 255, 255, 0.2) 50%,
+    rgba(255, 255, 255, 0.3) 100%
+  );
+  transform: scale(1.08);
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.15),
+    0 2px 6px rgba(0, 0, 0, 0.1),
+    inset 0 1px 2px rgba(255, 255, 255, 0.6);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.settings-sidebar-toggle-fab:active {
+  transform: scale(0.95);
 }
 
 /* サイドバー本体 */
