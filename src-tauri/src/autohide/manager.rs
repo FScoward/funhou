@@ -137,14 +137,6 @@ impl AutohideManager {
         Ok(config.clone())
     }
 
-    /// Check if autohide is enabled
-    pub fn is_enabled(&self) -> bool {
-        self.config
-            .lock()
-            .map(|c| c.enabled)
-            .unwrap_or(false)
-    }
-
     /// Check if window is currently visible
     pub fn is_visible(&self) -> bool {
         self.state
