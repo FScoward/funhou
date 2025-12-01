@@ -169,7 +169,13 @@ export function EntryCard({
         <>
           <div
             className="entry-content-clickable"
-            onClick={() => onEdit(id, content)}
+            onClick={(e) => {
+              // チェックボックスのクリックは編集モードにしない
+              if ((e.target as HTMLElement).tagName === 'INPUT') {
+                return
+              }
+              onEdit(id, content)
+            }}
             title="クリックして編集"
           >
             {showMarkdown ? (
