@@ -1194,3 +1194,94 @@ textarea::placeholder {
 .markdown-preview input[type="checkbox"] {
   margin-right: 0.5em;
 }
+
+/* Custom Scrollbar Styles - macOS native-like overlay scrollbar */
+/* Scrollable containers */
+.app-layout,
+.pinned-sidebar-drawer {
+  /* Enable overlay scrollbar behavior */
+  overflow-y: overlay;
+  overflow-x: hidden;
+}
+
+/* Webkit browsers (Chrome, Safari, Edge) */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+  background: transparent;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0);
+  border-radius: 5px;
+  border: 3px solid transparent;
+  background-clip: padding-box;
+  min-height: 40px;
+  transition: background 0.3s ease;
+}
+
+/* Show scrollbar on hover over scrollable container */
+.app-layout:hover::-webkit-scrollbar-thumb,
+.pinned-sidebar-drawer:hover::-webkit-scrollbar-thumb,
+*:hover::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.3);
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.5);
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:active {
+  background: rgba(0, 0, 0, 0.6);
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Firefox - use none to hide by default */
+* {
+  scrollbar-width: none;
+}
+
+/* Show scrollbar on hover for Firefox */
+*:hover {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.3) transparent;
+}
+
+/* Dark mode scrollbar */
+@media (prefers-color-scheme: dark) {
+  ::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0);
+  }
+
+  /* Show scrollbar on hover in dark mode */
+  .app-layout:hover::-webkit-scrollbar-thumb,
+  .pinned-sidebar-drawer:hover::-webkit-scrollbar-thumb,
+  *:hover::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.3);
+    background-clip: padding-box;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.5);
+    background-clip: padding-box;
+  }
+
+  ::-webkit-scrollbar-thumb:active {
+    background: rgba(255, 255, 255, 0.6);
+    background-clip: padding-box;
+  }
+
+  *:hover {
+    scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+  }
+}
