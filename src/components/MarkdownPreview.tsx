@@ -1,6 +1,12 @@
 import React, { createContext, useContext } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import {
+  CHECKBOX_PATTERN_DOING,
+  CHECKBOX_PATTERN_ALL,
+  getNextCheckboxStatus,
+  type CheckboxStatus
+} from '@/utils/checkboxUtils';
 
 interface MarkdownPreviewProps {
   content: string;
@@ -19,7 +25,7 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({ content, className, o
   // - [/] を一時的に - [ ] に変換してGFMで解析可能にし、後でスタイルを適用
   const doingLines = new Set<number>();
   const processedContent = content.split('\n').map((line, index) => {
-    const doingMatch = line.match(/^(\s*[-*+]\s+)\[\/\](.*)$/);
+    const doingMatch = line.match(CHECKBOX_PATTERN_DOING);
     if (doingMatch) {
       doingLines.add(index + 1); // 1始まり
       return `${doingMatch[1]}[ ]${doingMatch[2]}`;
@@ -36,25 +42,14 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({ content, className, o
 
     if (index >= 0 && index < lines.length) {
       const line = lines[index];
-      // チェックボックスのパターンを探す: - [ ] または - [x] または - [/]
-      // 注意: リストマーカーは - だけでなく * や + の場合もある
-      const checkboxRegex = /^(\s*[-*+]\s+)\[([ \/xX])\](.*)$/;
-      const match = line.match(checkboxRegex);
+      const match = line.match(CHECKBOX_PATTERN_ALL);
 
       if (match) {
         const prefix = match[1];
-        const currentStatus = match[2];
+        const currentStatus = match[2] as CheckboxStatus;
         const suffix = match[3];
 
-        // ステータスを遷移: [ ] → [/] → [x] → [ ]
-        let newStatus: string;
-        if (currentStatus === ' ') {
-          newStatus = '/';
-        } else if (currentStatus === '/') {
-          newStatus = 'x';
-        } else {
-          newStatus = ' ';
-        }
+        const newStatus = getNextCheckboxStatus(currentStatus);
         const newLine = `${prefix}[${newStatus}]${suffix}`;
 
         lines[index] = newLine;

@@ -4,6 +4,7 @@ import CustomInput from '@/components/CustomInput'
 import { TagBadge } from '@/components/TagBadge'
 import { TagSelector } from '@/components/TagSelector'
 import { formatTimestamp } from '@/utils/dateUtils'
+import { getFirstLine } from '@/utils/textUtils'
 import { Reply, Tag } from '@/types'
 import MarkdownPreview from '@/components/MarkdownPreview'
 
@@ -87,12 +88,6 @@ export function EntryCard({
   onDirectTagRemove,
 }: EntryCardProps) {
   const [showMarkdown, setShowMarkdown] = useState(true)
-
-  // アーカイブ済みエントリーの1行目を取得
-  const getFirstLine = (text: string) => {
-    const firstLine = text.split('\n')[0]
-    return firstLine.length > 50 ? firstLine.substring(0, 50) + '...' : firstLine
-  }
 
   // アーカイブ済みで折りたたまれた表示
   if (archived) {

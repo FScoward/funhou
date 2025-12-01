@@ -19,10 +19,10 @@ describe('MarkdownPreview Checkbox Interaction', () => {
         const checkboxes = screen.getAllByRole('checkbox')
         expect(checkboxes).toHaveLength(2)
 
-        // Click the first checkbox (unchecked -> checked)
+        // Click the first checkbox (unchecked -> DOING: [ ] -> [/])
         fireEvent.click(checkboxes[0])
 
-        expect(onContentUpdate).toHaveBeenCalledWith('- [x] Task 1\n- [x] Task 2')
+        expect(onContentUpdate).toHaveBeenCalledWith('- [/] Task 1\n- [x] Task 2')
     })
 
     it('should uncheck a checked checkbox', () => {

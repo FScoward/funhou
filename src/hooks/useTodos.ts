@@ -1,6 +1,11 @@
 import { useState, useCallback } from 'react'
 import Database from '@tauri-apps/plugin-sql'
 import { TodoItem, Entry } from '@/types'
+import {
+  CHECKBOX_PATTERN_INCOMPLETE,
+  CHECKBOX_PATTERN_ALL,
+  type CheckboxStatus
+} from '@/utils/checkboxUtils'
 
 interface UseTodosProps {
   database: Database | null
@@ -22,13 +27,11 @@ export function useTodos({ database }: UseTodosProps) {
       )
 
       const todos: TodoItem[] = []
-      // 未完了 [ ] とDoing [/] のチェックボックスを抽出
-      const checkboxRegex = /^(\s*[-*+]\s+)\[([ \/])\](.*)$/
 
       for (const entry of entries) {
         const lines = entry.content.split('\n')
         lines.forEach((line, index) => {
-          const match = line.match(checkboxRegex)
+          const match = line.match(CHECKBOX_PATTERN_INCOMPLETE)
           if (match) {
             todos.push({
               entryId: entry.id,
@@ -52,7 +55,7 @@ export function useTodos({ database }: UseTodosProps) {
   const updateEntryLine = useCallback(async (
     entryId: number,
     lineIndex: number,
-    newStatus: ' ' | '/' | 'x'
+    newStatus: CheckboxStatus
   ): Promise<string | null> => {
     if (!database) return null
 
@@ -67,8 +70,7 @@ export function useTodos({ database }: UseTodosProps) {
         const index = lineIndex - 1
 
         if (index >= 0 && index < lines.length) {
-          const checkboxRegex = /^(\s*[-*+]\s+)\[([ \/xX])\](.*)$/
-          const match = lines[index].match(checkboxRegex)
+          const match = lines[index].match(CHECKBOX_PATTERN_ALL)
 
           if (match) {
             lines[index] = `${match[1]}[${newStatus}]${match[3]}`

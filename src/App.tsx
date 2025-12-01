@@ -19,7 +19,7 @@ import { useEntries } from '@/hooks/useEntries'
 import { useReplies } from '@/hooks/useReplies'
 import { useTodos } from '@/hooks/useTodos'
 import { CurrentActivitySection } from '@/components/CurrentActivitySection'
-import { getSettings } from '@/lib/settings'
+import { getSettings, applyFont, applyFontSize } from '@/lib/settings'
 import { applyTheme, ThemeVariant } from '@/lib/themes'
 
 function App() {
@@ -73,22 +73,6 @@ function App() {
       unlistenPromise.then(unlisten => unlisten())
     }
   }, [])
-
-  const applyFont = (fontFamily: string) => {
-    if (fontFamily) {
-      document.documentElement.style.setProperty('--font-family', fontFamily)
-    } else {
-      document.documentElement.style.removeProperty('--font-family')
-    }
-  }
-
-  const applyFontSize = (fontSize: string) => {
-    if (fontSize) {
-      document.documentElement.style.setProperty('--font-size', fontSize)
-    } else {
-      document.documentElement.style.removeProperty('--font-size')
-    }
-  }
 
   const handleThemeChange = (theme: ThemeVariant) => {
     applyTheme(theme)

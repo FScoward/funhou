@@ -128,3 +128,19 @@ export async function setTheme(
 ): Promise<void> {
   await saveSetting(db, 'theme', value)
 }
+
+export function applyFont(fontFamily: string): void {
+  if (fontFamily) {
+    document.documentElement.style.setProperty('--font-family', fontFamily)
+  } else {
+    document.documentElement.style.removeProperty('--font-family')
+  }
+}
+
+export function applyFontSize(fontSize: string): void {
+  if (fontSize) {
+    document.documentElement.style.setProperty('--font-size', fontSize)
+  } else {
+    document.documentElement.style.removeProperty('--font-size')
+  }
+}
