@@ -17,6 +17,8 @@ import { useTimeline } from '@/hooks/useTimeline'
 import { useTags } from '@/hooks/useTags'
 import { useEntries } from '@/hooks/useEntries'
 import { useReplies } from '@/hooks/useReplies'
+import { useCurrentActivity } from '@/hooks/useCurrentActivity'
+import { CurrentActivitySection } from '@/components/CurrentActivitySection'
 import { getSettings } from '@/lib/settings'
 import { applyTheme, ThemeVariant } from '@/lib/themes'
 
@@ -125,6 +127,7 @@ function App() {
   const {
     timelineItems: filteredTimelineItems,
     setTimelineItems: setFilteredTimelineItems,
+    loadEntries,
     handleScrollToEntry: scrollToEntry,
     currentPage,
     setCurrentPage,
@@ -137,6 +140,17 @@ function App() {
     selectedTags,
     filterMode,
     searchText,
+  })
+
+  // 今何してる？
+  const {
+    currentActivity,
+    isLoading: isCurrentActivityLoading,
+    saveCurrentActivity,
+  } = useCurrentActivity({
+    database,
+    loadAvailableTags,
+    loadEntries,
   })
 
   // エントリー
@@ -274,6 +288,13 @@ function App() {
           }}
           frequentTags={frequentTags}
           recentTags={recentTags}
+        />
+
+        <CurrentActivitySection
+          currentActivity={currentActivity}
+          onSave={saveCurrentActivity}
+          onTagClick={handleTagClick}
+          isLoading={isCurrentActivityLoading}
         />
 
         {(selectedTags.length > 0 || searchText.trim().length > 0) && (

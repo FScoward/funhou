@@ -18,6 +18,7 @@ export interface Entry {
   tags?: Tag[]
   pinned?: number
   archived?: number
+  is_current?: number
 }
 
 export interface Reply {
@@ -39,6 +40,7 @@ export interface TimelineItem {
   tags?: Tag[]
   pinned?: boolean
   archived?: boolean
+  isCurrent?: boolean
   // reply specific fields
   replyId?: number
   entryId?: number
