@@ -1,7 +1,6 @@
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
-import { Settings } from 'lucide-react'
 import { ja } from 'date-fns/locale'
 import { formatDateWithWeekday } from '@/utils/dateUtils'
 
@@ -13,7 +12,6 @@ interface DateNavigationProps {
   onPreviousDay: () => void
   onNextDay: () => void
   onToday: () => void
-  onSettingsClick: () => void
 }
 
 export function DateNavigation({
@@ -24,11 +22,9 @@ export function DateNavigation({
   onPreviousDay,
   onNextDay,
   onToday,
-  onSettingsClick,
 }: DateNavigationProps) {
   return (
     <div className="date-navigation">
-      <div className="settings-spacer"></div>
       <div className="date-navigation-center">
         <button onClick={onPreviousDay} className="nav-button">
           ◀
@@ -73,13 +69,6 @@ export function DateNavigation({
           ▶
         </button>
       </div>
-      <button
-        onClick={onSettingsClick}
-        className="nav-button settings-button"
-        aria-label="設定"
-      >
-        <Settings size={20} />
-      </button>
     </div>
   )
 }

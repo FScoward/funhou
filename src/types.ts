@@ -36,6 +36,14 @@ export interface TodoItem {
   status: ' ' | '/'    // 未完了 or Doing
 }
 
+export interface CompletedTodoItem {
+  entryId: number        // 元のエントリーID
+  lineIndex: number      // エントリー内の行番号（1始まり）
+  text: string           // タスクのテキスト部分
+  status: 'x' | 'X'      // 完了状態
+  entryTimestamp: string // エントリーのタイムスタンプ（表示用）
+}
+
 export interface TimelineItem {
   type: 'entry' | 'reply'
   id: number
