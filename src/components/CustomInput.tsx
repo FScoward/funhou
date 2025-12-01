@@ -15,6 +15,7 @@ interface CustomInputProps {
   onChange: (value: string) => void
   onSubmit: () => void
   onKeyDown?: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void
+  onBlur?: () => void
   placeholder?: string
   availableTags?: Tag[]
   selectedTags?: string[]
@@ -29,6 +30,7 @@ export default function CustomInput({
   onChange,
   onSubmit,
   onKeyDown,
+  onBlur,
   placeholder = "今やっていることを記録してください...",
   availableTags = [],
   selectedTags = [],
@@ -52,6 +54,7 @@ export default function CustomInput({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           onKeyDown={onKeyDown}
+          onBlur={onBlur}
           minRows={1}
         />
         <InputGroupAddon align="block-end">

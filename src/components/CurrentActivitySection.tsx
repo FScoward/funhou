@@ -94,35 +94,27 @@ export function CurrentActivitySection({
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
                 onKeyDown={handleKeyDown}
+                onBlur={() => {
+                  // 編集中（既存のcurrentActivityがある場合）のみキャンセル
+                  if (isEditing && currentActivity) {
+                    setIsEditing(false)
+                    setContent('')
+                  }
+                }}
                 disabled={isSubmitting}
                 minRows={1}
                 autoFocus
               />
               <InputGroupAddon align="block-end">
-                <div className="flex items-center justify-end w-full gap-2">
-                  {isEditing && currentActivity && (
-                    <button
-                      type="button"
-                      className="text-xs text-gray-500 hover:text-gray-700"
-                      onClick={() => {
-                        setIsEditing(false)
-                        setContent('')
-                      }}
-                      disabled={isSubmitting}
-                    >
-                      キャンセル
-                    </button>
-                  )}
-                  <InputGroupButton
-                    className={`rounded-full transition-opacity ${hasContent ? 'opacity-100' : 'opacity-30'}`}
-                    size="icon-xs"
-                    variant="default"
-                    onClick={handleSubmit}
-                    disabled={isSubmitting}
-                  >
-                    <ArrowUp className="size-[14px]" />
-                  </InputGroupButton>
-                </div>
+                <InputGroupButton
+                  className={`ml-auto rounded-full transition-opacity ${hasContent ? 'opacity-100' : 'opacity-30'}`}
+                  size="icon-xs"
+                  variant="default"
+                  onClick={handleSubmit}
+                  disabled={isSubmitting}
+                >
+                  <ArrowUp className="size-[14px]" />
+                </InputGroupButton>
               </InputGroupAddon>
             </InputGroup>
           </div>

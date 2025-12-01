@@ -542,6 +542,19 @@ textarea::placeholder {
   font-family: var(--font-family, inherit);
 }
 
+/* クリック可能なエントリーコンテンツ */
+.entry-content-clickable {
+  cursor: pointer;
+  padding: 0.25rem;
+  margin: -0.25rem;
+  border-radius: 8px;
+  transition: background-color 0.15s;
+}
+
+.entry-content-clickable:hover {
+  background-color: rgba(0, 0, 0, 0.03);
+}
+
 .empty {
   color: #666;
   font-style: italic;
