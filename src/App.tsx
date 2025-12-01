@@ -160,6 +160,7 @@ function App() {
     handleDeleteEntry,
     handleKeyDown,
     handleTogglePin,
+    handleToggleArchive,
     handleDirectUpdateEntry,
     handleDirectTagAdd,
     handleDirectTagRemove,
@@ -343,6 +344,7 @@ function App() {
           onToggleReplies={toggleEntryReplies}
           onScrollToEntry={scrollToEntry}
           onTogglePin={handleTogglePin}
+          onToggleArchive={handleToggleArchive}
           onUpdateEntryDirectly={handleDirectUpdateEntry}
           onDirectTagAdd={handleDirectTagAdd}
           onDirectTagRemove={handleDirectTagRemove}

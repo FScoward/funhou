@@ -46,8 +46,8 @@ export function useTimeline({ database, selectedDate, selectedTags, filterMode, 
       const isSearching = searchText.trim().length > 0
       const isCrossDateQuery = isTagFiltering || isSearching
 
-      // エントリーをSQLクエリで取得（pinned状態も含める）
-      let entryQuery = 'SELECT id, content, timestamp, pinned FROM entries WHERE 1=1'
+      // エントリーをSQLクエリで取得（pinned, archived状態も含める）
+      let entryQuery = 'SELECT id, content, timestamp, pinned, archived FROM entries WHERE 1=1'
       const entryParams: (string | number)[] = []
 
       // タグフィルタリングまたは検索時以外は日付条件を追加
@@ -136,7 +136,7 @@ export function useTimeline({ database, selectedDate, selectedTags, filterMode, 
 
         if (additionalParentIds.length > 0) {
           // タグフィルタリングまたは検索時は日付条件なしで親エントリーを取得
-          let additionalParentsQuery = `SELECT id, content, timestamp, pinned FROM entries WHERE id IN (${additionalParentIds.join(',')})`
+          let additionalParentsQuery = `SELECT id, content, timestamp, pinned, archived FROM entries WHERE id IN (${additionalParentIds.join(',')})`
           const additionalParentsParams: (string | number)[] = []
 
           if (!isCrossDateQuery) {
@@ -189,7 +189,8 @@ export function useTimeline({ database, selectedDate, selectedTags, filterMode, 
           replies: entryReplies,
           replyCount: entryReplies.length,
           tags: entry.tags,
-          pinned: entry.pinned === 1
+          pinned: entry.pinned === 1,
+          archived: entry.archived === 1
         }
       })
 

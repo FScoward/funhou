@@ -267,6 +267,38 @@ export function useEntries({ database, timelineItems, setTimelineItems, loadAvai
     }
   }
 
+  const handleToggleArchive = async (entryId: number) => {
+    if (!database) return
+
+    try {
+      // 現在のarchived状態を取得
+      const result = await database.select<{ archived: number }[]>(
+        'SELECT archived FROM entries WHERE id = ?',
+        [entryId]
+      )
+
+      if (result.length === 0) return
+
+      const currentArchived = result[0].archived ?? 0
+      const newArchived = currentArchived === 1 ? 0 : 1
+
+      // データベースを更新
+      await database.execute(
+        'UPDATE entries SET archived = ? WHERE id = ?',
+        [newArchived, entryId]
+      )
+
+      // stateを更新
+      setTimelineItems(timelineItems.map(item =>
+        item.type === 'entry' && item.id === entryId
+          ? { ...item, archived: newArchived === 1 }
+          : item
+      ))
+    } catch (error) {
+      console.error('アーカイブ状態の切り替えに失敗しました:', error)
+    }
+  }
+
   return {
     // State
     currentEntry,
@@ -289,6 +321,7 @@ export function useEntries({ database, timelineItems, setTimelineItems, loadAvai
     handleDeleteEntry,
     handleKeyDown,
     handleTogglePin,
+    handleToggleArchive,
     handleDirectUpdateEntry,
     handleDirectTagAdd,
     handleDirectTagRemove,
