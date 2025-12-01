@@ -1,4 +1,6 @@
 import { useState, useMemo, useEffect } from 'react'
+import { getCurrentWindow } from '@tauri-apps/api/window'
+import { invoke } from '@tauri-apps/api/core'
 import './App.css'
 import { SettingsDialog } from '@/components/SettingsDialog'
 import { DateNavigation } from '@/components/DateNavigation'
@@ -25,9 +27,9 @@ function App() {
   // データベース
   const database = useDatabase()
 
-  // フォント設定の読み込みと適用
+  // フォント設定の読み込み・適用
   useEffect(() => {
-    const loadAndApplyFont = async () => {
+    const loadAndApplySettings = async () => {
       if (!database) return
 
       const settings = await getSettings(database)
@@ -37,10 +39,33 @@ function App() {
       if (settings.fontSize) {
         applyFontSize(settings.fontSize)
       }
+      // タブのシマー設定をlocalStorageに保存（tabウィンドウと共有）
+      localStorage.setItem('tab_shimmer_enabled', (settings.tabShimmerEnabled ?? true) ? 'true' : 'false')
     }
 
-    loadAndApplyFont()
+    loadAndApplySettings()
   }, [database])
+
+  // メインウィンドウの移動イベントを監視し、タブウィンドウを追従させる
+  useEffect(() => {
+    const setupMoveListener = async () => {
+      const currentWindow = getCurrentWindow()
+      const unlisten = await currentWindow.onMoved(async (event) => {
+        try {
+          await invoke('set_tab_window_y', { y: event.payload.y })
+        } catch (e) {
+          console.error('Failed to sync tab window position:', e)
+        }
+      })
+      return unlisten
+    }
+
+    const unlistenPromise = setupMoveListener()
+
+    return () => {
+      unlistenPromise.then(unlisten => unlisten())
+    }
+  }, [])
 
   const applyFont = (fontFamily: string) => {
     if (fontFamily) {

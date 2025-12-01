@@ -19,7 +19,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { getSettings, setAlwaysOnTop, setFontFamily, setFontSize } from '@/lib/settings'
+import {
+  getSettings,
+  setAlwaysOnTop,
+  setFontFamily,
+  setFontSize,
+  setTabShimmerEnabled,
+} from '@/lib/settings'
 
 interface SettingsDialogProps {
   open: boolean
@@ -35,6 +41,7 @@ export function SettingsDialog({ open, onOpenChange, db, onFontChange, onFontSiz
   const [selectedFont, setSelectedFont] = useState<string>('')
   const [selectedFontSize, setSelectedFontSize] = useState<string>('default')
   const [isLoadingFonts, setIsLoadingFonts] = useState(false)
+  const [tabShimmerEnabled, setTabShimmerEnabledState] = useState(true)
 
   useEffect(() => {
     if (open) {
@@ -48,6 +55,9 @@ export function SettingsDialog({ open, onOpenChange, db, onFontChange, onFontSiz
     setAlwaysOnTopState(settings.alwaysOnTop)
     setSelectedFont(settings.fontFamily || 'default')
     setSelectedFontSize(settings.fontSize || 'default')
+    setTabShimmerEnabledState(settings.tabShimmerEnabled ?? true)
+    // localStorageも初期化
+    localStorage.setItem('tab_shimmer_enabled', (settings.tabShimmerEnabled ?? true) ? 'true' : 'false')
   }
 
   const loadFonts = async () => {
@@ -146,6 +156,16 @@ export function SettingsDialog({ open, onOpenChange, db, onFontChange, onFontSiz
     }
   }
 
+  const handleTabShimmerChange = async (checked: boolean) => {
+    try {
+      setTabShimmerEnabledState(checked)
+      await setTabShimmerEnabled(db, checked)
+    } catch (error) {
+      console.error('設定の変更に失敗しました:', error)
+      setTabShimmerEnabledState(!checked)
+    }
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
@@ -167,6 +187,20 @@ export function SettingsDialog({ open, onOpenChange, db, onFontChange, onFontSiz
               id="always-on-top"
               checked={alwaysOnTop}
               onCheckedChange={handleAlwaysOnTopChange}
+            />
+          </div>
+
+          <div className="flex items-center justify-between space-x-2">
+            <Label htmlFor="tab-shimmer" className="flex flex-col space-y-1">
+              <span>タブのキラキラ効果</span>
+              <span className="font-normal text-sm text-muted-foreground">
+                サイドタブに光るアニメーション効果を表示します
+              </span>
+            </Label>
+            <Switch
+              id="tab-shimmer"
+              checked={tabShimmerEnabled}
+              onCheckedChange={handleTabShimmerChange}
             />
           </div>
 
@@ -218,7 +252,7 @@ export function SettingsDialog({ open, onOpenChange, db, onFontChange, onFontSiz
           {(selectedFont !== 'default' || selectedFontSize !== 'default') && (
             <>
               <div
-                className="mt-2 p-4 rounded-md border border-border bg-muted"
+                className="mt-2 p-4 rounded-2xl border border-border bg-muted"
                 style={{
                   fontFamily: selectedFont !== 'default' ? selectedFont : undefined,
                   fontSize: selectedFontSize !== 'default' ? selectedFontSize : undefined,

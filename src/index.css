@@ -62,7 +62,7 @@
 
   color-scheme: light dark;
   color: #213547;
-  background-color: #ffffff;
+  background-color: transparent;
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
@@ -83,7 +83,7 @@ body {
 @media (prefers-color-scheme: dark) {
   :root {
     color: #e8eaed;
-    background-color: #202124;
+    background-color: transparent;
   }
 
   textarea {

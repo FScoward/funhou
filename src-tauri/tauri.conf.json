@@ -13,13 +13,44 @@
     "targets": "all"
   },
   "app": {
+    "macOSPrivateApi": true,
     "windows": [
       {
-        "title": "funhou - 分報ツール",
-        "width": 800,
-        "height": 600,
+        "label": "main",
+        "title": "funhou",
+        "width": 380,
+        "height": 800,
+        "minWidth": 300,
+        "minHeight": 400,
+        "x": 20,
+        "y": 50,
         "resizable": true,
-        "fullscreen": false
+        "fullscreen": false,
+        "visible": true,
+        "decorations": false,
+        "transparent": true,
+        "visibleOnAllWorkspaces": true,
+        "windowEffects": {
+          "effects": ["sidebar"],
+          "radius": 20
+        }
+      },
+      {
+        "label": "tab",
+        "title": "",
+        "url": "tab.html",
+        "width": 20,
+        "height": 800,
+        "x": 0,
+        "y": 50,
+        "resizable": false,
+        "decorations": false,
+        "transparent": true,
+        "alwaysOnTop": true,
+        "skipTaskbar": true,
+        "visible": true,
+        "visibleOnAllWorkspaces": true,
+        "shadow": false
       }
     ],
     "security": {
@@ -27,11 +58,18 @@
       "capabilities": [
         {
           "identifier": "main-capability",
-          "windows": ["main"],
+          "windows": ["main", "tab"],
           "permissions": [
             "core:default",
             "core:webview:allow-internal-toggle-devtools",
             "core:window:allow-set-always-on-top",
+            "core:window:allow-set-position",
+            "core:window:allow-outer-position",
+            "core:window:allow-outer-size",
+            "core:window:allow-show",
+            "core:window:allow-hide",
+            "core:window:allow-is-visible",
+            "core:window:allow-set-focus",
             "sql:allow-load",
             "sql:allow-execute",
             "sql:allow-select",

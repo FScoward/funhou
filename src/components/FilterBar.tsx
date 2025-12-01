@@ -98,7 +98,7 @@ export function FilterBar({
       {/* タグフィルタ展開エリア */}
       <Collapsible.Root open={expandedFilter === 'tag'}>
         <Collapsible.Content className="mt-3">
-          <div className="p-4 border rounded-lg bg-muted/30">
+          <div className="p-4 border rounded-2xl bg-muted/30">
             <TagFilter
               availableTags={availableTags}
               selectedTags={selectedTags}
@@ -118,7 +118,7 @@ export function FilterBar({
       {/* 検索フィルタ展開エリア */}
       <Collapsible.Root open={expandedFilter === 'search'}>
         <Collapsible.Content className="mt-3">
-          <div className="p-4 border rounded-lg bg-muted/30">
+          <div className="p-4 border rounded-2xl bg-muted/30">
             <SearchInput onSearch={onSearch} value={searchText} />
           </div>
         </Collapsible.Content>

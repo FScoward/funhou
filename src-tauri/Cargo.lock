@@ -996,6 +996,8 @@ dependencies = [
 name = "funhou"
 version = "0.1.0"
 dependencies = [
+ "core-foundation 0.9.4",
+ "core-graphics 0.23.2",
  "font-kit",
  "serde",
  "serde_json",
@@ -1003,6 +1005,7 @@ dependencies = [
  "tauri-build",
  "tauri-plugin-shell",
  "tauri-plugin-sql",
+ "tokio",
 ]
 
 [[package]]
@@ -4368,7 +4371,19 @@ dependencies = [
  "mio",
  "pin-project-lite",
  "socket2",
+ "tokio-macros",
  "windows-sys 0.61.2",
+]
+
+[[package]]
+name = "tokio-macros"
+version = "2.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "af407857209536a95c8e56f8231ef2c2e2aff839b22e07a1ffcbc617e9db9fa5"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.109",
 ]
 
 [[package]]
