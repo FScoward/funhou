@@ -1,5 +1,5 @@
 import { invoke } from '@tauri-apps/api/core'
-import { getCurrentWindow } from '@tauri-apps/api/window'
+import { getCurrentWindow, PhysicalPosition } from '@tauri-apps/api/window'
 
 // シマー設定を適用
 function applyShimmerSetting() {
@@ -51,7 +51,7 @@ document.addEventListener('mousemove', async (e) => {
   const currentWindow = getCurrentWindow()
 
   // X位置は固定（0）、Y位置のみ変更
-  await currentWindow.setPosition({ type: 'Physical', x: 0, y: newY })
+  await currentWindow.setPosition(new PhysicalPosition(0, newY))
 })
 
 document.addEventListener('mouseup', async () => {
@@ -70,14 +70,14 @@ async function restoreTabPosition() {
   if (savedY) {
     const y = parseInt(savedY, 10)
     const currentWindow = getCurrentWindow()
-    await currentWindow.setPosition({ type: 'Physical', x: 0, y })
+    await currentWindow.setPosition(new PhysicalPosition(0, y))
   }
 }
 
 restoreTabPosition()
 
 // クリックでメインウィンドウをトグル（ドラッグ中はトグルしない）
-document.body.addEventListener('click', async (e) => {
+document.body.addEventListener('click', async () => {
   // ドラッグ終了直後はクリックとして扱わない
   if (isDragging) return
 
@@ -87,8 +87,8 @@ document.body.addEventListener('click', async (e) => {
     if (tabHandle) {
       tabHandle.classList.add('clicked')
     }
-  } catch (e) {
-    console.error('Failed to toggle main window:', e)
+  } catch (err) {
+    console.error('Failed to toggle main window:', err)
   }
 })
 
