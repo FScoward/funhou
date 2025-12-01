@@ -42,6 +42,7 @@ interface TimelineProps {
   onToggleReplies: (id: number) => void
   onScrollToEntry: (entryId: number) => void
   onTogglePin: (id: number) => void
+  onToggleArchive: (id: number) => void
   onUpdateEntryDirectly: (entryId: number, newContent: string) => void
   onDirectTagAdd: (entryId: number, tag: string) => void
   onDirectTagRemove: (entryId: number, tag: string) => void
@@ -87,6 +88,7 @@ export function Timeline({
   onToggleReplies,
   onScrollToEntry,
   onTogglePin,
+  onToggleArchive,
   onUpdateEntryDirectly,
   onDirectTagAdd,
   onDirectTagRemove,
@@ -150,6 +152,7 @@ export function Timeline({
                   onToggleReplies={onToggleReplies}
                   onScrollToEntry={onScrollToEntry}
                   onTogglePin={onTogglePin}
+                  onToggleArchive={onToggleArchive}
                   onUpdateEntryDirectly={onUpdateEntryDirectly}
                   onDirectTagAdd={onDirectTagAdd}
                   onDirectTagRemove={onDirectTagRemove}
@@ -203,6 +206,7 @@ export function Timeline({
               onToggleReplies={onToggleReplies}
               onScrollToEntry={onScrollToEntry}
               onTogglePin={onTogglePin}
+              onToggleArchive={onToggleArchive}
               onUpdateEntryDirectly={onUpdateEntryDirectly}
               onDirectTagAdd={onDirectTagAdd}
               onDirectTagRemove={onDirectTagRemove}

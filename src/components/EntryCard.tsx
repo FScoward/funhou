@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Trash2, Pencil, X, Pin, FileCode, Type } from 'lucide-react'
+import { Trash2, Pencil, X, Pin, FileCode, Type, Archive } from 'lucide-react'
 import CustomInput from '@/components/CustomInput'
 import { TagBadge } from '@/components/TagBadge'
 import { TagSelector } from '@/components/TagSelector'
@@ -14,6 +14,7 @@ interface EntryCardProps {
   replyCount?: number
   replies?: Reply[]
   pinned?: boolean
+  archived?: boolean
   isEditing: boolean
   editContent: string
   editManualTags: string[]
@@ -40,6 +41,7 @@ interface EntryCardProps {
   onAddReply: (id: number) => void
   onToggleReplies: (id: number) => void
   onTogglePin: (id: number) => void
+  onToggleArchive: (id: number) => void
   onUpdateEntryDirectly: (entryId: number, newContent: string) => void
   onDirectTagAdd: (tag: string) => void
   onDirectTagRemove: (tag: string) => void
@@ -52,6 +54,7 @@ export function EntryCard({
   replyCount,
   replies,
   pinned,
+  archived,
   isEditing,
   editContent,
   editManualTags,
@@ -78,11 +81,34 @@ export function EntryCard({
   onAddReply,
   onToggleReplies,
   onTogglePin,
+  onToggleArchive,
   onUpdateEntryDirectly,
   onDirectTagAdd,
   onDirectTagRemove,
 }: EntryCardProps) {
   const [showMarkdown, setShowMarkdown] = useState(true)
+
+  // アーカイブ済みエントリーの1行目を取得
+  const getFirstLine = (text: string) => {
+    const firstLine = text.split('\n')[0]
+    return firstLine.length > 50 ? firstLine.substring(0, 50) + '...' : firstLine
+  }
+
+  // アーカイブ済みで折りたたまれた表示
+  if (archived) {
+    return (
+      <div className="entry-card archived collapsed">
+        <div
+          className="archived-preview"
+          onClick={() => onToggleArchive(id)}
+          title="クリックしてアーカイブを解除"
+        >
+          <Archive size={14} className="archived-icon" />
+          <span className="archived-text">{getFirstLine(content)}</span>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className={`entry-card ${pinned ? 'pinned' : ''}`}>
@@ -113,6 +139,13 @@ export function EntryCard({
         aria-label={pinned ? "ピン留めを解除" : "ピン留め"}
       >
         <Pin size={16} />
+      </button>
+      <button
+        className="archive-button"
+        onClick={() => onToggleArchive(id)}
+        aria-label="アーカイブ"
+      >
+        <Archive size={16} />
       </button>
       {isEditing ? (
         <div className="edit-input-section">

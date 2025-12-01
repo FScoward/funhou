@@ -150,6 +150,15 @@ export async function getDb() {
       )
       WHERE last_used_at IS NULL
     `)
+
+    // archivedカラムを追加（既に存在する場合はエラーを無視）
+    try {
+      await db.execute(`
+        ALTER TABLE entries ADD COLUMN archived INTEGER DEFAULT 0
+      `)
+    } catch (error) {
+      console.log('archived column already exists or migration error:', error)
+    }
   }
   return db
 }

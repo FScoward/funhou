@@ -43,6 +43,7 @@ interface TimelineItemComponentProps {
   onToggleReplies: (id: number) => void
   onScrollToEntry: (entryId: number) => void
   onTogglePin: (id: number) => void
+  onToggleArchive: (id: number) => void
   onUpdateEntryDirectly: (entryId: number, newContent: string) => void
   onDirectTagAdd: (entryId: number, tag: string) => void
   onDirectTagRemove: (entryId: number, tag: string) => void
@@ -88,6 +89,7 @@ export function TimelineItemComponent({
   onToggleReplies,
   onScrollToEntry,
   onTogglePin,
+  onToggleArchive,
   onUpdateEntryDirectly,
   onDirectTagAdd,
   onDirectTagRemove,
@@ -127,6 +129,7 @@ export function TimelineItemComponent({
             replyCount={item.replyCount}
             replies={item.replies}
             pinned={item.pinned}
+            archived={item.archived}
             isEditing={editingEntryId === item.id}
             editContent={editContent}
             editManualTags={editManualTags}
@@ -153,6 +156,7 @@ export function TimelineItemComponent({
             onAddReply={onAddReply}
             onToggleReplies={onToggleReplies}
             onTogglePin={onTogglePin}
+            onToggleArchive={onToggleArchive}
             onUpdateEntryDirectly={onUpdateEntryDirectly}
             onDirectTagAdd={(tag) => onDirectTagAdd(item.id, tag)}
             onDirectTagRemove={(tag) => onDirectTagRemove(item.id, tag)}
