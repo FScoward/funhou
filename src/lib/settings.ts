@@ -1,4 +1,5 @@
 import Database from '@tauri-apps/plugin-sql'
+import { ThemeVariant } from './themes'
 
 export type ScreenEdge = 'left' | 'right'
 
@@ -9,6 +10,7 @@ export interface Settings {
   autohideEnabled?: boolean
   autohideEdge?: ScreenEdge
   tabShimmerEnabled?: boolean
+  theme?: ThemeVariant
 }
 
 export async function getSettings(db: Database): Promise<Settings> {
@@ -24,6 +26,7 @@ export async function getSettings(db: Database): Promise<Settings> {
       autohideEnabled: false,
       autohideEdge: 'left',
       tabShimmerEnabled: true,
+      theme: 'default',
     }
 
     result.forEach((row) => {
@@ -39,6 +42,8 @@ export async function getSettings(db: Database): Promise<Settings> {
         settings.autohideEdge = row.value as ScreenEdge
       } else if (row.key === 'tab_shimmer_enabled') {
         settings.tabShimmerEnabled = row.value === 'true'
+      } else if (row.key === 'theme') {
+        settings.theme = row.value as ThemeVariant
       }
     })
 
@@ -52,6 +57,7 @@ export async function getSettings(db: Database): Promise<Settings> {
       autohideEnabled: false,
       autohideEdge: 'left',
       tabShimmerEnabled: true,
+      theme: 'default',
     }
   }
 }
@@ -114,4 +120,11 @@ export async function setTabShimmerEnabled(
   await saveSetting(db, 'tab_shimmer_enabled', value ? 'true' : 'false')
   // localStorageにも保存してtabウィンドウと共有
   localStorage.setItem('tab_shimmer_enabled', value ? 'true' : 'false')
+}
+
+export async function setTheme(
+  db: Database,
+  value: ThemeVariant
+): Promise<void> {
+  await saveSetting(db, 'theme', value)
 }

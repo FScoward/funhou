@@ -18,6 +18,7 @@ import { useTags } from '@/hooks/useTags'
 import { useEntries } from '@/hooks/useEntries'
 import { useReplies } from '@/hooks/useReplies'
 import { getSettings } from '@/lib/settings'
+import { applyTheme, ThemeVariant } from '@/lib/themes'
 
 function App() {
   const [settingsOpen, setSettingsOpen] = useState(false)
@@ -38,6 +39,10 @@ function App() {
       }
       if (settings.fontSize) {
         applyFontSize(settings.fontSize)
+      }
+      // テーマの適用
+      if (settings.theme) {
+        applyTheme(settings.theme)
       }
       // タブのシマー設定をlocalStorageに保存（tabウィンドウと共有）
       localStorage.setItem('tab_shimmer_enabled', (settings.tabShimmerEnabled ?? true) ? 'true' : 'false')
@@ -81,6 +86,10 @@ function App() {
     } else {
       document.documentElement.style.removeProperty('--font-size')
     }
+  }
+
+  const handleThemeChange = (theme: ThemeVariant) => {
+    applyTheme(theme)
   }
 
   // 日付ナビゲーション
@@ -367,6 +376,7 @@ function App() {
           db={database}
           onFontChange={applyFont}
           onFontSizeChange={applyFontSize}
+          onThemeChange={handleThemeChange}
         />
       )}
     </div>

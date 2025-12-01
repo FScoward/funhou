@@ -1,8 +1,8 @@
 .app {
   margin: 0;
   padding: 1rem;
-  color: #333;
-  background: rgba(255, 255, 255, 0.15);
+  color: hsl(var(--foreground));
+  background: var(--glass-bg);
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
   border-radius: 20px;
@@ -10,9 +10,9 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 8px 32px rgba(31, 38, 135, 0.15),
-              inset 0 2px 20px rgba(255, 255, 255, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 8px 32px var(--glass-shadow),
+              inset 0 2px 20px rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--glass-border);
 }
 
 .app-layout {
@@ -125,17 +125,17 @@ h1 {
 .input-section {
   margin-bottom: 0.75rem;
   position: relative;
-  border: 1px solid rgba(255, 255, 255, 0.5);
+  border: 1px solid var(--glass-border);
   border-radius: 20px;
-  background: rgba(255, 255, 255, 0.2);
+  background: var(--glass-bg);
   backdrop-filter: blur(12px) saturate(180%);
   -webkit-backdrop-filter: blur(12px) saturate(180%);
   padding: 1rem;
   transition: all 0.2s ease;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 4px 16px rgba(31, 38, 135, 0.1),
-              inset 0 2px 10px rgba(255, 255, 255, 0.25);
+  box-shadow: 0 4px 16px var(--glass-shadow),
+              inset 0 2px 10px rgba(255, 255, 255, 0.1);
 }
 
 .input-section:focus-within {
@@ -270,20 +270,20 @@ textarea::placeholder {
 
 .entry-card {
   position: relative;
-  background: rgba(255, 255, 255, 0.2);
+  background: var(--glass-bg);
   backdrop-filter: blur(12px) saturate(180%);
   -webkit-backdrop-filter: blur(12px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.5);
+  border: 1px solid var(--glass-border);
   border-radius: 20px;
   padding: 1rem;
-  box-shadow: 0 4px 16px rgba(31, 38, 135, 0.1),
-              inset 0 2px 10px rgba(255, 255, 255, 0.25);
+  box-shadow: 0 4px 16px var(--glass-shadow),
+              inset 0 2px 10px rgba(255, 255, 255, 0.1);
   transition: all 0.2s ease;
 }
 
 .entry-card:hover {
-  box-shadow: 0 6px 20px rgba(31, 38, 135, 0.15),
-              inset 0 2px 10px rgba(255, 255, 255, 0.3);
+  box-shadow: 0 6px 20px var(--glass-shadow),
+              inset 0 2px 10px rgba(255, 255, 255, 0.15);
   transform: translateY(-1px);
 }
 
@@ -601,20 +601,20 @@ textarea::placeholder {
 /* Reply Card */
 .reply-card {
   position: relative;
-  background: rgba(255, 255, 255, 0.2);
+  background: var(--glass-bg);
   backdrop-filter: blur(12px) saturate(180%);
   -webkit-backdrop-filter: blur(12px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.5);
+  border: 1px solid var(--glass-border);
   border-radius: 20px;
   padding: 1rem;
-  box-shadow: 0 4px 16px rgba(31, 38, 135, 0.1),
-              inset 0 2px 10px rgba(255, 255, 255, 0.25);
+  box-shadow: 0 4px 16px var(--glass-shadow),
+              inset 0 2px 10px rgba(255, 255, 255, 0.1);
   transition: all 0.2s ease;
 }
 
 .reply-card:hover {
-  box-shadow: 0 6px 20px rgba(31, 38, 135, 0.15),
-              inset 0 2px 10px rgba(255, 255, 255, 0.3);
+  box-shadow: 0 6px 20px var(--glass-shadow),
+              inset 0 2px 10px rgba(255, 255, 255, 0.15);
   transform: translateY(-1px);
 }
 
@@ -749,12 +749,12 @@ textarea::placeholder {
   right: 0;
   bottom: 0;
   width: 350px;
-  background: rgba(255, 255, 255, 0.25);
+  background: var(--glass-bg);
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border-left: 1px solid rgba(255, 255, 255, 0.4);
-  box-shadow: -8px 0 32px rgba(31, 38, 135, 0.15),
-              inset 2px 0 20px rgba(255, 255, 255, 0.2);
+  border-left: 1px solid var(--glass-border);
+  box-shadow: -8px 0 32px var(--glass-shadow),
+              inset 2px 0 20px rgba(255, 255, 255, 0.1);
   z-index: 1001;
   padding: 1.5rem;
   overflow-y: auto;
