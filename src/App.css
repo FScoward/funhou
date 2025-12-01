@@ -965,7 +965,7 @@ textarea::placeholder {
 /* FAB（トグルボタン） */
 .sidebar-toggle-fab {
   position: fixed;
-  top: 2rem;
+  top: 4rem;
   right: 1rem;
   background-color: rgba(76, 175, 80, 0.9);
   color: white;
@@ -1693,4 +1693,360 @@ textarea::placeholder {
   *:hover {
     scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
   }
+}
+
+/* ========================================
+   DONE Sidebar - 完了タスクサイドバー
+   ======================================== */
+
+/* トグルボタン - ピン留めボタンの下に配置 */
+.done-sidebar-toggle-fab {
+  position: fixed;
+  top: 7rem;
+  right: 1rem;
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  background-color: rgba(76, 175, 80, 0.9);
+  color: white;
+  border: none;
+  box-shadow: 0 2px 8px rgba(76, 175, 80, 0.3);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  z-index: 999;
+}
+
+.done-sidebar-toggle-fab:hover {
+  background-color: #4CAF50;
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(76, 175, 80, 0.4);
+}
+
+.done-sidebar-toggle-count {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: #FF5722;
+  color: white;
+  font-size: 0.65rem;
+  font-weight: 700;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+}
+
+/* サイドバー本体 */
+.done-sidebar-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 350px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-left: 1px solid var(--glass-border);
+  box-shadow: -8px 0 32px var(--glass-shadow);
+  z-index: 1001;
+  padding: 1.5rem;
+  overflow-y: auto;
+  transition: transform 0.3s ease-in-out;
+  border-radius: 24px 0 0 24px;
+}
+
+.done-sidebar-drawer.open {
+  transform: translateX(0);
+}
+
+.done-sidebar-drawer.closed {
+  transform: translateX(100%);
+  pointer-events: none;
+}
+
+/* オーバーレイ */
+.done-overlay {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+/* ヘッダー */
+.done-sidebar-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  padding-bottom: 0.75rem;
+  padding-right: 2.5rem;
+  border-bottom: 2px solid #4CAF50;
+  color: #4CAF50;
+}
+
+.done-sidebar-header h2 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0;
+  flex: 1;
+}
+
+.done-count {
+  background-color: #4CAF50;
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.2rem 0.5rem;
+  border-radius: 14px;
+}
+
+/* 空の状態 */
+.done-sidebar-empty {
+  color: #999;
+  font-size: 0.85rem;
+  text-align: center;
+  padding: 3rem 1rem;
+}
+
+/* リスト */
+.done-sidebar-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+/* アイテム */
+.done-sidebar-item {
+  background-color: #f1f8f4;
+  border: 1px solid #4CAF50;
+  border-radius: 14px;
+  padding: 0.75rem;
+  cursor: pointer;
+  transition: all 0.15s;
+  position: relative;
+}
+
+.done-sidebar-item:hover {
+  background-color: #e8f5e9;
+  box-shadow: 0 2px 6px rgba(76, 175, 80, 0.2);
+  transform: translateY(-1px);
+}
+
+.done-item-timestamp {
+  font-size: 0.7rem;
+  color: #4CAF50;
+  font-weight: 600;
+  margin-bottom: 0.4rem;
+}
+
+.done-item-content {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.done-item-check {
+  color: #4CAF50;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.done-item-text {
+  font-size: var(--font-size, 0.85rem);
+  color: #555;
+  line-height: 1.4;
+  word-break: break-word;
+  font-family: var(--font-family, inherit);
+  text-decoration: line-through;
+  text-decoration-color: rgba(76, 175, 80, 0.5);
+}
+
+.done-item-jump {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  background: transparent;
+  border: none;
+  color: #999;
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 4px;
+  transition: all 0.15s;
+}
+
+.done-item-jump:hover {
+  color: #4CAF50;
+  background: rgba(76, 175, 80, 0.1);
+}
+
+/* スクロールバー */
+.done-sidebar-drawer:hover::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.3);
+  background-clip: padding-box;
+}
+
+/* ========================================
+   Settings Sidebar - 設定サイドバー
+   ======================================== */
+
+/* トグルボタン - DONEボタンの下に配置 */
+.settings-sidebar-toggle-fab {
+  position: fixed;
+  top: 10rem;
+  right: 1rem;
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  background-color: rgba(100, 100, 100, 0.9);
+  color: white;
+  border: none;
+  box-shadow: 0 2px 8px rgba(100, 100, 100, 0.3);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  z-index: 999;
+}
+
+.settings-sidebar-toggle-fab:hover {
+  background-color: #666;
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(100, 100, 100, 0.4);
+}
+
+/* サイドバー本体 */
+.settings-sidebar-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 350px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-left: 1px solid var(--glass-border);
+  box-shadow: -8px 0 32px var(--glass-shadow);
+  z-index: 1001;
+  padding: 1.5rem;
+  overflow-y: auto;
+  transition: transform 0.3s ease-in-out;
+  border-radius: 24px 0 0 24px;
+}
+
+.settings-sidebar-drawer.open {
+  transform: translateX(0);
+}
+
+.settings-sidebar-drawer.closed {
+  transform: translateX(100%);
+  pointer-events: none;
+}
+
+/* オーバーレイ */
+.settings-overlay {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+/* ヘッダー */
+.settings-sidebar-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  padding-bottom: 0.75rem;
+  padding-right: 2.5rem;
+  border-bottom: 2px solid #666;
+  color: #666;
+}
+
+.settings-sidebar-header h2 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0;
+  flex: 1;
+}
+
+/* コンテンツ */
+.settings-sidebar-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+/* 設定アイテム（横並び） */
+.settings-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem;
+  background-color: rgba(0, 0, 0, 0.03);
+  border-radius: 12px;
+}
+
+.settings-item-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex: 1;
+}
+
+.settings-item-label label {
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.settings-item-description {
+  font-size: 0.75rem;
+  color: #888;
+  line-height: 1.3;
+}
+
+/* 設定アイテム（縦並び） */
+.settings-item-vertical {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background-color: rgba(0, 0, 0, 0.03);
+  border-radius: 12px;
+}
+
+.settings-item-vertical label {
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+/* フォントプレビュー */
+.settings-font-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.settings-font-preview-box {
+  padding: 1rem;
+  background-color: rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 12px;
+}
+
+.settings-font-preview-box .preview-label {
+  font-size: 0.75rem;
+  color: #888;
+  margin-bottom: 0.5rem;
+}
+
+.settings-font-preview-box p {
+  margin: 0.25rem 0;
+}
+
+/* スクロールバー */
+.settings-sidebar-drawer:hover::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.3);
+  background-clip: padding-box;
 }

@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from 'react'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import { invoke } from '@tauri-apps/api/core'
 import './App.css'
-import { SettingsDialog } from '@/components/SettingsDialog'
+import { SettingsSidebar } from '@/components/SettingsSidebar'
 import { DateNavigation } from '@/components/DateNavigation'
 import { DeleteConfirmDialogs } from '@/components/DeleteConfirmDialogs'
 import { InputSection } from '@/components/InputSection'
@@ -18,13 +18,16 @@ import { useTags } from '@/hooks/useTags'
 import { useEntries } from '@/hooks/useEntries'
 import { useReplies } from '@/hooks/useReplies'
 import { useTodos } from '@/hooks/useTodos'
+import { useCompletedTodos } from '@/hooks/useCompletedTodos'
 import { CurrentActivitySection } from '@/components/CurrentActivitySection'
+import { CompletedTasksSidebar } from '@/components/CompletedTasksSidebar'
 import { getSettings, applyFont, applyFontSize } from '@/lib/settings'
 import { applyTheme, ThemeVariant } from '@/lib/themes'
 
 function App() {
-  const [settingsOpen, setSettingsOpen] = useState(false)
+  const [settingsSidebarOpen, setSettingsSidebarOpen] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [doneSidebarOpen, setDoneSidebarOpen] = useState(false)
   const [searchText, setSearchText] = useState('')
 
   // データベース
@@ -134,12 +137,26 @@ function App() {
     updateEntryLine,
   } = useTodos({ database })
 
+  // 完了タスク
+  const {
+    completedItems,
+    isLoading: isCompletedLoading,
+    loadCompletedTodos,
+  } = useCompletedTodos({ database, selectedDate })
+
   // TODO項目の読み込み
   useEffect(() => {
     if (database) {
       loadTodos()
     }
   }, [database, loadTodos])
+
+  // 完了タスクの読み込み（日付変更時に再読み込み）
+  useEffect(() => {
+    if (database) {
+      loadCompletedTodos()
+    }
+  }, [database, selectedDate, loadCompletedTodos])
 
   // エントリー
   const {
@@ -229,7 +246,6 @@ function App() {
           onPreviousDay={goToPreviousDay}
           onNextDay={goToNextDay}
           onToday={goToToday}
-          onSettingsClick={() => setSettingsOpen(true)}
         />
 
         <FilterBar
@@ -293,6 +309,7 @@ function App() {
               ))
             }
             await loadTodos()
+            await loadCompletedTodos()
           }}
         />
 
@@ -381,6 +398,14 @@ function App() {
         onToggle={() => setSidebarOpen(!sidebarOpen)}
       />
 
+      <CompletedTasksSidebar
+        completedItems={completedItems}
+        isLoading={isCompletedLoading}
+        onItemClick={scrollToEntry}
+        isOpen={doneSidebarOpen}
+        onToggle={() => setDoneSidebarOpen(!doneSidebarOpen)}
+      />
+
       <DeleteConfirmDialogs
         deleteDialogOpen={deleteDialogOpen}
         onDeleteDialogOpenChange={setDeleteDialogOpen}
@@ -394,16 +419,14 @@ function App() {
         deleteTagTarget={deleteTagTarget}
       />
 
-      {database && (
-        <SettingsDialog
-          open={settingsOpen}
-          onOpenChange={setSettingsOpen}
-          db={database}
-          onFontChange={applyFont}
-          onFontSizeChange={applyFontSize}
-          onThemeChange={handleThemeChange}
-        />
-      )}
+      <SettingsSidebar
+        isOpen={settingsSidebarOpen}
+        onToggle={() => setSettingsSidebarOpen(!settingsSidebarOpen)}
+        db={database}
+        onFontChange={applyFont}
+        onFontSizeChange={applyFontSize}
+        onThemeChange={handleThemeChange}
+      />
     </div>
   )
 }
