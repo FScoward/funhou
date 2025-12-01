@@ -1216,11 +1216,20 @@ textarea::placeholder {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.3);
+  background: rgba(0, 0, 0, 0);
   border-radius: 5px;
   border: 3px solid transparent;
   background-clip: padding-box;
   min-height: 40px;
+  transition: background 0.3s ease;
+}
+
+/* Show scrollbar on hover over scrollable container */
+.app-layout:hover::-webkit-scrollbar-thumb,
+.pinned-sidebar-drawer:hover::-webkit-scrollbar-thumb,
+*:hover::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.3);
+  background-clip: padding-box;
 }
 
 ::-webkit-scrollbar-thumb:hover {
@@ -1237,8 +1246,13 @@ textarea::placeholder {
   background: transparent;
 }
 
-/* Firefox - use auto to mimic overlay behavior */
+/* Firefox - use none to hide by default */
 * {
+  scrollbar-width: none;
+}
+
+/* Show scrollbar on hover for Firefox */
+*:hover {
   scrollbar-width: thin;
   scrollbar-color: rgba(0, 0, 0, 0.3) transparent;
 }
@@ -1246,6 +1260,13 @@ textarea::placeholder {
 /* Dark mode scrollbar */
 @media (prefers-color-scheme: dark) {
   ::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0);
+  }
+
+  /* Show scrollbar on hover in dark mode */
+  .app-layout:hover::-webkit-scrollbar-thumb,
+  .pinned-sidebar-drawer:hover::-webkit-scrollbar-thumb,
+  *:hover::-webkit-scrollbar-thumb {
     background: rgba(255, 255, 255, 0.3);
     background-clip: padding-box;
   }
@@ -1260,7 +1281,7 @@ textarea::placeholder {
     background-clip: padding-box;
   }
 
-  * {
+  *:hover {
     scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
   }
 }
