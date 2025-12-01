@@ -25,7 +25,9 @@ import {
   setFontFamily,
   setFontSize,
   setTabShimmerEnabled,
+  setTheme,
 } from '@/lib/settings'
+import { ThemeVariant } from '@/lib/themes'
 
 interface SettingsDialogProps {
   open: boolean
@@ -33,13 +35,15 @@ interface SettingsDialogProps {
   db: Database
   onFontChange?: (fontFamily: string) => void
   onFontSizeChange?: (fontSize: string) => void
+  onThemeChange?: (theme: ThemeVariant) => void
 }
 
-export function SettingsDialog({ open, onOpenChange, db, onFontChange, onFontSizeChange }: SettingsDialogProps) {
+export function SettingsDialog({ open, onOpenChange, db, onFontChange, onFontSizeChange, onThemeChange }: SettingsDialogProps) {
   const [alwaysOnTop, setAlwaysOnTopState] = useState(false)
   const [fonts, setFonts] = useState<string[]>([])
   const [selectedFont, setSelectedFont] = useState<string>('')
   const [selectedFontSize, setSelectedFontSize] = useState<string>('default')
+  const [selectedTheme, setSelectedTheme] = useState<ThemeVariant>('default')
   const [isLoadingFonts, setIsLoadingFonts] = useState(false)
   const [tabShimmerEnabled, setTabShimmerEnabledState] = useState(true)
 
@@ -55,6 +59,7 @@ export function SettingsDialog({ open, onOpenChange, db, onFontChange, onFontSiz
     setAlwaysOnTopState(settings.alwaysOnTop)
     setSelectedFont(settings.fontFamily || 'default')
     setSelectedFontSize(settings.fontSize || 'default')
+    setSelectedTheme(settings.theme || 'default')
     setTabShimmerEnabledState(settings.tabShimmerEnabled ?? true)
     // localStorageも初期化
     localStorage.setItem('tab_shimmer_enabled', (settings.tabShimmerEnabled ?? true) ? 'true' : 'false')
@@ -166,6 +171,19 @@ export function SettingsDialog({ open, onOpenChange, db, onFontChange, onFontSiz
     }
   }
 
+  const handleThemeChange = async (theme: ThemeVariant) => {
+    try {
+      setSelectedTheme(theme)
+      await setTheme(db, theme)
+
+      if (onThemeChange) {
+        onThemeChange(theme)
+      }
+    } catch (error) {
+      console.error('テーマ設定の変更に失敗しました:', error)
+    }
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
@@ -202,6 +220,27 @@ export function SettingsDialog({ open, onOpenChange, db, onFontChange, onFontSiz
               checked={tabShimmerEnabled}
               onCheckedChange={handleTabShimmerChange}
             />
+          </div>
+
+          <div className="flex flex-col space-y-2">
+            <Label htmlFor="theme">テーマ</Label>
+            <Select
+              value={selectedTheme}
+              onValueChange={(value) => handleThemeChange(value as ThemeVariant)}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="デフォルト" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="default">デフォルト</SelectItem>
+                <SelectItem value="rose-pine">Rose Pine</SelectItem>
+                <SelectItem value="rose-pine-moon">Rose Pine Moon</SelectItem>
+                <SelectItem value="rose-pine-dawn">Rose Pine Dawn</SelectItem>
+              </SelectContent>
+            </Select>
+            <span className="text-xs text-muted-foreground">
+              カラーテーマを選択します
+            </span>
           </div>
 
           <div className="flex flex-col space-y-2">

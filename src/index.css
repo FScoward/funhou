@@ -27,6 +27,9 @@
     --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
       'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
       sans-serif;
+    --glass-bg: rgba(255, 255, 255, 0.15);
+    --glass-border: rgba(255, 255, 255, 0.3);
+    --glass-shadow: rgba(31, 38, 135, 0.15);
   }
 
   .dark {
@@ -49,6 +52,87 @@
     --border: 0 0% 14.9%;
     --input: 0 0% 14.9%;
     --ring: 0 0% 83.1%;
+    --glass-bg: rgba(10, 10, 10, 0.7);
+    --glass-border: rgba(255, 255, 255, 0.1);
+    --glass-shadow: rgba(0, 0, 0, 0.3);
+  }
+
+  /* Rose Pine - Main (Dark) */
+  .theme-rose-pine {
+    --background: 249 22% 12%;
+    --foreground: 245 50% 91%;
+    --card: 249 21% 18%;
+    --card-foreground: 245 50% 91%;
+    --popover: 249 21% 20%;
+    --popover-foreground: 245 50% 91%;
+    --primary: 267 57% 78%;
+    --primary-foreground: 249 22% 12%;
+    --secondary: 249 19% 24%;
+    --secondary-foreground: 245 50% 91%;
+    --muted: 249 19% 24%;
+    --muted-foreground: 251 16% 65%;
+    --accent: 189 43% 73%;
+    --accent-foreground: 249 22% 12%;
+    --destructive: 343 76% 68%;
+    --destructive-foreground: 245 50% 91%;
+    --border: 267 30% 40%;
+    --input: 249 19% 25%;
+    --ring: 267 57% 78%;
+    --glass-bg: rgba(31, 29, 46, 0.9);
+    --glass-border: rgba(196, 167, 231, 0.35);
+    --glass-shadow: rgba(25, 23, 36, 0.5);
+  }
+
+  /* Rose Pine Moon (Dark) */
+  .theme-rose-pine-moon {
+    --background: 246 24% 17%;
+    --foreground: 245 50% 91%;
+    --card: 247 23% 22%;
+    --card-foreground: 245 50% 91%;
+    --popover: 247 23% 24%;
+    --popover-foreground: 245 50% 91%;
+    --primary: 267 57% 78%;
+    --primary-foreground: 246 24% 17%;
+    --secondary: 248 22% 30%;
+    --secondary-foreground: 245 50% 91%;
+    --muted: 248 22% 30%;
+    --muted-foreground: 251 16% 65%;
+    --accent: 189 43% 73%;
+    --accent-foreground: 246 24% 17%;
+    --destructive: 343 76% 68%;
+    --destructive-foreground: 245 50% 91%;
+    --border: 267 30% 42%;
+    --input: 248 22% 32%;
+    --ring: 267 57% 78%;
+    --glass-bg: rgba(42, 39, 63, 0.9);
+    --glass-border: rgba(196, 167, 231, 0.35);
+    --glass-shadow: rgba(35, 33, 54, 0.5);
+  }
+
+  /* Rose Pine Dawn (Light) */
+  .theme-rose-pine-dawn {
+    --background: 35 50% 95%;
+    --foreground: 248 19% 40%;
+    --card: 40 100% 98%;
+    --card-foreground: 248 19% 40%;
+    --popover: 40 100% 98%;
+    --popover-foreground: 248 19% 40%;
+    --primary: 268 21% 57%;
+    --primary-foreground: 35 50% 95%;
+    --secondary: 33 33% 93%;
+    --secondary-foreground: 248 19% 40%;
+    --muted: 33 33% 93%;
+    --muted-foreground: 257 9% 62%;
+    --accent: 189 30% 48%;
+    --accent-foreground: 35 50% 95%;
+    --destructive: 343 35% 55%;
+    --destructive-foreground: 35 50% 95%;
+    --border: 33 33% 93%;
+    --input: 33 33% 93%;
+    --ring: 268 21% 57%;
+    --glass-bg: rgba(250, 244, 237, 0.7);
+    --glass-border: rgba(144, 122, 169, 0.2);
+    --glass-shadow: rgba(250, 244, 237, 0.3);
   }
 }
 
