@@ -385,6 +385,7 @@ function App() {
           onUpdateEntryDirectly={async (entryId, newContent) => {
             await handleDirectUpdateEntry(entryId, newContent)
             await loadTodos()
+            await loadCompletedTodos()
           }}
           onDirectTagAdd={handleDirectTagAdd}
           onDirectTagRemove={handleDirectTagRemove}
