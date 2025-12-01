@@ -965,7 +965,7 @@ textarea::placeholder {
 /* FAB（トグルボタン） - Liquid Glass Style */
 .sidebar-toggle-fab {
   position: fixed;
-  top: 4rem;
+  top: 7.5rem;
   right: 1rem;
   background: linear-gradient(
     135deg,
@@ -1722,10 +1722,10 @@ textarea::placeholder {
    DONE Sidebar - 完了タスクサイドバー
    ======================================== */
 
-/* トグルボタン - ピン留めボタンの下に配置 - Liquid Glass Style */
+/* トグルボタン - 設定ボタンの下に配置 - Liquid Glass Style */
 .done-sidebar-toggle-fab {
   position: fixed;
-  top: 7.5rem;
+  top: 11rem;
   right: 1rem;
   width: 40px;
   height: 40px;
@@ -1938,10 +1938,10 @@ textarea::placeholder {
    Settings Sidebar - 設定サイドバー
    ======================================== */
 
-/* トグルボタン - DONEボタンの下に配置 - Liquid Glass Style */
+/* トグルボタン - 一番上に配置 - Liquid Glass Style */
 .settings-sidebar-toggle-fab {
   position: fixed;
-  top: 11rem;
+  top: 4rem;
   right: 1rem;
   width: 40px;
   height: 40px;
