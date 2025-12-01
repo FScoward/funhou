@@ -159,6 +159,15 @@ export async function getDb() {
     } catch (error) {
       console.log('archived column already exists or migration error:', error)
     }
+
+    // is_currentカラムを追加（「今何してる？」機能用）
+    try {
+      await db.execute(`
+        ALTER TABLE entries ADD COLUMN is_current INTEGER DEFAULT 0
+      `)
+    } catch (error) {
+      console.log('is_current column already exists or migration error:', error)
+    }
   }
   return db
 }

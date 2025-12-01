@@ -18,6 +18,7 @@ export interface Entry {
   tags?: Tag[]
   pinned?: number
   archived?: number
+  is_current?: number
 }
 
 export interface Reply {
@@ -26,6 +27,13 @@ export interface Reply {
   content: string
   timestamp: string
   tags?: Tag[]
+}
+
+export interface TodoItem {
+  entryId: number      // 元のエントリーID
+  lineIndex: number    // エントリー内の行番号（1始まり）
+  text: string         // タスクのテキスト部分
+  status: ' ' | '/'    // 未完了 or Doing
 }
 
 export interface TimelineItem {
@@ -39,6 +47,7 @@ export interface TimelineItem {
   tags?: Tag[]
   pinned?: boolean
   archived?: boolean
+  isCurrent?: boolean
   // reply specific fields
   replyId?: number
   entryId?: number

@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { Trash2, Pencil, X, Pin, FileCode, Type, Archive } from 'lucide-react'
+import { Trash2, X, Pin, FileCode, Type, Archive } from 'lucide-react'
 import CustomInput from '@/components/CustomInput'
 import { TagBadge } from '@/components/TagBadge'
 import { TagSelector } from '@/components/TagSelector'
 import { formatTimestamp } from '@/utils/dateUtils'
+import { getFirstLine } from '@/utils/textUtils'
 import { Reply, Tag } from '@/types'
 import MarkdownPreview from '@/components/MarkdownPreview'
 
@@ -88,12 +89,6 @@ export function EntryCard({
 }: EntryCardProps) {
   const [showMarkdown, setShowMarkdown] = useState(true)
 
-  // アーカイブ済みエントリーの1行目を取得
-  const getFirstLine = (text: string) => {
-    const firstLine = text.split('\n')[0]
-    return firstLine.length > 50 ? firstLine.substring(0, 50) + '...' : firstLine
-  }
-
   // アーカイブ済みで折りたたまれた表示
   if (archived) {
     return (
@@ -112,13 +107,6 @@ export function EntryCard({
 
   return (
     <div className={`entry-card ${pinned ? 'pinned' : ''}`}>
-      <button
-        className="edit-button"
-        onClick={() => isEditing ? onCancelEdit() : onEdit(id, content)}
-        aria-label={isEditing ? "キャンセル" : "編集"}
-      >
-        {isEditing ? <X size={16} /> : <Pencil size={16} />}
-      </button>
       <button
         className="delete-button"
         onClick={() => onDelete(id)}
@@ -162,6 +150,7 @@ export function EntryCard({
                 onCancelEdit()
               }
             }}
+            onBlur={onCancelEdit}
             placeholder="エントリーを編集..."
             availableTags={availableTags}
             selectedTags={editManualTags}
@@ -173,15 +162,27 @@ export function EntryCard({
         </div>
       ) : (
         <>
-          {showMarkdown ? (
-            <MarkdownPreview
-              content={content}
-              className="entry-text"
-              onContentUpdate={(newContent) => onUpdateEntryDirectly(id, newContent)}
-            />
-          ) : (
-            <div className="entry-text">{content}</div>
-          )}
+          <div
+            className="entry-content-clickable"
+            onClick={(e) => {
+              // チェックボックスのクリックは編集モードにしない
+              if ((e.target as HTMLElement).tagName === 'INPUT') {
+                return
+              }
+              onEdit(id, content)
+            }}
+            title="クリックして編集"
+          >
+            {showMarkdown ? (
+              <MarkdownPreview
+                content={content}
+                className="entry-text"
+                onContentUpdate={(newContent) => onUpdateEntryDirectly(id, newContent)}
+              />
+            ) : (
+              <div className="entry-text">{content}</div>
+            )}
+          </div>
           {tags && tags.length > 0 && (
             <div className="entry-tags flex items-center gap-2 flex-wrap">
               {tags.map(tag => (

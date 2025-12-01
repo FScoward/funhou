@@ -17,7 +17,9 @@ import { useTimeline } from '@/hooks/useTimeline'
 import { useTags } from '@/hooks/useTags'
 import { useEntries } from '@/hooks/useEntries'
 import { useReplies } from '@/hooks/useReplies'
-import { getSettings } from '@/lib/settings'
+import { useTodos } from '@/hooks/useTodos'
+import { CurrentActivitySection } from '@/components/CurrentActivitySection'
+import { getSettings, applyFont, applyFontSize } from '@/lib/settings'
 import { applyTheme, ThemeVariant } from '@/lib/themes'
 
 function App() {
@@ -72,22 +74,6 @@ function App() {
     }
   }, [])
 
-  const applyFont = (fontFamily: string) => {
-    if (fontFamily) {
-      document.documentElement.style.setProperty('--font-family', fontFamily)
-    } else {
-      document.documentElement.style.removeProperty('--font-family')
-    }
-  }
-
-  const applyFontSize = (fontSize: string) => {
-    if (fontSize) {
-      document.documentElement.style.setProperty('--font-size', fontSize)
-    } else {
-      document.documentElement.style.removeProperty('--font-size')
-    }
-  }
-
   const handleThemeChange = (theme: ThemeVariant) => {
     applyTheme(theme)
   }
@@ -137,7 +123,23 @@ function App() {
     selectedTags,
     filterMode,
     searchText,
+    onDateChange: setSelectedDate,
   })
+
+  // TODO項目
+  const {
+    todoItems,
+    loadTodos,
+    isLoading: isTodosLoading,
+    updateEntryLine,
+  } = useTodos({ database })
+
+  // TODO項目の読み込み
+  useEffect(() => {
+    if (database) {
+      loadTodos()
+    }
+  }, [database, loadTodos])
 
   // エントリー
   const {
@@ -276,6 +278,24 @@ function App() {
           recentTags={recentTags}
         />
 
+        <CurrentActivitySection
+          isLoading={isTodosLoading}
+          todoItems={todoItems}
+          onScrollToEntry={scrollToEntry}
+          onStatusChange={async (todo, newStatus) => {
+            const newContent = await updateEntryLine(todo.entryId, todo.lineIndex, newStatus)
+            if (newContent) {
+              // タイムラインのエントリーも更新
+              setFilteredTimelineItems(filteredTimelineItems.map(item =>
+                item.type === 'entry' && item.id === todo.entryId
+                  ? { ...item, content: newContent }
+                  : item
+              ))
+            }
+            await loadTodos()
+          }}
+        />
+
         {(selectedTags.length > 0 || searchText.trim().length > 0) && (
           <Pagination
             currentPage={currentPage}
@@ -345,7 +365,10 @@ function App() {
           onScrollToEntry={scrollToEntry}
           onTogglePin={handleTogglePin}
           onToggleArchive={handleToggleArchive}
-          onUpdateEntryDirectly={handleDirectUpdateEntry}
+          onUpdateEntryDirectly={async (entryId, newContent) => {
+            await handleDirectUpdateEntry(entryId, newContent)
+            await loadTodos()
+          }}
           onDirectTagAdd={handleDirectTagAdd}
           onDirectTagRemove={handleDirectTagRemove}
         />
