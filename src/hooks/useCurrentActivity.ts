@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import Database from '@tauri-apps/plugin-sql'
-import { Entry } from '@/types'
+import { Entry, TodoItem } from '@/types'
 import { associateTagsWithEntry, getTagsForEntry } from '@/lib/tags'
 
 interface UseCurrentActivityProps {
@@ -101,11 +101,55 @@ export function useCurrentActivity({ database, loadAvailableTags, loadEntries }:
     }
   }
 
+  // TODOを選択して「今何してる？」に設定（記録は残さない、表示のみ）
+  const selectTodoAsCurrentActivity = async (todo: TodoItem) => {
+    if (!database) return
+
+    try {
+      // 1. 元エントリーの該当行を `- [/]` に更新
+      const entries = await database.select<Entry[]>(
+        'SELECT content, timestamp FROM entries WHERE id = ?',
+        [todo.entryId]
+      )
+
+      if (entries.length > 0) {
+        const lines = entries[0].content.split('\n')
+        const index = todo.lineIndex - 1
+
+        if (index >= 0 && index < lines.length) {
+          // `- [ ]` を `- [/]` に置換
+          lines[index] = lines[index].replace(/\[[ ]\]/, '[/]')
+          const newContent = lines.join('\n')
+
+          await database.execute(
+            'UPDATE entries SET content = ? WHERE id = ?',
+            [newContent, todo.entryId]
+          )
+        }
+
+        // 2. ローカルステートのみ更新（エントリーは作成しない）
+        // 元のエントリーIDを保持してジャンプ機能を有効にする
+        setCurrentActivity({
+          id: todo.entryId,
+          content: todo.text,
+          timestamp: entries[0].timestamp,
+          tags: [],
+        })
+      }
+
+      // タイムラインを更新（エントリーの内容が変わったため）
+      await loadEntries()
+    } catch (error) {
+      console.error('TODOの選択に失敗しました:', error)
+    }
+  }
+
   return {
     currentActivity,
     isLoading,
     saveCurrentActivity,
     clearCurrentActivity,
     loadCurrentActivity,
+    selectTodoAsCurrentActivity,
   }
 }

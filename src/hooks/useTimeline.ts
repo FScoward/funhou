@@ -10,11 +10,12 @@ interface UseTimelineProps {
   selectedTags: string[]
   filterMode: 'AND' | 'OR'
   searchText?: string
+  onDateChange?: (date: Date) => void
 }
 
 const ITEMS_PER_PAGE = 20
 
-export function useTimeline({ database, selectedDate, selectedTags, filterMode, searchText = '' }: UseTimelineProps) {
+export function useTimeline({ database, selectedDate, selectedTags, filterMode, searchText = '', onDateChange }: UseTimelineProps) {
   const [timelineItems, setTimelineItems] = useState<TimelineItem[]>([])
   const [currentPage, setCurrentPage] = useState(1)
   const [totalItems, setTotalItems] = useState(0)
@@ -232,7 +233,7 @@ export function useTimeline({ database, selectedDate, selectedTags, filterMode, 
     }
   }
 
-  const handleScrollToEntry = (entryId: number) => {
+  const handleScrollToEntry = async (entryId: number) => {
     const element = document.getElementById(`item-entry-${entryId}`)
     if (element) {
       element.scrollIntoView({ behavior: 'smooth', block: 'center' })
@@ -241,6 +242,31 @@ export function useTimeline({ database, selectedDate, selectedTags, filterMode, 
       setTimeout(() => {
         element.classList.remove('highlight-flash')
       }, 2000)
+    } else if (database && onDateChange) {
+      // エントリーが現在のタイムラインにない場合、そのエントリーの日付に移動
+      try {
+        const result = await database.select<{ timestamp: string }[]>(
+          'SELECT timestamp FROM entries WHERE id = ?',
+          [entryId]
+        )
+        if (result.length > 0) {
+          const entryDate = new Date(result[0].timestamp)
+          onDateChange(entryDate)
+          // 日付変更後に要素へスクロール（少し待ってDOMが更新されるのを待つ）
+          setTimeout(() => {
+            const el = document.getElementById(`item-entry-${entryId}`)
+            if (el) {
+              el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+              el.classList.add('highlight-flash')
+              setTimeout(() => {
+                el.classList.remove('highlight-flash')
+              }, 2000)
+            }
+          }, 300)
+        }
+      } catch (error) {
+        console.error('エントリーの日付取得に失敗しました:', error)
+      }
     }
   }
 

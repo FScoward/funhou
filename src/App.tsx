@@ -17,7 +17,7 @@ import { useTimeline } from '@/hooks/useTimeline'
 import { useTags } from '@/hooks/useTags'
 import { useEntries } from '@/hooks/useEntries'
 import { useReplies } from '@/hooks/useReplies'
-import { useCurrentActivity } from '@/hooks/useCurrentActivity'
+import { useTodos } from '@/hooks/useTodos'
 import { CurrentActivitySection } from '@/components/CurrentActivitySection'
 import { getSettings } from '@/lib/settings'
 import { applyTheme, ThemeVariant } from '@/lib/themes'
@@ -127,7 +127,6 @@ function App() {
   const {
     timelineItems: filteredTimelineItems,
     setTimelineItems: setFilteredTimelineItems,
-    loadEntries,
     handleScrollToEntry: scrollToEntry,
     currentPage,
     setCurrentPage,
@@ -140,18 +139,23 @@ function App() {
     selectedTags,
     filterMode,
     searchText,
+    onDateChange: setSelectedDate,
   })
 
-  // 今何してる？
+  // TODO項目
   const {
-    currentActivity,
-    isLoading: isCurrentActivityLoading,
-    saveCurrentActivity,
-  } = useCurrentActivity({
-    database,
-    loadAvailableTags,
-    loadEntries,
-  })
+    todoItems,
+    loadTodos,
+    isLoading: isTodosLoading,
+    updateEntryLine,
+  } = useTodos({ database })
+
+  // TODO項目の読み込み
+  useEffect(() => {
+    if (database) {
+      loadTodos()
+    }
+  }, [database, loadTodos])
 
   // エントリー
   const {
@@ -291,10 +295,21 @@ function App() {
         />
 
         <CurrentActivitySection
-          currentActivity={currentActivity}
-          onSave={saveCurrentActivity}
-          onTagClick={handleTagClick}
-          isLoading={isCurrentActivityLoading}
+          isLoading={isTodosLoading}
+          todoItems={todoItems}
+          onScrollToEntry={scrollToEntry}
+          onStatusChange={async (todo, newStatus) => {
+            const newContent = await updateEntryLine(todo.entryId, todo.lineIndex, newStatus)
+            if (newContent) {
+              // タイムラインのエントリーも更新
+              setFilteredTimelineItems(filteredTimelineItems.map(item =>
+                item.type === 'entry' && item.id === todo.entryId
+                  ? { ...item, content: newContent }
+                  : item
+              ))
+            }
+            await loadTodos()
+          }}
         />
 
         {(selectedTags.length > 0 || searchText.trim().length > 0) && (
@@ -366,7 +381,10 @@ function App() {
           onScrollToEntry={scrollToEntry}
           onTogglePin={handleTogglePin}
           onToggleArchive={handleToggleArchive}
-          onUpdateEntryDirectly={handleDirectUpdateEntry}
+          onUpdateEntryDirectly={async (entryId, newContent) => {
+            await handleDirectUpdateEntry(entryId, newContent)
+            await loadTodos()
+          }}
           onDirectTagAdd={handleDirectTagAdd}
           onDirectTagRemove={handleDirectTagRemove}
         />

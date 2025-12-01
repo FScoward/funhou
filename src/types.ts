@@ -29,6 +29,13 @@ export interface Reply {
   tags?: Tag[]
 }
 
+export interface TodoItem {
+  entryId: number      // 元のエントリーID
+  lineIndex: number    // エントリー内の行番号（1始まり）
+  text: string         // タスクのテキスト部分
+  status: ' ' | '/'    // 未完了 or Doing
+}
+
 export interface TimelineItem {
   type: 'entry' | 'reply'
   id: number
