@@ -140,6 +140,20 @@ fn set_main_window_y(app: tauri::AppHandle, y: i32) -> Result<(), String> {
     Ok(())
 }
 
+/// Set tab window Y position (for main window move sync)
+#[tauri::command]
+fn set_tab_window_y(app: tauri::AppHandle, y: i32) -> Result<(), String> {
+    let tab_window = app
+        .get_webview_window("tab")
+        .ok_or("Tab window not found")?;
+
+    tab_window
+        .set_position(tauri::PhysicalPosition::new(0, y))
+        .map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
@@ -199,6 +213,7 @@ fn main() {
             is_sidebar_visible,
             toggle_main_window,
             set_main_window_y,
+            set_tab_window_y,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
