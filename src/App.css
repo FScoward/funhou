@@ -1195,33 +1195,41 @@ textarea::placeholder {
   margin-right: 0.5em;
 }
 
-/* Custom Scrollbar Styles */
+/* Custom Scrollbar Styles - macOS native-like overlay scrollbar */
+/* Scrollable containers */
+.app-layout,
+.pinned-sidebar-drawer {
+  /* Enable overlay scrollbar behavior */
+  overflow-y: overlay;
+  overflow-x: hidden;
+}
+
 /* Webkit browsers (Chrome, Safari, Edge) */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 10px;
+  height: 10px;
+  background: transparent;
 }
 
 ::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 10px;
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(76, 175, 80, 0.4);
-  border-radius: 10px;
-  border: 2px solid transparent;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 5px;
+  border: 3px solid transparent;
   background-clip: padding-box;
-  transition: background 0.2s ease;
+  min-height: 40px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(76, 175, 80, 0.6);
+  background: rgba(0, 0, 0, 0.5);
   background-clip: padding-box;
 }
 
 ::-webkit-scrollbar-thumb:active {
-  background: rgba(76, 175, 80, 0.8);
+  background: rgba(0, 0, 0, 0.6);
   background-clip: padding-box;
 }
 
@@ -1229,34 +1237,30 @@ textarea::placeholder {
   background: transparent;
 }
 
-/* Firefox */
+/* Firefox - use auto to mimic overlay behavior */
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgba(76, 175, 80, 0.4) rgba(255, 255, 255, 0.1);
+  scrollbar-color: rgba(0, 0, 0, 0.3) transparent;
 }
 
 /* Dark mode scrollbar */
 @media (prefers-color-scheme: dark) {
-  ::-webkit-scrollbar-track {
-    background: rgba(0, 0, 0, 0.2);
-  }
-
   ::-webkit-scrollbar-thumb {
-    background: rgba(138, 180, 248, 0.4);
+    background: rgba(255, 255, 255, 0.3);
     background-clip: padding-box;
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background: rgba(138, 180, 248, 0.6);
+    background: rgba(255, 255, 255, 0.5);
     background-clip: padding-box;
   }
 
   ::-webkit-scrollbar-thumb:active {
-    background: rgba(138, 180, 248, 0.8);
+    background: rgba(255, 255, 255, 0.6);
     background-clip: padding-box;
   }
 
   * {
-    scrollbar-color: rgba(138, 180, 248, 0.4) rgba(0, 0, 0, 0.2);
+    scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
   }
 }
