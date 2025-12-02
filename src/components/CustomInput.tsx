@@ -1,6 +1,6 @@
 import { useRef, useState } from "react"
 import TextareaAutosize from "react-textarea-autosize"
-import { ArrowUp, Mic, MicOff } from "lucide-react"
+import { ArrowUp, Mic, MicOff, Loader2 } from "lucide-react"
 
 import {
   InputGroup,
@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/input-group"
 import { TagSelector } from "@/components/TagSelector"
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition"
+import { useOllamaFormatting } from "@/hooks/useOllamaFormatting"
 import type { Tag } from "@/types"
 
 interface CustomInputProps {
@@ -24,6 +25,10 @@ interface CustomInputProps {
   onTagRemove?: (tag: string) => void
   frequentTags?: Tag[]
   recentTags?: Tag[]
+  /** Ollama整形機能が有効かどうか */
+  ollamaEnabled?: boolean
+  /** 使用するOllamaモデル */
+  ollamaModel?: string
 }
 
 export default function CustomInput({
@@ -38,47 +43,105 @@ export default function CustomInput({
   onTagAdd,
   onTagRemove,
   frequentTags = [],
-  recentTags = []
+  recentTags = [],
+  ollamaEnabled = false,
+  ollamaModel = 'gemma3:4b',
 }: CustomInputProps) {
   const hasContent = value.trim().length > 0
   const showTagSelector = onTagAdd && onTagRemove
 
-  // 音声認識開始時のテキストを保持
-  const textBeforeSpeechRef = useRef<string>('')
-  // このインスタンスがアクティブかどうか（UI表示用）
+  // このインスタンスがアクティブかどうか
   const [isActive, setIsActive] = useState(false)
-  // コールバック内で最新の状態を参照するためのRef
   const isActiveRef = useRef<boolean>(false)
+
+  // マイクON時点でのテキスト（この後ろに音声認識結果を追加）
+  const baseTextRef = useRef<string>('')
+
+  // 現在の音声認識セッションの結果
+  const currentSpeechTextRef = useRef<string>('')
+
+  // 最後にプログラムで設定した値（キーボード編集検出用）
+  const lastProgramValueRef = useRef<string>('')
+
+
+  // Ollama整形フック
+  const { formatText, isFormatting } = useOllamaFormatting({
+    enabled: ollamaEnabled,
+    model: ollamaModel,
+    onError: (error) => {
+      console.error('Ollama formatting error:', error)
+    },
+  })
 
   // 音声認識フック
   const { isAvailable, toggleRecognition: originalToggle } = useSpeechRecognition({
-    onResult: (text) => {
-      // このインスタンスがアクティブな場合のみ結果を反映
-      if (!isActiveRef.current) return
+    onResult: (text, isFinal) => {
+      console.log('[CustomInput] 音声認識結果:', { text, isFinal, isActive: isActiveRef.current })
 
-      // 音声認識開始前のテキスト + 認識結果を結合
-      const prefix = textBeforeSpeechRef.current
-      const newValue = prefix ? `${prefix} ${text}` : text
-      onChange(newValue)
+      if (!isActiveRef.current) {
+        console.log('[CustomInput] スキップ: このインスタンスは非アクティブ')
+        return
+      }
+
+      // 音声認識結果を保存
+      currentSpeechTextRef.current = text
+
+      // ベーステキスト + 音声認識結果
+      const fullText = baseTextRef.current + text
+      console.log('[CustomInput] fullText:', fullText, '(base:', baseTextRef.current, '+ speech:', text, ')')
+
+      lastProgramValueRef.current = fullText
+      onChange(fullText)
     },
     onError: (error) => {
       console.error('Speech recognition error:', error)
     },
   })
 
-  // トグル時に現在のテキストを保存し、アクティブ状態を更新
+  // キーボード編集を検出
+  const handleChange = (newValue: string) => {
+    // プログラムからの更新の場合は何もしない
+    if (newValue === lastProgramValueRef.current) {
+      return
+    }
+
+    onChange(newValue)
+
+    // マイクがアクティブな場合、キーボード編集があったらベースを更新
+    if (isActiveRef.current) {
+      console.log('[CustomInput] キーボード編集検出 → ベーステキストを更新:', newValue)
+      baseTextRef.current = newValue
+      currentSpeechTextRef.current = ''
+      lastProgramValueRef.current = newValue
+    }
+  }
+
+  // マイクのトグル
   const toggleRecognition = async () => {
     if (!isActive) {
-      // 開始時に現在のテキストを保存し、アクティブにする
-      textBeforeSpeechRef.current = value.trim()
+      // 開始時
+      baseTextRef.current = value
+      currentSpeechTextRef.current = ''
+      lastProgramValueRef.current = value
       isActiveRef.current = true
       setIsActive(true)
+      console.log('[CustomInput] マイクON, ベーステキスト:', value)
+      await originalToggle()
     } else {
-      // 停止時にアクティブを解除
+      // 停止時
       isActiveRef.current = false
       setIsActive(false)
+      await originalToggle()
+
+      // 停止時にOllamaで整形
+      const currentText = value.trim()
+      if (ollamaEnabled && currentText) {
+        console.log('[CustomInput] マイク停止 → Ollama整形開始')
+        const formattedText = await formatText(currentText)
+        console.log('[CustomInput] Ollama整形結果:', formattedText)
+        onChange(formattedText)
+      }
     }
-    await originalToggle()
   }
 
   // 送信時にマイクをオフにする
@@ -99,12 +162,19 @@ export default function CustomInput({
           className="flex field-sizing-content min-h-16 w-full resize-none bg-transparent px-3 py-2.5 text-base transition-[color,box-shadow] outline-none md:text-sm border-0 focus-visible:ring-0 dark:bg-transparent"
           placeholder={placeholder}
           value={value}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={(e) => handleChange(e.target.value)}
           onKeyDown={onKeyDown}
           onBlur={onBlur}
           minRows={1}
         />
         <InputGroupAddon align="block-end">
+          {/* 整形中インジケーター */}
+          {isFormatting && (
+            <div className="flex items-center gap-1 text-xs text-muted-foreground mr-2">
+              <Loader2 className="size-3 animate-spin" />
+              <span>整形中...</span>
+            </div>
+          )}
           {/* マイクボタン */}
           <InputGroupButton
             className={`rounded-full transition-all ${
@@ -115,7 +185,7 @@ export default function CustomInput({
             size="icon-xs"
             variant={isActive ? 'destructive' : 'ghost'}
             onClick={toggleRecognition}
-            disabled={!isAvailable}
+            disabled={!isAvailable || isFormatting}
             title={isActive ? '音声入力を停止' : '音声入力を開始'}
           >
             {isActive ? (

@@ -29,6 +29,8 @@ function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [doneSidebarOpen, setDoneSidebarOpen] = useState(false)
   const [searchText, setSearchText] = useState('')
+  const [ollamaEnabled, setOllamaEnabled] = useState(false)
+  const [ollamaModel, setOllamaModel] = useState('gemma3:4b')
 
   // データベース
   const database = useDatabase()
@@ -51,6 +53,10 @@ function App() {
       }
       // タブのシマー設定をlocalStorageに保存（tabウィンドウと共有）
       localStorage.setItem('tab_shimmer_enabled', (settings.tabShimmerEnabled ?? true) ? 'true' : 'false')
+      // Ollama設定の適用
+      console.log('[App] Ollama設定読み込み:', { ollamaEnabled: settings.ollamaEnabled, ollamaModel: settings.ollamaModel })
+      setOllamaEnabled(settings.ollamaEnabled ?? false)
+      setOllamaModel(settings.ollamaModel || 'gemma3:4b')
     }
 
     loadAndApplySettings()
@@ -296,6 +302,8 @@ function App() {
           }}
           frequentTags={frequentTags}
           recentTags={recentTags}
+          ollamaEnabled={ollamaEnabled}
+          ollamaModel={ollamaModel}
         />
 
         <CurrentActivitySection
@@ -463,6 +471,8 @@ function App() {
         onFontChange={applyFont}
         onFontSizeChange={applyFontSize}
         onThemeChange={handleThemeChange}
+        onOllamaEnabledChange={setOllamaEnabled}
+        onOllamaModelChange={setOllamaModel}
       />
     </div>
   )

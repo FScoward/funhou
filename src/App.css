@@ -2413,6 +2413,12 @@ textarea::placeholder {
   margin: 0.25rem 0;
 }
 
+.settings-section-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 1rem 0;
+}
+
 /* スクロールバー */
 .settings-sidebar-drawer:hover::-webkit-scrollbar-thumb {
   background: rgba(0, 0, 0, 0.3);

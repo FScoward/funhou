@@ -12,6 +12,8 @@ interface InputSectionProps {
   onTagRemove: (tag: string) => void
   frequentTags?: Tag[]
   recentTags?: Tag[]
+  ollamaEnabled?: boolean
+  ollamaModel?: string
 }
 
 export function InputSection({
@@ -25,6 +27,8 @@ export function InputSection({
   onTagRemove,
   frequentTags,
   recentTags,
+  ollamaEnabled,
+  ollamaModel,
 }: InputSectionProps) {
   return (
     <div className="input-section">
@@ -39,6 +43,8 @@ export function InputSection({
         onTagRemove={onTagRemove}
         frequentTags={frequentTags}
         recentTags={recentTags}
+        ollamaEnabled={ollamaEnabled}
+        ollamaModel={ollamaModel}
       />
     </div>
   )

@@ -11,6 +11,8 @@ export interface Settings {
   autohideEdge?: ScreenEdge
   tabShimmerEnabled?: boolean
   theme?: ThemeVariant
+  ollamaEnabled?: boolean
+  ollamaModel?: string
 }
 
 export async function getSettings(db: Database): Promise<Settings> {
@@ -27,6 +29,8 @@ export async function getSettings(db: Database): Promise<Settings> {
       autohideEdge: 'left',
       tabShimmerEnabled: true,
       theme: 'default',
+      ollamaEnabled: false,
+      ollamaModel: 'gemma3:4b',
     }
 
     result.forEach((row) => {
@@ -44,6 +48,10 @@ export async function getSettings(db: Database): Promise<Settings> {
         settings.tabShimmerEnabled = row.value === 'true'
       } else if (row.key === 'theme') {
         settings.theme = row.value as ThemeVariant
+      } else if (row.key === 'ollama_enabled') {
+        settings.ollamaEnabled = row.value === 'true'
+      } else if (row.key === 'ollama_model') {
+        settings.ollamaModel = row.value
       }
     })
 
@@ -58,6 +66,8 @@ export async function getSettings(db: Database): Promise<Settings> {
       autohideEdge: 'left',
       tabShimmerEnabled: true,
       theme: 'default',
+      ollamaEnabled: false,
+      ollamaModel: 'gemma3:4b',
     }
   }
 }
@@ -143,4 +153,18 @@ export function applyFontSize(fontSize: string): void {
   } else {
     document.documentElement.style.removeProperty('--font-size')
   }
+}
+
+export async function setOllamaEnabled(
+  db: Database,
+  value: boolean
+): Promise<void> {
+  await saveSetting(db, 'ollama_enabled', value ? 'true' : 'false')
+}
+
+export async function setOllamaModel(
+  db: Database,
+  value: string
+): Promise<void> {
+  await saveSetting(db, 'ollama_model', value)
 }
