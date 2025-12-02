@@ -1293,60 +1293,219 @@ textarea::placeholder {
   color: #888;
 }
 
-.markdown-preview input[type="checkbox"] {
-  margin-right: 0.5em;
-}
+/* ========================================
+   Checkbox Styles - 全チェックボックス共通
+   ======================================== */
 
-/* Doing状態 - [/] のチェックボックス */
-.markdown-preview input[type="checkbox"].checkbox-doing {
+/* 基本スタイル - 未チェック [ ] */
+.markdown-preview input[type="checkbox"] {
   appearance: none;
   -webkit-appearance: none;
-  width: 1em;
-  height: 1em;
-  border: 2px solid #f59e0b;
-  border-radius: 3px;
-  background-color: rgba(245, 158, 11, 0.15);
+  width: 1.15em;
+  height: 1.15em;
+  margin-right: 0.5em;
+  border: 2px solid var(--glass-border, rgba(180, 180, 180, 0.5));
+  border-radius: 6px;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.3) 0%,
+    rgba(255, 255, 255, 0.1) 100%
+  );
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   position: relative;
   vertical-align: middle;
   cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow:
+    0 2px 4px rgba(0, 0, 0, 0.08),
+    inset 0 1px 2px rgba(255, 255, 255, 0.4);
+}
+
+.markdown-preview input[type="checkbox"]:hover {
+  transform: scale(1.1);
+  border-color: var(--doing-checkbox-color, #f59e0b);
+  box-shadow:
+    0 4px 8px rgba(0, 0, 0, 0.12),
+    0 0 12px rgba(245, 158, 11, 0.2),
+    inset 0 1px 2px rgba(255, 255, 255, 0.5);
+}
+
+.markdown-preview input[type="checkbox"]:active {
+  transform: scale(0.95);
+}
+
+/* チェック済み [x] - Liquid Glass Style */
+.markdown-preview input[type="checkbox"]:checked {
+  border-color: var(--completed-primary, #4CAF50);
+  background: linear-gradient(
+    135deg,
+    var(--completed-primary, #4CAF50) 0%,
+    color-mix(in srgb, var(--completed-primary, #4CAF50), black 20%) 100%
+  );
+  box-shadow:
+    0 2px 6px rgba(76, 175, 80, 0.3),
+    inset 0 1px 2px rgba(255, 255, 255, 0.3);
+}
+
+.markdown-preview input[type="checkbox"]:checked::after {
+  content: '';
+  position: absolute;
+  top: 45%;
+  left: 50%;
+  width: 0.3em;
+  height: 0.55em;
+  border: solid white;
+  border-width: 0 2.5px 2.5px 0;
+  transform: translate(-50%, -50%) rotate(45deg);
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.2));
+}
+
+.markdown-preview input[type="checkbox"]:checked:hover {
+  transform: scale(1.1);
+  box-shadow:
+    0 4px 12px rgba(76, 175, 80, 0.4),
+    0 0 16px var(--completed-primary-light, rgba(76, 175, 80, 0.3)),
+    inset 0 1px 2px rgba(255, 255, 255, 0.4);
+}
+
+/* Doing状態 - [/] のチェックボックス - Liquid Glass Style */
+.markdown-preview input[type="checkbox"].checkbox-doing {
+  border-color: var(--doing-checkbox-color, #f59e0b);
+  background: linear-gradient(
+    135deg,
+    var(--doing-checkbox-bg, rgba(245, 158, 11, 0.25)) 0%,
+    rgba(255, 255, 255, 0.1) 100%
+  );
+  box-shadow:
+    0 2px 6px rgba(245, 158, 11, 0.2),
+    inset 0 1px 2px rgba(255, 255, 255, 0.3);
+}
+
+.markdown-preview input[type="checkbox"].checkbox-doing:hover {
+  box-shadow:
+    0 4px 12px rgba(245, 158, 11, 0.3),
+    0 0 16px var(--doing-checkbox-bg, rgba(245, 158, 11, 0.3)),
+    inset 0 1px 2px rgba(255, 255, 255, 0.4);
 }
 
 .markdown-preview input[type="checkbox"].checkbox-doing::after {
   content: '';
   position: absolute;
   top: 50%;
-  left: -1px;
-  right: -1px;
-  height: 2px;
-  background: #f59e0b;
+  left: 15%;
+  right: 15%;
+  height: 2.5px;
+  background: var(--doing-checkbox-color, #f59e0b);
   transform: translateY(-50%) rotate(-45deg);
+  border-radius: 2px;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.15));
 }
 
-/* Doing状態のリストアイテム */
+/* Doing状態のリストアイテム - キラキラエフェクト */
 .markdown-preview li.doing-item {
-  color: #f59e0b;
+  color: var(--doing-checkbox-color, #f59e0b);
   font-weight: 500;
+  position: relative;
+  padding: 0.25em 0.5em;
+  margin: 0.15em 0;
+  border-radius: 8px;
+  background: linear-gradient(
+    135deg,
+    var(--doing-checkbox-bg, rgba(245, 158, 11, 0.08)) 0%,
+    transparent 50%,
+    var(--doing-checkbox-bg, rgba(245, 158, 11, 0.05)) 100%
+  );
+  animation: doing-shimmer 3s ease-in-out infinite;
 }
 
-/* TODO選択ボタン */
+.markdown-preview li.doing-item::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 8px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.4) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer-slide 2.5s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes doing-shimmer {
+  0%, 100% {
+    box-shadow:
+      0 0 8px var(--doing-checkbox-bg, rgba(245, 158, 11, 0.3)),
+      inset 0 0 4px var(--doing-checkbox-bg, rgba(245, 158, 11, 0.1));
+  }
+  50% {
+    box-shadow:
+      0 0 16px var(--doing-checkbox-bg, rgba(245, 158, 11, 0.5)),
+      0 0 24px var(--doing-checkbox-bg, rgba(245, 158, 11, 0.3)),
+      inset 0 0 8px var(--doing-checkbox-bg, rgba(245, 158, 11, 0.15));
+  }
+}
+
+@keyframes shimmer-slide {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* チェック済みのリストアイテム - 打ち消し線 */
+.markdown-preview li:has(input[type="checkbox"]:checked) {
+  text-decoration: line-through;
+  text-decoration-color: var(--completed-strikethrough, rgba(76, 175, 80, 0.6));
+  text-decoration-thickness: 2px;
+  color: var(--completed-text, #888);
+  opacity: 0.85;
+}
+
+/* TODO選択ボタン - Liquid Glass Style */
 .todo-selector-trigger {
   display: flex;
   align-items: center;
   gap: 0.25rem;
   margin-left: auto;
-  padding: 0.25rem 0.5rem;
-  background: rgba(245, 158, 11, 0.1);
-  border: 1px solid rgba(245, 158, 11, 0.3);
-  border-radius: 8px;
-  color: #f59e0b;
+  padding: 0.25rem 0.6rem;
+  background: linear-gradient(
+    135deg,
+    var(--doing-checkbox-bg, rgba(245, 158, 11, 0.1)) 0%,
+    transparent 100%
+  );
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  border: 1px solid color-mix(in srgb, var(--doing-checkbox-color, #f59e0b), transparent 70%);
+  border-radius: 10px;
+  color: var(--doing-checkbox-color, #f59e0b);
   cursor: pointer;
-  transition: all 0.15s;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   font-size: 0.75rem;
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.05),
+    inset 0 1px 2px rgba(255, 255, 255, 0.2);
 }
 
 .todo-selector-trigger:hover {
-  background: rgba(245, 158, 11, 0.2);
-  border-color: rgba(245, 158, 11, 0.5);
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--doing-checkbox-bg, rgba(245, 158, 11, 0.2)), transparent 20%) 0%,
+    transparent 100%
+  );
+  border-color: color-mix(in srgb, var(--doing-checkbox-color, #f59e0b), transparent 50%);
+  box-shadow:
+    0 2px 6px rgba(0, 0, 0, 0.1),
+    0 0 8px var(--doing-checkbox-bg, rgba(245, 158, 11, 0.2)),
+    inset 0 1px 2px rgba(255, 255, 255, 0.3);
 }
 
 .todo-count {
@@ -1604,33 +1763,82 @@ textarea::placeholder {
   background-color: rgba(0, 0, 0, 0.05);
 }
 
+/* Doing状態のチェックボックス - 完了にできるボタン */
 .doing-list-item-checkbox {
   appearance: none;
   -webkit-appearance: none;
-  width: 1em;
-  height: 1em;
-  border: 2px solid #f59e0b;
-  border-radius: 3px;
-  background-color: rgba(245, 158, 11, 0.15);
+  width: 1.25em;
+  height: 1.25em;
+  border: 2.5px solid var(--doing-checkbox-color, #f59e0b);
+  border-radius: 7px;
+  background: linear-gradient(
+    135deg,
+    var(--doing-checkbox-bg, rgba(245, 158, 11, 0.25)) 0%,
+    rgba(255, 255, 255, 0.15) 100%
+  );
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   position: relative;
   cursor: pointer;
   flex-shrink: 0;
-  transition: transform 0.15s;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow:
+    0 3px 8px rgba(245, 158, 11, 0.25),
+    inset 0 1px 3px rgba(255, 255, 255, 0.4);
 }
 
+/* スラッシュマーク（進行中の印） */
 .doing-list-item-checkbox::after {
   content: '';
   position: absolute;
   top: 50%;
-  left: -1px;
-  right: -1px;
-  height: 2px;
-  background: #f59e0b;
+  left: 18%;
+  right: 18%;
+  height: 3px;
+  background: linear-gradient(
+    90deg,
+    var(--doing-checkbox-color, #f59e0b) 0%,
+    color-mix(in srgb, var(--doing-checkbox-color, #f59e0b), white 30%) 100%
+  );
   transform: translateY(-50%) rotate(-45deg);
+  border-radius: 2px;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
 }
 
 .doing-list-item-checkbox:hover {
-  transform: scale(1.2);
+  transform: scale(1.15);
+  border-color: var(--completed-primary, #4CAF50);
+  background: linear-gradient(
+    135deg,
+    var(--completed-primary-light, rgba(76, 175, 80, 0.2)) 0%,
+    rgba(255, 255, 255, 0.2) 100%
+  );
+  box-shadow:
+    0 6px 16px rgba(76, 175, 80, 0.3),
+    0 0 20px var(--completed-primary-light, rgba(76, 175, 80, 0.25)),
+    inset 0 1px 3px rgba(255, 255, 255, 0.5);
+}
+
+/* ホバー時にチェックマークをプレビュー */
+.doing-list-item-checkbox:hover::after {
+  background: transparent;
+}
+
+.doing-list-item-checkbox:hover::before {
+  content: '';
+  position: absolute;
+  top: 40%;
+  left: 50%;
+  width: 0.3em;
+  height: 0.5em;
+  border: solid var(--completed-primary, #4CAF50);
+  border-width: 0 2.5px 2.5px 0;
+  transform: translate(-50%, -50%) rotate(45deg);
+  opacity: 0.8;
+}
+
+.doing-list-item-checkbox:active {
+  transform: scale(0.92);
 }
 
 .doing-list-item-text {
@@ -1660,7 +1868,7 @@ textarea::placeholder {
 }
 
 .doing-list-item-jump:hover {
-  color: #f59e0b;
+  color: var(--doing-checkbox-color, #f59e0b);
 }
 
 /* 空状態 */
@@ -1686,6 +1894,13 @@ textarea::placeholder {
 @media (prefers-reduced-motion: reduce) {
   .current-activity-card::before {
     animation: none;
+  }
+  .markdown-preview li.doing-item {
+    animation: none;
+  }
+  .markdown-preview li.doing-item::before {
+    animation: none;
+    background: none;
   }
 }
 
@@ -1738,7 +1953,7 @@ textarea::placeholder {
   );
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
-  color: rgba(76, 175, 80, 0.9);
+  color: var(--completed-primary, rgba(76, 175, 80, 0.9));
   border: 1px solid rgba(255, 255, 255, 0.3);
   box-shadow:
     0 4px 16px rgba(0, 0, 0, 0.1),
@@ -1763,6 +1978,7 @@ textarea::placeholder {
   box-shadow:
     0 8px 24px rgba(0, 0, 0, 0.15),
     0 2px 6px rgba(0, 0, 0, 0.1),
+    0 0 16px var(--completed-primary-light, rgba(76, 175, 80, 0.3)),
     inset 0 1px 2px rgba(255, 255, 255, 0.6);
   border-color: rgba(255, 255, 255, 0.5);
 }
@@ -1775,7 +1991,7 @@ textarea::placeholder {
   position: absolute;
   top: -4px;
   right: -4px;
-  background: #FF5722;
+  background: linear-gradient(135deg, var(--completed-primary, #4CAF50), color-mix(in srgb, var(--completed-primary, #4CAF50), black 20%));
   color: white;
   font-size: 0.65rem;
   font-weight: 700;
@@ -1786,6 +2002,7 @@ textarea::placeholder {
   align-items: center;
   justify-content: center;
   padding: 0 4px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 /* サイドバー本体 */
@@ -1829,8 +2046,8 @@ textarea::placeholder {
   margin-bottom: 1.5rem;
   padding-bottom: 0.75rem;
   padding-right: 2.5rem;
-  border-bottom: 2px solid #4CAF50;
-  color: #4CAF50;
+  border-bottom: 2px solid var(--completed-primary, #4CAF50);
+  color: var(--completed-primary, #4CAF50);
 }
 
 .done-sidebar-header h2 {
@@ -1841,12 +2058,13 @@ textarea::placeholder {
 }
 
 .done-count {
-  background-color: #4CAF50;
+  background: linear-gradient(135deg, var(--completed-primary, #4CAF50), color-mix(in srgb, var(--completed-primary, #4CAF50), black 15%));
   color: white;
   font-size: 0.75rem;
   font-weight: 600;
-  padding: 0.2rem 0.5rem;
+  padding: 0.25rem 0.6rem;
   border-radius: 14px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
 }
 
 /* 空の状態 */
@@ -1864,28 +2082,50 @@ textarea::placeholder {
   gap: 0.75rem;
 }
 
-/* アイテム */
+/* アイテム - Liquid Glass Style */
 .done-sidebar-item {
-  background-color: #f1f8f4;
-  border: 1px solid #4CAF50;
-  border-radius: 14px;
-  padding: 0.75rem;
+  background: linear-gradient(
+    135deg,
+    var(--completed-bg, rgba(241, 248, 244, 0.9)) 0%,
+    color-mix(in srgb, var(--completed-bg, rgba(241, 248, 244, 0.9)), transparent 20%) 100%
+  );
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid var(--completed-primary, #4CAF50);
+  border-radius: 16px;
+  padding: 0.85rem;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.06),
+    inset 0 1px 2px rgba(255, 255, 255, 0.4);
 }
 
 .done-sidebar-item:hover {
-  background-color: #e8f5e9;
-  box-shadow: 0 2px 6px rgba(76, 175, 80, 0.2);
-  transform: translateY(-1px);
+  background: linear-gradient(
+    135deg,
+    var(--completed-bg-hover, rgba(232, 245, 233, 0.95)) 0%,
+    color-mix(in srgb, var(--completed-bg-hover, rgba(232, 245, 233, 0.95)), transparent 10%) 100%
+  );
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.1),
+    0 0 16px var(--completed-primary-light, rgba(76, 175, 80, 0.2)),
+    inset 0 1px 2px rgba(255, 255, 255, 0.5);
+  transform: translateY(-2px);
+  border-color: var(--completed-primary, #4CAF50);
+}
+
+.done-sidebar-item:active {
+  transform: translateY(0);
 }
 
 .done-item-timestamp {
   font-size: 0.7rem;
-  color: #4CAF50;
+  color: var(--completed-primary, #4CAF50);
   font-weight: 600;
   margin-bottom: 0.4rem;
+  opacity: 0.9;
 }
 
 .done-item-content {
@@ -1895,19 +2135,21 @@ textarea::placeholder {
 }
 
 .done-item-check {
-  color: #4CAF50;
+  color: var(--completed-primary, #4CAF50);
   flex-shrink: 0;
   margin-top: 2px;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
 }
 
 .done-item-text {
   font-size: var(--font-size, 0.85rem);
-  color: #555;
+  color: var(--completed-text, #555);
   line-height: 1.4;
   word-break: break-word;
   font-family: var(--font-family, inherit);
   text-decoration: line-through;
-  text-decoration-color: rgba(76, 175, 80, 0.5);
+  text-decoration-color: var(--completed-strikethrough, rgba(76, 175, 80, 0.5));
+  text-decoration-thickness: 1.5px;
 }
 
 .done-item-jump {
@@ -1916,16 +2158,18 @@ textarea::placeholder {
   right: 0.5rem;
   background: transparent;
   border: none;
-  color: #999;
+  color: var(--completed-text, #999);
   cursor: pointer;
-  padding: 0.25rem;
-  border-radius: 4px;
-  transition: all 0.15s;
+  padding: 0.3rem;
+  border-radius: 6px;
+  transition: all 0.2s;
+  opacity: 0.6;
 }
 
 .done-item-jump:hover {
-  color: #4CAF50;
-  background: rgba(76, 175, 80, 0.1);
+  color: var(--completed-primary, #4CAF50);
+  background: var(--completed-primary-light, rgba(76, 175, 80, 0.1));
+  opacity: 1;
 }
 
 /* スクロールバー */
