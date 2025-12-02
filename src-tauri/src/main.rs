@@ -2,8 +2,10 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod autohide;
+mod speech;
 
 use autohide::{AutohideConfig, AutohideManager, ScreenEdge};
+use speech::{SpeechManager, SpeechRecognitionState};
 use font_kit::source::SystemSource;
 use std::collections::HashSet;
 use std::sync::Mutex;
@@ -12,6 +14,7 @@ use tauri::{Manager, State};
 /// Application state
 pub struct AppState {
     autohide_manager: Mutex<AutohideManager>,
+    speech_manager: Mutex<SpeechManager>,
 }
 
 #[tauri::command]
@@ -154,12 +157,40 @@ fn set_tab_window_y(app: tauri::AppHandle, y: i32) -> Result<(), String> {
     Ok(())
 }
 
+/// Start speech recognition
+#[tauri::command]
+fn start_speech_recognition(
+    app: tauri::AppHandle,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
+    let manager = state.speech_manager.lock().map_err(|e| e.to_string())?;
+    manager.start_recognition(&app)
+}
+
+/// Stop speech recognition
+#[tauri::command]
+fn stop_speech_recognition(
+    app: tauri::AppHandle,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
+    let manager = state.speech_manager.lock().map_err(|e| e.to_string())?;
+    manager.stop_recognition(&app)
+}
+
+/// Get current speech recognition state
+#[tauri::command]
+fn get_speech_state(state: State<'_, AppState>) -> Result<SpeechRecognitionState, String> {
+    let manager = state.speech_manager.lock().map_err(|e| e.to_string())?;
+    manager.get_state()
+}
+
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_sql::Builder::default().build())
         .manage(AppState {
             autohide_manager: Mutex::new(AutohideManager::new()),
+            speech_manager: Mutex::new(SpeechManager::new()),
         })
         .setup(|app| {
             // Get primary monitor size and adjust window heights
@@ -214,6 +245,9 @@ fn main() {
             toggle_main_window,
             set_main_window_y,
             set_tab_window_y,
+            start_speech_recognition,
+            stop_speech_recognition,
+            get_speech_state,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

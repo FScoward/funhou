@@ -21,6 +21,13 @@ core-graphics = "0.23"
 core-foundation = "0.9"
 tokio = { version = "1", features = ["sync", "time", "rt", "macros"] }
 
+# Speech recognition dependencies
+objc2 = "0.6"
+objc2-foundation = "0.3"
+objc2-speech = "0.3"
+objc2-avf-audio = "0.3"
+block2 = "0.6"
+
 [features]
 default = ["custom-protocol"]
 custom-protocol = ["tauri/custom-protocol"]
