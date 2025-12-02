@@ -86,7 +86,6 @@ export default function CustomInput({
   const handlePauseDetected = async (fullText: string) => {
     if (!isActiveRef.current || !ollamaEnabled || isFormattingRef.current) return
 
-    console.log('[CustomInput] ポーズ検出 → 音声認識停止 → Ollama整形開始:', fullText)
     isFormattingRef.current = true
 
     // 音声認識を一時停止（refを使って呼ぶ）
@@ -94,7 +93,6 @@ export default function CustomInput({
 
     // Ollamaで整形
     const formattedText = await formatText(fullText)
-    console.log('[CustomInput] Ollama整形結果:', formattedText)
 
     // 整形結果を反映
     lastProgramValueRef.current = formattedText
@@ -106,7 +104,6 @@ export default function CustomInput({
 
     // マイクがまだアクティブ状態なら音声認識を再開（refを使って呼ぶ）
     if (isActiveRef.current) {
-      console.log('[CustomInput] 音声認識を再開')
       await startRecognitionRef.current()
     }
 
@@ -126,11 +123,8 @@ export default function CustomInput({
 
   // 音声認識フック
   const { isAvailable, startRecognition, stopRecognition, toggleRecognition: originalToggle } = useSpeechRecognition({
-    onResult: (text, isFinal) => {
-      console.log('[CustomInput] 音声認識結果:', { text, isFinal, isActive: isActiveRef.current })
-
+    onResult: (text) => {
       if (!isActiveRef.current) {
-        console.log('[CustomInput] スキップ: このインスタンスは非アクティブ')
         return
       }
 
@@ -139,7 +133,6 @@ export default function CustomInput({
 
       // ベーステキスト + 音声認識結果
       const fullText = baseTextRef.current + text
-      console.log('[CustomInput] fullText:', fullText, '(base:', baseTextRef.current, '+ speech:', text, ')')
 
       lastProgramValueRef.current = fullText
       onChange(fullText)
@@ -169,7 +162,6 @@ export default function CustomInput({
 
     // マイクがアクティブな場合、キーボード編集があったらベースを更新
     if (isActiveRef.current) {
-      console.log('[CustomInput] キーボード編集検出 → ベーステキストを更新:', newValue)
       baseTextRef.current = newValue
       currentSpeechTextRef.current = ''
       lastProgramValueRef.current = newValue
@@ -191,7 +183,6 @@ export default function CustomInput({
       lastProgramValueRef.current = value
       isActiveRef.current = true
       setIsActive(true)
-      console.log('[CustomInput] マイクON, ベーステキスト:', value)
       await originalToggle()
     } else {
       // 停止時
@@ -208,9 +199,7 @@ export default function CustomInput({
       // 停止時にOllamaで整形
       const currentText = value.trim()
       if (ollamaEnabled && currentText) {
-        console.log('[CustomInput] マイク停止 → Ollama整形開始')
         const formattedText = await formatText(currentText)
-        console.log('[CustomInput] Ollama整形結果:', formattedText)
         onChange(formattedText)
       }
     }
@@ -256,8 +245,8 @@ export default function CustomInput({
           <InputGroupButton
             className={`rounded-full transition-all ${
               isActive
-                ? 'bg-red-500 hover:bg-red-600 animate-pulse text-white'
-                : 'opacity-60 hover:opacity-100'
+                ? 'bg-red-500 hover:bg-red-600 animate-pulse text-white shadow-lg shadow-red-500/30'
+                : 'bg-primary/10 hover:bg-primary/20 text-primary'
             }`}
             size="icon-xs"
             variant={isActive ? 'destructive' : 'ghost'}

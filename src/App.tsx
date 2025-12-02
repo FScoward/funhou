@@ -54,7 +54,6 @@ function App() {
       // タブのシマー設定をlocalStorageに保存（tabウィンドウと共有）
       localStorage.setItem('tab_shimmer_enabled', (settings.tabShimmerEnabled ?? true) ? 'true' : 'false')
       // Ollama設定の適用
-      console.log('[App] Ollama設定読み込み:', { ollamaEnabled: settings.ollamaEnabled, ollamaModel: settings.ollamaModel })
       setOllamaEnabled(settings.ollamaEnabled ?? false)
       setOllamaModel(settings.ollamaModel || 'gemma3:4b')
     }

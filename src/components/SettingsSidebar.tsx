@@ -193,12 +193,10 @@ export function SettingsSidebar({
   }
 
   const handleOllamaEnabledChange = async (checked: boolean) => {
-    console.log('[SettingsSidebar] Ollama有効/無効切り替え:', checked)
     if (!db) return
     try {
       setOllamaEnabledState(checked)
       await setOllamaEnabled(db, checked)
-      console.log('[SettingsSidebar] DB保存完了、コールバック呼び出し')
       if (onOllamaEnabledChange) onOllamaEnabledChange(checked)
     } catch (error) {
       console.error('Ollama設定の変更に失敗しました:', error)

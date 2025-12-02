@@ -75,11 +75,6 @@ export async function formatTextWithOllama(
 ): Promise<string> {
   const prompt = createFormattingPrompt(text)
 
-  console.log('[Ollama] === リクエスト開始 ===')
-  console.log('[Ollama] モデル:', model)
-  console.log('[Ollama] 入力テキスト:', text)
-  console.log('[Ollama] プロンプト全文:\n', prompt)
-
   const response = await fetch(`${OLLAMA_BASE_URL}/api/generate`, {
     method: 'POST',
     headers: {
@@ -94,19 +89,11 @@ export async function formatTextWithOllama(
   })
 
   if (!response.ok) {
-    console.error('[Ollama] APIエラー:', response.status, response.statusText)
     throw new Error(`Ollama API error: ${response.status} ${response.statusText}`)
   }
 
   const data: OllamaGenerateResponse = await response.json()
-  const result = data.response.trim()
-
-  console.log('[Ollama] === レスポンス ===')
-  console.log('[Ollama] 生レスポンス:', data.response)
-  console.log('[Ollama] 整形後テキスト:', result)
-  console.log('[Ollama] === 完了 ===')
-
-  return result
+  return data.response.trim()
 }
 
 /**
