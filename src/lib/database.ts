@@ -168,6 +168,15 @@ export async function getDb() {
     } catch (error) {
       console.log('is_current column already exists or migration error:', error)
     }
+
+    // 返信テーブルにarchivedカラムを追加（既に存在する場合はエラーを無視）
+    try {
+      await db.execute(`
+        ALTER TABLE replies ADD COLUMN archived INTEGER DEFAULT 0
+      `)
+    } catch (error) {
+      console.log('replies.archived column already exists or migration error:', error)
+    }
   }
   return db
 }

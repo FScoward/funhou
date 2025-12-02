@@ -47,6 +47,7 @@ interface TimelineProps {
   onDirectTagAdd: (entryId: number, tag: string) => void
   onDirectTagRemove: (entryId: number, tag: string) => void
   onUpdateReplyDirectly: (replyId: number, newContent: string) => void
+  onToggleReplyArchive: (replyId: number, entryId: number) => void
 }
 
 export function Timeline({
@@ -94,6 +95,7 @@ export function Timeline({
   onDirectTagAdd,
   onDirectTagRemove,
   onUpdateReplyDirectly,
+  onToggleReplyArchive,
 }: TimelineProps) {
   // タグフィルタリング時は日付別にグループ化
   const groupedItems = isTagFiltering ? groupTimelineItemsByDate(timelineItems) : null
@@ -159,6 +161,7 @@ export function Timeline({
                   onDirectTagAdd={onDirectTagAdd}
                   onDirectTagRemove={onDirectTagRemove}
                   onUpdateReplyDirectly={onUpdateReplyDirectly}
+                  onToggleReplyArchive={onToggleReplyArchive}
                 />
               ))}
             </div>
@@ -214,6 +217,7 @@ export function Timeline({
               onDirectTagAdd={onDirectTagAdd}
               onDirectTagRemove={onDirectTagRemove}
               onUpdateReplyDirectly={onUpdateReplyDirectly}
+              onToggleReplyArchive={onToggleReplyArchive}
             />
           ))}
         </div>

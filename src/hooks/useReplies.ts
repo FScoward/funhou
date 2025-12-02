@@ -214,6 +214,45 @@ export function useReplies({ database, timelineItems, setTimelineItems, loadAvai
     }
   }
 
+  const handleToggleReplyArchive = async (replyId: number, entryId: number) => {
+    if (!database) return
+
+    try {
+      // 現在のarchived状態を取得
+      const result = await database.select<{ archived: number }[]>(
+        'SELECT archived FROM replies WHERE id = ?',
+        [replyId]
+      )
+
+      if (result.length === 0) return
+
+      const currentArchived = result[0].archived ?? 0
+      const newArchived = currentArchived === 1 ? 0 : 1
+
+      // データベースを更新
+      await database.execute(
+        'UPDATE replies SET archived = ? WHERE id = ?',
+        [newArchived, replyId]
+      )
+
+      // stateを更新（タイムラインアイテムと親エントリーのrepliesリスト両方）
+      setTimelineItems(timelineItems.map(item => {
+        if (item.type === 'reply' && item.replyId === replyId) {
+          return { ...item, replyArchived: newArchived === 1 }
+        }
+        if (item.type === 'entry' && item.id === entryId) {
+          const updatedReplies = (item.replies || []).map(reply =>
+            reply.id === replyId ? { ...reply, archived: newArchived } : reply
+          )
+          return { ...item, replies: updatedReplies }
+        }
+        return item
+      }))
+    } catch (error) {
+      console.error('返信のアーカイブ状態の切り替えに失敗しました:', error)
+    }
+  }
+
   const handleDeleteReply = async () => {
     if (deleteReplyTarget === null || !database) return
 
@@ -270,5 +309,6 @@ export function useReplies({ database, timelineItems, setTimelineItems, loadAvai
     openDeleteReplyDialog,
     handleDeleteReply,
     handleDirectUpdateReply,
+    handleToggleReplyArchive,
   }
 }

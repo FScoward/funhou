@@ -48,6 +48,7 @@ interface TimelineItemComponentProps {
   onDirectTagAdd: (entryId: number, tag: string) => void
   onDirectTagRemove: (entryId: number, tag: string) => void
   onUpdateReplyDirectly: (replyId: number, newContent: string) => void
+  onToggleReplyArchive: (replyId: number, entryId: number) => void
 }
 
 export function TimelineItemComponent({
@@ -95,6 +96,7 @@ export function TimelineItemComponent({
   onDirectTagAdd,
   onDirectTagRemove,
   onUpdateReplyDirectly,
+  onToggleReplyArchive,
 }: TimelineItemComponentProps) {
   const itemDate = new Date(item.timestamp)
   const day = itemDate.getDate()
@@ -170,6 +172,7 @@ export function TimelineItemComponent({
             content={item.content}
             tags={item.tags}
             parentEntry={item.parentEntry}
+            archived={item.replyArchived}
             isEditing={editingReplyId === item.replyId}
             editContent={editReplyContent}
             editManualTags={editReplyManualTags}
@@ -185,6 +188,7 @@ export function TimelineItemComponent({
             onTagClick={onTagClick}
             onScrollToEntry={onScrollToEntry}
             onUpdateReplyDirectly={onUpdateReplyDirectly}
+            onToggleArchive={onToggleReplyArchive}
           />
         )}
       </div>
