@@ -1,6 +1,6 @@
+import { useRef, useState } from "react"
 import TextareaAutosize from "react-textarea-autosize"
-import { ArrowUp } from "lucide-react"
-
+import { ArrowUp, Mic, MicOff } from "lucide-react"
 
 import {
   InputGroup,
@@ -8,6 +8,7 @@ import {
   InputGroupButton,
 } from "@/components/ui/input-group"
 import { TagSelector } from "@/components/TagSelector"
+import { useSpeechRecognition } from "@/hooks/useSpeechRecognition"
 import type { Tag } from "@/types"
 
 interface CustomInputProps {
@@ -42,7 +43,53 @@ export default function CustomInput({
   const hasContent = value.trim().length > 0
   const showTagSelector = onTagAdd && onTagRemove
 
+  // 音声認識開始時のテキストを保持
+  const textBeforeSpeechRef = useRef<string>('')
+  // このインスタンスがアクティブかどうか（UI表示用）
+  const [isActive, setIsActive] = useState(false)
+  // コールバック内で最新の状態を参照するためのRef
+  const isActiveRef = useRef<boolean>(false)
 
+  // 音声認識フック
+  const { isAvailable, toggleRecognition: originalToggle } = useSpeechRecognition({
+    onResult: (text) => {
+      // このインスタンスがアクティブな場合のみ結果を反映
+      if (!isActiveRef.current) return
+
+      // 音声認識開始前のテキスト + 認識結果を結合
+      const prefix = textBeforeSpeechRef.current
+      const newValue = prefix ? `${prefix} ${text}` : text
+      onChange(newValue)
+    },
+    onError: (error) => {
+      console.error('Speech recognition error:', error)
+    },
+  })
+
+  // トグル時に現在のテキストを保存し、アクティブ状態を更新
+  const toggleRecognition = async () => {
+    if (!isActive) {
+      // 開始時に現在のテキストを保存し、アクティブにする
+      textBeforeSpeechRef.current = value.trim()
+      isActiveRef.current = true
+      setIsActive(true)
+    } else {
+      // 停止時にアクティブを解除
+      isActiveRef.current = false
+      setIsActive(false)
+    }
+    await originalToggle()
+  }
+
+  // 送信時にマイクをオフにする
+  const handleSubmit = async () => {
+    if (isActive) {
+      isActiveRef.current = false
+      setIsActive(false)
+      await originalToggle()
+    }
+    onSubmit()
+  }
 
   return (
     <div className="w-full space-y-2">
@@ -58,11 +105,31 @@ export default function CustomInput({
           minRows={1}
         />
         <InputGroupAddon align="block-end">
+          {/* マイクボタン */}
+          <InputGroupButton
+            className={`rounded-full transition-all ${
+              isActive
+                ? 'bg-red-500 hover:bg-red-600 animate-pulse text-white'
+                : 'opacity-60 hover:opacity-100'
+            }`}
+            size="icon-xs"
+            variant={isActive ? 'destructive' : 'ghost'}
+            onClick={toggleRecognition}
+            disabled={!isAvailable}
+            title={isActive ? '音声入力を停止' : '音声入力を開始'}
+          >
+            {isActive ? (
+              <MicOff className="size-[14px]" />
+            ) : (
+              <Mic className="size-[14px]" />
+            )}
+          </InputGroupButton>
+          {/* 送信ボタン */}
           <InputGroupButton
             className={`ml-auto rounded-full transition-opacity ${hasContent ? 'opacity-100' : 'opacity-30'}`}
             size="icon-xs"
             variant="default"
-            onClick={onSubmit}
+            onClick={handleSubmit}
           >
             <ArrowUp className="size-[14px]" />
           </InputGroupButton>
