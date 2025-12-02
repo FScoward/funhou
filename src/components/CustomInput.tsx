@@ -81,6 +81,16 @@ export default function CustomInput({
     await originalToggle()
   }
 
+  // 送信時にマイクをオフにする
+  const handleSubmit = async () => {
+    if (isActive) {
+      isActiveRef.current = false
+      setIsActive(false)
+      await originalToggle()
+    }
+    onSubmit()
+  }
+
   return (
     <div className="w-full space-y-2">
       <InputGroup>
@@ -119,7 +129,7 @@ export default function CustomInput({
             className={`ml-auto rounded-full transition-opacity ${hasContent ? 'opacity-100' : 'opacity-30'}`}
             size="icon-xs"
             variant="default"
-            onClick={onSubmit}
+            onClick={handleSubmit}
           >
             <ArrowUp className="size-[14px]" />
           </InputGroupButton>
