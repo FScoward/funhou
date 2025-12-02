@@ -5,6 +5,7 @@ interface CurrentActivitySectionProps {
   isLoading?: boolean
   todoItems?: TodoItem[]
   onScrollToEntry?: (entryId: number) => void
+  onScrollToReply?: (replyId: number) => void
   onStatusChange?: (todo: TodoItem, newStatus: 'x') => Promise<void>
 }
 
@@ -12,6 +13,7 @@ export function CurrentActivitySection({
   isLoading = false,
   todoItems = [],
   onScrollToEntry,
+  onScrollToReply,
   onStatusChange,
 }: CurrentActivitySectionProps) {
   // DOINGのみフィルタリング
@@ -43,7 +45,7 @@ export function CurrentActivitySection({
           <div className="current-activity-doing-list">
             {doingTodos.map((todo) => (
               <div
-                key={`${todo.entryId}-${todo.lineIndex}`}
+                key={`${todo.replyId ?? todo.entryId}-${todo.lineIndex}`}
                 className="doing-list-item"
               >
                 {onStatusChange && (
@@ -54,7 +56,15 @@ export function CurrentActivitySection({
                   />
                 )}
                 <span className="doing-list-item-text">{todo.text}</span>
-                {onScrollToEntry && (
+                {todo.replyId && onScrollToReply ? (
+                  <button
+                    className="doing-list-item-jump"
+                    onClick={() => onScrollToReply(todo.replyId!)}
+                    title="返信に移動"
+                  >
+                    <ExternalLink size={14} />
+                  </button>
+                ) : onScrollToEntry && (
                   <button
                     className="doing-list-item-jump"
                     onClick={() => onScrollToEntry(todo.entryId)}

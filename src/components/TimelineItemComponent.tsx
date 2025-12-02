@@ -47,6 +47,7 @@ interface TimelineItemComponentProps {
   onUpdateEntryDirectly: (entryId: number, newContent: string) => void
   onDirectTagAdd: (entryId: number, tag: string) => void
   onDirectTagRemove: (entryId: number, tag: string) => void
+  onUpdateReplyDirectly: (replyId: number, newContent: string) => void
 }
 
 export function TimelineItemComponent({
@@ -93,6 +94,7 @@ export function TimelineItemComponent({
   onUpdateEntryDirectly,
   onDirectTagAdd,
   onDirectTagRemove,
+  onUpdateReplyDirectly,
 }: TimelineItemComponentProps) {
   const itemDate = new Date(item.timestamp)
   const day = itemDate.getDate()
@@ -182,6 +184,7 @@ export function TimelineItemComponent({
             onEditTagRemove={onEditReplyTagRemove}
             onTagClick={onTagClick}
             onScrollToEntry={onScrollToEntry}
+            onUpdateReplyDirectly={onUpdateReplyDirectly}
           />
         )}
       </div>

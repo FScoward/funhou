@@ -188,6 +188,32 @@ export function useReplies({ database, timelineItems, setTimelineItems, loadAvai
     setDeleteReplyDialogOpen(true)
   }
 
+  const handleDirectUpdateReply = async (replyId: number, newContent: string) => {
+    if (database) {
+      try {
+        await database.execute(
+          'UPDATE replies SET content = ? WHERE id = ?',
+          [newContent, replyId]
+        )
+
+        setTimelineItems(timelineItems.map(item => {
+          if (item.type === 'reply' && item.replyId === replyId) {
+            return { ...item, content: newContent }
+          }
+          if (item.type === 'entry' && item.replies) {
+            const updatedReplies = item.replies.map(reply =>
+              reply.id === replyId ? { ...reply, content: newContent } : reply
+            )
+            return { ...item, replies: updatedReplies }
+          }
+          return item
+        }))
+      } catch (error) {
+        console.error('返信の直接更新に失敗しました:', error)
+      }
+    }
+  }
+
   const handleDeleteReply = async () => {
     if (deleteReplyTarget === null || !database) return
 
@@ -243,5 +269,6 @@ export function useReplies({ database, timelineItems, setTimelineItems, loadAvai
     cancelEditReply,
     openDeleteReplyDialog,
     handleDeleteReply,
+    handleDirectUpdateReply,
   }
 }

@@ -29,6 +29,7 @@ interface ReplyCardProps {
   onEditTagRemove: (tag: string) => void
   onTagClick: (tag: string) => void
   onScrollToEntry: (entryId: number) => void
+  onUpdateReplyDirectly: (replyId: number, newContent: string) => void
 }
 
 export function ReplyCard({
@@ -51,6 +52,7 @@ export function ReplyCard({
   onEditTagRemove,
   onTagClick,
   onScrollToEntry,
+  onUpdateReplyDirectly,
 }: ReplyCardProps) {
   const [showMarkdown, setShowMarkdown] = useState(true)
 
@@ -110,7 +112,11 @@ export function ReplyCard({
       ) : (
         <>
           {showMarkdown ? (
-            <MarkdownPreview content={content} className="reply-text" />
+            <MarkdownPreview
+              content={content}
+              className="reply-text"
+              onContentUpdate={(newContent) => onUpdateReplyDirectly(replyId, newContent)}
+            />
           ) : (
             <div className="reply-text">{content}</div>
           )}
