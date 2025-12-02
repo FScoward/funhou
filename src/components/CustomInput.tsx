@@ -1,4 +1,4 @@
-import { useRef } from "react"
+import { useRef, useState } from "react"
 import TextareaAutosize from "react-textarea-autosize"
 import { ArrowUp, Mic, MicOff } from "lucide-react"
 
@@ -45,10 +45,17 @@ export default function CustomInput({
 
   // 音声認識開始時のテキストを保持
   const textBeforeSpeechRef = useRef<string>('')
+  // このインスタンスがアクティブかどうか（UI表示用）
+  const [isActive, setIsActive] = useState(false)
+  // コールバック内で最新の状態を参照するためのRef
+  const isActiveRef = useRef<boolean>(false)
 
   // 音声認識フック
-  const { isListening, isAvailable, toggleRecognition: originalToggle } = useSpeechRecognition({
+  const { isAvailable, toggleRecognition: originalToggle } = useSpeechRecognition({
     onResult: (text) => {
+      // このインスタンスがアクティブな場合のみ結果を反映
+      if (!isActiveRef.current) return
+
       // 音声認識開始前のテキスト + 認識結果を結合
       const prefix = textBeforeSpeechRef.current
       const newValue = prefix ? `${prefix} ${text}` : text
@@ -59,11 +66,17 @@ export default function CustomInput({
     },
   })
 
-  // トグル時に現在のテキストを保存
+  // トグル時に現在のテキストを保存し、アクティブ状態を更新
   const toggleRecognition = async () => {
-    if (!isListening) {
-      // 開始時に現在のテキストを保存
+    if (!isActive) {
+      // 開始時に現在のテキストを保存し、アクティブにする
       textBeforeSpeechRef.current = value.trim()
+      isActiveRef.current = true
+      setIsActive(true)
+    } else {
+      // 停止時にアクティブを解除
+      isActiveRef.current = false
+      setIsActive(false)
     }
     await originalToggle()
   }
@@ -85,17 +98,17 @@ export default function CustomInput({
           {/* マイクボタン */}
           <InputGroupButton
             className={`rounded-full transition-all ${
-              isListening
+              isActive
                 ? 'bg-red-500 hover:bg-red-600 animate-pulse text-white'
                 : 'opacity-60 hover:opacity-100'
             }`}
             size="icon-xs"
-            variant={isListening ? 'destructive' : 'ghost'}
+            variant={isActive ? 'destructive' : 'ghost'}
             onClick={toggleRecognition}
             disabled={!isAvailable}
-            title={isListening ? '音声入力を停止' : '音声入力を開始'}
+            title={isActive ? '音声入力を停止' : '音声入力を開始'}
           >
-            {isListening ? (
+            {isActive ? (
               <MicOff className="size-[14px]" />
             ) : (
               <Mic className="size-[14px]" />
