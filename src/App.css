@@ -1099,7 +1099,7 @@ textarea::placeholder {
 
 /* Markdown Preview Styles */
 .markdown-preview {
-  font-size: 0.9rem;
+  font-size: var(--font-size, 0.9rem);
   color: #555;
   line-height: 1.5;
   word-wrap: break-word;
