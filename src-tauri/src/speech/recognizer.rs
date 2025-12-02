@@ -61,6 +61,7 @@ impl SpeechRecognizerWrapper {
     }
 
     /// 音声認識の認可をリクエスト
+    #[allow(dead_code)]
     pub fn request_authorization<F>(callback: F)
     where
         F: Fn(bool) + Send + 'static,
@@ -230,6 +231,7 @@ impl SpeechRecognizerWrapper {
     }
 
     /// リスニング中かどうかを返す
+    #[allow(dead_code)]
     pub fn is_listening(&self) -> bool {
         self.is_listening
             .lock()

@@ -1,4 +1,5 @@
-import CustomInput from '@/components/CustomInput'
+import { forwardRef } from 'react'
+import CustomInput, { CustomInputRef } from '@/components/CustomInput'
 import { Tag } from '@/types'
 
 interface InputSectionProps {
@@ -12,9 +13,11 @@ interface InputSectionProps {
   onTagRemove: (tag: string) => void
   frequentTags?: Tag[]
   recentTags?: Tag[]
+  ollamaEnabled?: boolean
+  ollamaModel?: string
 }
 
-export function InputSection({
+export const InputSection = forwardRef<CustomInputRef, InputSectionProps>(function InputSection({
   currentEntry,
   onEntryChange,
   onSubmit,
@@ -25,10 +28,13 @@ export function InputSection({
   onTagRemove,
   frequentTags,
   recentTags,
-}: InputSectionProps) {
+  ollamaEnabled,
+  ollamaModel,
+}, ref) {
   return (
     <div className="input-section">
       <CustomInput
+        ref={ref}
         value={currentEntry}
         onChange={onEntryChange}
         onSubmit={onSubmit}
@@ -39,7 +45,9 @@ export function InputSection({
         onTagRemove={onTagRemove}
         frequentTags={frequentTags}
         recentTags={recentTags}
+        ollamaEnabled={ollamaEnabled}
+        ollamaModel={ollamaModel}
       />
     </div>
   )
-}
+})

@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import { invoke } from '@tauri-apps/api/core'
 import './App.css'
@@ -6,6 +6,7 @@ import { SettingsSidebar } from '@/components/SettingsSidebar'
 import { DateNavigation } from '@/components/DateNavigation'
 import { DeleteConfirmDialogs } from '@/components/DeleteConfirmDialogs'
 import { InputSection } from '@/components/InputSection'
+import type { CustomInputRef } from '@/components/CustomInput'
 import { Timeline } from '@/components/Timeline'
 import { Pagination } from '@/components/Pagination'
 import { PinnedSidebar } from '@/components/PinnedSidebar'
@@ -29,6 +30,11 @@ function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [doneSidebarOpen, setDoneSidebarOpen] = useState(false)
   const [searchText, setSearchText] = useState('')
+  const [ollamaEnabled, setOllamaEnabled] = useState(false)
+  const [ollamaModel, setOllamaModel] = useState('gemma3:4b')
+
+  // InputSectionのref（マイクトグル用）
+  const inputSectionRef = useRef<CustomInputRef>(null)
 
   // データベース
   const database = useDatabase()
@@ -51,6 +57,9 @@ function App() {
       }
       // タブのシマー設定をlocalStorageに保存（tabウィンドウと共有）
       localStorage.setItem('tab_shimmer_enabled', (settings.tabShimmerEnabled ?? true) ? 'true' : 'false')
+      // Ollama設定の適用
+      setOllamaEnabled(settings.ollamaEnabled ?? false)
+      setOllamaModel(settings.ollamaModel || 'gemma3:4b')
     }
 
     loadAndApplySettings()
@@ -230,6 +239,7 @@ function App() {
     goToPreviousDay,
     goToNextDay,
     goToToday,
+    onToggleMic: () => inputSectionRef.current?.toggleMic(),
   })
 
   // ピン留めされたエントリーのみをフィルタリング
@@ -280,6 +290,7 @@ function App() {
         />
 
         <InputSection
+          ref={inputSectionRef}
           currentEntry={currentEntry}
           onEntryChange={setCurrentEntry}
           onSubmit={handleAddEntry}
@@ -296,6 +307,8 @@ function App() {
           }}
           frequentTags={frequentTags}
           recentTags={recentTags}
+          ollamaEnabled={ollamaEnabled}
+          ollamaModel={ollamaModel}
         />
 
         <CurrentActivitySection
@@ -463,6 +476,8 @@ function App() {
         onFontChange={applyFont}
         onFontSizeChange={applyFontSize}
         onThemeChange={handleThemeChange}
+        onOllamaEnabledChange={setOllamaEnabled}
+        onOllamaModelChange={setOllamaModel}
       />
     </div>
   )

@@ -104,12 +104,14 @@ impl SpeechManager {
     }
 
     /// 設定を取得
+    #[allow(dead_code)]
     pub fn get_config(&self) -> Result<SpeechConfig, String> {
         let config = self.config.lock().map_err(|e| e.to_string())?;
         Ok(config.clone())
     }
 
     /// 言語を設定
+    #[allow(dead_code)]
     pub fn set_language(&self, language: String) -> Result<(), String> {
         let mut config = self.config.lock().map_err(|e| e.to_string())?;
         config.language = language;

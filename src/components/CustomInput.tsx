@@ -1,6 +1,6 @@
-import { useRef, useState } from "react"
+import { useRef, useState, forwardRef, useImperativeHandle } from "react"
 import TextareaAutosize from "react-textarea-autosize"
-import { ArrowUp, Mic, MicOff } from "lucide-react"
+import { ArrowUp, Mic, MicOff, Loader2 } from "lucide-react"
 
 import {
   InputGroup,
@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/input-group"
 import { TagSelector } from "@/components/TagSelector"
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition"
+import { useOllamaFormatting } from "@/hooks/useOllamaFormatting"
 import type { Tag } from "@/types"
 
 interface CustomInputProps {
@@ -24,9 +25,17 @@ interface CustomInputProps {
   onTagRemove?: (tag: string) => void
   frequentTags?: Tag[]
   recentTags?: Tag[]
+  /** Ollama整形機能が有効かどうか */
+  ollamaEnabled?: boolean
+  /** 使用するOllamaモデル */
+  ollamaModel?: string
 }
 
-export default function CustomInput({
+export interface CustomInputRef {
+  toggleMic: () => void
+}
+
+const CustomInput = forwardRef<CustomInputRef, CustomInputProps>(function CustomInput({
   value,
   onChange,
   onSubmit,
@@ -38,52 +47,184 @@ export default function CustomInput({
   onTagAdd,
   onTagRemove,
   frequentTags = [],
-  recentTags = []
-}: CustomInputProps) {
+  recentTags = [],
+  ollamaEnabled = false,
+  ollamaModel = 'gemma3:4b',
+}, ref) {
   const hasContent = value.trim().length > 0
   const showTagSelector = onTagAdd && onTagRemove
 
-  // 音声認識開始時のテキストを保持
-  const textBeforeSpeechRef = useRef<string>('')
-  // このインスタンスがアクティブかどうか（UI表示用）
+  // このインスタンスがアクティブかどうか
   const [isActive, setIsActive] = useState(false)
-  // コールバック内で最新の状態を参照するためのRef
   const isActiveRef = useRef<boolean>(false)
 
-  // 音声認識フック
-  const { isAvailable, toggleRecognition: originalToggle } = useSpeechRecognition({
-    onResult: (text) => {
-      // このインスタンスがアクティブな場合のみ結果を反映
-      if (!isActiveRef.current) return
+  // マイクON時点でのテキスト（この後ろに音声認識結果を追加）
+  const baseTextRef = useRef<string>('')
 
-      // 音声認識開始前のテキスト + 認識結果を結合
-      const prefix = textBeforeSpeechRef.current
-      const newValue = prefix ? `${prefix} ${text}` : text
-      onChange(newValue)
+  // 現在の音声認識セッションの結果
+  const currentSpeechTextRef = useRef<string>('')
+
+  // 最後にプログラムで設定した値（キーボード編集検出用）
+  const lastProgramValueRef = useRef<string>('')
+
+  // デバウンスタイマー
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // 整形中フラグ（音声認識の再開制御用）
+  const isFormattingRef = useRef<boolean>(false)
+
+  // 音声認識の開始/停止関数をrefで保持（順序依存を解決）
+  const startRecognitionRef = useRef<() => Promise<void>>(() => Promise.resolve())
+  const stopRecognitionRef = useRef<() => Promise<void>>(() => Promise.resolve())
+
+  // Ollama整形フック
+  const { formatText, isFormatting } = useOllamaFormatting({
+    enabled: ollamaEnabled,
+    model: ollamaModel,
+    onError: (error) => {
+      console.error('Ollama formatting error:', error)
+    },
+  })
+
+  // ポーズ検出時に音声認識を停止→整形→再開
+  const handlePauseDetected = async (fullText: string) => {
+    if (!isActiveRef.current || !ollamaEnabled || isFormattingRef.current) return
+
+    isFormattingRef.current = true
+
+    // 音声認識を一時停止（refを使って呼ぶ）
+    await stopRecognitionRef.current()
+
+    // Ollamaで整形
+    const formattedText = await formatText(fullText)
+
+    // 整形結果を反映
+    lastProgramValueRef.current = formattedText
+    onChange(formattedText)
+
+    // 整形後のテキストを新しいベースにする
+    baseTextRef.current = formattedText
+    currentSpeechTextRef.current = ''
+
+    // マイクがまだアクティブ状態なら音声認識を再開（refを使って呼ぶ）
+    if (isActiveRef.current) {
+      await startRecognitionRef.current()
+    }
+
+    isFormattingRef.current = false
+  }
+
+  // デバウンス付きでポーズ検出
+  const scheduleFormatting = (fullText: string) => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current)
+    }
+
+    debounceTimerRef.current = setTimeout(() => {
+      handlePauseDetected(fullText)
+    }, 1500)
+  }
+
+  // 音声認識フック
+  const { isAvailable, startRecognition, stopRecognition, toggleRecognition: originalToggle } = useSpeechRecognition({
+    onResult: (text) => {
+      if (!isActiveRef.current) {
+        return
+      }
+
+      // 音声認識結果を保存
+      currentSpeechTextRef.current = text
+
+      // ベーステキスト + 音声認識結果
+      const fullText = baseTextRef.current + text
+
+      lastProgramValueRef.current = fullText
+      onChange(fullText)
+
+      // Ollamaが有効なら、ポーズ検出後に整形をスケジュール
+      if (ollamaEnabled && !isFormattingRef.current) {
+        scheduleFormatting(fullText)
+      }
     },
     onError: (error) => {
       console.error('Speech recognition error:', error)
     },
   })
 
-  // トグル時に現在のテキストを保存し、アクティブ状態を更新
+  // refに関数を設定
+  startRecognitionRef.current = startRecognition
+  stopRecognitionRef.current = stopRecognition
+
+  // キーボード編集を検出
+  const handleChange = (newValue: string) => {
+    // プログラムからの更新の場合は何もしない
+    if (newValue === lastProgramValueRef.current) {
+      return
+    }
+
+    onChange(newValue)
+
+    // マイクがアクティブな場合、キーボード編集があったらベースを更新
+    if (isActiveRef.current) {
+      baseTextRef.current = newValue
+      currentSpeechTextRef.current = ''
+      lastProgramValueRef.current = newValue
+
+      // 整形タイマーをクリア
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current)
+        debounceTimerRef.current = null
+      }
+    }
+  }
+
+  // マイクのトグル
   const toggleRecognition = async () => {
     if (!isActive) {
-      // 開始時に現在のテキストを保存し、アクティブにする
-      textBeforeSpeechRef.current = value.trim()
+      // 開始時
+      baseTextRef.current = value
+      currentSpeechTextRef.current = ''
+      lastProgramValueRef.current = value
       isActiveRef.current = true
       setIsActive(true)
+      await originalToggle()
     } else {
-      // 停止時にアクティブを解除
+      // 停止時
+      // 整形タイマーをクリア
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current)
+        debounceTimerRef.current = null
+      }
+
       isActiveRef.current = false
       setIsActive(false)
+      await originalToggle()
+
+      // 停止時にOllamaで整形
+      const currentText = value.trim()
+      if (ollamaEnabled && currentText) {
+        const formattedText = await formatText(currentText)
+        onChange(formattedText)
+      }
     }
-    await originalToggle()
   }
+
+  // 外部からマイクトグルを呼び出せるようにする
+  useImperativeHandle(ref, () => ({
+    toggleMic: () => {
+      if (!isAvailable || isFormatting) return
+      toggleRecognition()
+    }
+  }), [isAvailable, isFormatting, toggleRecognition])
 
   // 送信時にマイクをオフにする
   const handleSubmit = async () => {
     if (isActive) {
+      // 整形タイマーをクリア
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current)
+        debounceTimerRef.current = null
+      }
       isActiveRef.current = false
       setIsActive(false)
       await originalToggle()
@@ -99,23 +240,40 @@ export default function CustomInput({
           className="flex field-sizing-content min-h-16 w-full resize-none bg-transparent px-3 py-2.5 text-base transition-[color,box-shadow] outline-none md:text-sm border-0 focus-visible:ring-0 dark:bg-transparent"
           placeholder={placeholder}
           value={value}
-          onChange={(e) => onChange(e.target.value)}
-          onKeyDown={onKeyDown}
+          onChange={(e) => handleChange(e.target.value)}
+          onKeyDown={(e) => {
+            // Cmd+D (Mac) または Ctrl+D (Windows/Linux) でマイクトグル
+            if ((e.metaKey || e.ctrlKey) && e.key === 'd') {
+              e.preventDefault()
+              if (isAvailable && !isFormatting) {
+                toggleRecognition()
+              }
+              return
+            }
+            onKeyDown?.(e)
+          }}
           onBlur={onBlur}
           minRows={1}
         />
         <InputGroupAddon align="block-end">
+          {/* 整形中インジケーター */}
+          {isFormatting && (
+            <div className="flex items-center gap-1 text-xs text-muted-foreground mr-2">
+              <Loader2 className="size-3 animate-spin" />
+              <span>整形中...</span>
+            </div>
+          )}
           {/* マイクボタン */}
           <InputGroupButton
             className={`rounded-full transition-all ${
               isActive
-                ? 'bg-red-500 hover:bg-red-600 animate-pulse text-white'
-                : 'opacity-60 hover:opacity-100'
+                ? 'bg-red-500 hover:bg-red-600 animate-pulse text-white shadow-lg shadow-red-500/30'
+                : 'bg-primary/10 hover:bg-primary/20 text-primary'
             }`}
             size="icon-xs"
             variant={isActive ? 'destructive' : 'ghost'}
             onClick={toggleRecognition}
-            disabled={!isAvailable}
+            disabled={!isAvailable || isFormatting}
             title={isActive ? '音声入力を停止' : '音声入力を開始'}
           >
             {isActive ? (
@@ -151,4 +309,6 @@ export default function CustomInput({
       )}
     </div>
   )
-}
+})
+
+export default CustomInput

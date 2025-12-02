@@ -5,6 +5,7 @@ interface UseKeyboardShortcutsProps {
   goToPreviousDay: () => void
   goToNextDay: () => void
   goToToday: () => void
+  onToggleMic?: () => void
 }
 
 export function useKeyboardShortcuts({
@@ -12,11 +13,19 @@ export function useKeyboardShortcuts({
   goToPreviousDay,
   goToNextDay,
   goToToday,
+  onToggleMic,
 }: UseKeyboardShortcutsProps) {
   useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
-      // textareaにフォーカスがある場合はスキップ
+      // textareaにフォーカスがある場合はスキップ（各CustomInputで処理する）
       if (document.activeElement?.tagName === 'TEXTAREA') {
+        return
+      }
+
+      // Cmd+D (Mac) または Ctrl+D (Windows/Linux) でマイクトグル（フォーカスがない時のみ）
+      if ((e.metaKey || e.ctrlKey) && e.key === 'd') {
+        e.preventDefault()
+        onToggleMic?.()
         return
       }
 
@@ -34,5 +43,5 @@ export function useKeyboardShortcuts({
 
     window.addEventListener('keydown', handleGlobalKeyDown)
     return () => window.removeEventListener('keydown', handleGlobalKeyDown)
-  }, [selectedDate, goToPreviousDay, goToNextDay, goToToday])
+  }, [selectedDate, goToPreviousDay, goToNextDay, goToToday, onToggleMic])
 }

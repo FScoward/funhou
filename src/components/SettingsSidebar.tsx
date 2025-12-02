@@ -20,7 +20,10 @@ import {
   setFontSize,
   setTabShimmerEnabled,
   setTheme,
+  setOllamaEnabled,
+  setOllamaModel,
 } from '@/lib/settings'
+import { checkOllamaAvailable, getAvailableModels } from '@/lib/ollama'
 import { ThemeVariant } from '@/lib/themes'
 
 interface SettingsSidebarProps {
@@ -30,6 +33,8 @@ interface SettingsSidebarProps {
   onFontChange?: (fontFamily: string) => void
   onFontSizeChange?: (fontSize: string) => void
   onThemeChange?: (theme: ThemeVariant) => void
+  onOllamaEnabledChange?: (enabled: boolean) => void
+  onOllamaModelChange?: (model: string) => void
 }
 
 export function SettingsSidebar({
@@ -38,7 +43,9 @@ export function SettingsSidebar({
   db,
   onFontChange,
   onFontSizeChange,
-  onThemeChange
+  onThemeChange,
+  onOllamaEnabledChange,
+  onOllamaModelChange,
 }: SettingsSidebarProps) {
   const [alwaysOnTop, setAlwaysOnTopState] = useState(false)
   const [fonts, setFonts] = useState<string[]>([])
@@ -47,11 +54,17 @@ export function SettingsSidebar({
   const [selectedTheme, setSelectedTheme] = useState<ThemeVariant>('default')
   const [isLoadingFonts, setIsLoadingFonts] = useState(false)
   const [tabShimmerEnabled, setTabShimmerEnabledState] = useState(true)
+  const [ollamaEnabled, setOllamaEnabledState] = useState(false)
+  const [ollamaModel, setOllamaModelState] = useState<string>('gemma3:4b')
+  const [ollamaAvailable, setOllamaAvailable] = useState<boolean | null>(null)
+  const [ollamaModels, setOllamaModels] = useState<string[]>([])
+  const [isCheckingOllama, setIsCheckingOllama] = useState(false)
 
   useEffect(() => {
     if (isOpen && db) {
       loadSettings()
       loadFonts()
+      checkOllamaStatus()
     }
   }, [isOpen, db])
 
@@ -64,6 +77,25 @@ export function SettingsSidebar({
     setSelectedTheme(settings.theme || 'default')
     setTabShimmerEnabledState(settings.tabShimmerEnabled ?? true)
     localStorage.setItem('tab_shimmer_enabled', (settings.tabShimmerEnabled ?? true) ? 'true' : 'false')
+    setOllamaEnabledState(settings.ollamaEnabled ?? false)
+    setOllamaModelState(settings.ollamaModel || 'gemma3:4b')
+  }
+
+  const checkOllamaStatus = async () => {
+    setIsCheckingOllama(true)
+    try {
+      const available = await checkOllamaAvailable()
+      setOllamaAvailable(available)
+      if (available) {
+        const models = await getAvailableModels()
+        setOllamaModels(models)
+      }
+    } catch (error) {
+      console.error('Ollamaの状態確認に失敗しました:', error)
+      setOllamaAvailable(false)
+    } finally {
+      setIsCheckingOllama(false)
+    }
   }
 
   const loadFonts = async () => {
@@ -157,6 +189,29 @@ export function SettingsSidebar({
       if (onThemeChange) onThemeChange(theme)
     } catch (error) {
       console.error('テーマ設定の変更に失敗しました:', error)
+    }
+  }
+
+  const handleOllamaEnabledChange = async (checked: boolean) => {
+    if (!db) return
+    try {
+      setOllamaEnabledState(checked)
+      await setOllamaEnabled(db, checked)
+      if (onOllamaEnabledChange) onOllamaEnabledChange(checked)
+    } catch (error) {
+      console.error('Ollama設定の変更に失敗しました:', error)
+      setOllamaEnabledState(!checked)
+    }
+  }
+
+  const handleOllamaModelChange = async (model: string) => {
+    if (!db) return
+    try {
+      setOllamaModelState(model)
+      await setOllamaModel(db, model)
+      if (onOllamaModelChange) onOllamaModelChange(model)
+    } catch (error) {
+      console.error('Ollamaモデル設定の変更に失敗しました:', error)
     }
   }
 
@@ -316,6 +371,61 @@ export function SettingsSidebar({
               >
                 フォント設定をリセット
               </Button>
+            </div>
+          )}
+
+          {/* Ollama テキスト整形（区切り線） */}
+          <div className="settings-section-divider" />
+
+          {/* Ollama テキスト整形 */}
+          <div className="settings-item">
+            <div className="settings-item-label">
+              <Label htmlFor="ollama-enabled">音声入力のテキスト整形</Label>
+              <span className="settings-item-description">
+                Ollamaを使用して音声認識結果に句読点を追加
+                {isCheckingOllama && ' (確認中...)'}
+                {ollamaAvailable === false && (
+                  <span className="text-destructive"> (Ollamaサーバー未起動)</span>
+                )}
+                {ollamaAvailable === true && (
+                  <span className="text-green-600 dark:text-green-400"> (接続済み)</span>
+                )}
+              </span>
+            </div>
+            <Switch
+              id="ollama-enabled"
+              checked={ollamaEnabled}
+              onCheckedChange={handleOllamaEnabledChange}
+              disabled={ollamaAvailable === false}
+            />
+          </div>
+
+          {/* Ollamaモデル選択 */}
+          {ollamaEnabled && ollamaAvailable && (
+            <div className="settings-item-vertical">
+              <Label htmlFor="ollama-model">Ollamaモデル</Label>
+              <Select
+                value={ollamaModel}
+                onValueChange={handleOllamaModelChange}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="モデルを選択" />
+                </SelectTrigger>
+                <SelectContent>
+                  {ollamaModels.length > 0 ? (
+                    ollamaModels.map((model) => (
+                      <SelectItem key={model} value={model}>
+                        {model}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <SelectItem value="gemma3:4b">gemma3:4b</SelectItem>
+                  )}
+                </SelectContent>
+              </Select>
+              <span className="text-xs text-muted-foreground mt-1">
+                推奨: gemma3:4b（日本語対応・軽量）
+              </span>
             </div>
           )}
         </div>
