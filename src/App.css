@@ -1402,10 +1402,63 @@ textarea::placeholder {
   filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.15));
 }
 
-/* Doing状態のリストアイテム */
+/* Doing状態のリストアイテム - キラキラエフェクト */
 .markdown-preview li.doing-item {
   color: var(--doing-checkbox-color, #f59e0b);
   font-weight: 500;
+  position: relative;
+  padding: 0.25em 0.5em;
+  margin: 0.15em 0;
+  border-radius: 8px;
+  background: linear-gradient(
+    135deg,
+    var(--doing-checkbox-bg, rgba(245, 158, 11, 0.08)) 0%,
+    transparent 50%,
+    var(--doing-checkbox-bg, rgba(245, 158, 11, 0.05)) 100%
+  );
+  animation: doing-shimmer 3s ease-in-out infinite;
+}
+
+.markdown-preview li.doing-item::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 8px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.4) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer-slide 2.5s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes doing-shimmer {
+  0%, 100% {
+    box-shadow:
+      0 0 8px var(--doing-checkbox-bg, rgba(245, 158, 11, 0.3)),
+      inset 0 0 4px var(--doing-checkbox-bg, rgba(245, 158, 11, 0.1));
+  }
+  50% {
+    box-shadow:
+      0 0 16px var(--doing-checkbox-bg, rgba(245, 158, 11, 0.5)),
+      0 0 24px var(--doing-checkbox-bg, rgba(245, 158, 11, 0.3)),
+      inset 0 0 8px var(--doing-checkbox-bg, rgba(245, 158, 11, 0.15));
+  }
+}
+
+@keyframes shimmer-slide {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
 }
 
 /* チェック済みのリストアイテム - 打ち消し線 */
@@ -1841,6 +1894,13 @@ textarea::placeholder {
 @media (prefers-reduced-motion: reduce) {
   .current-activity-card::before {
     animation: none;
+  }
+  .markdown-preview li.doing-item {
+    animation: none;
+  }
+  .markdown-preview li.doing-item::before {
+    animation: none;
+    background: none;
   }
 }
 
