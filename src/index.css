@@ -37,6 +37,16 @@
     --current-activity-bg: rgba(255, 250, 240, 0.95);
     --current-activity-label-color: #B8860B;
     --current-activity-border-subtle: rgba(255, 215, 0, 0.3);
+    /* Doing Checkbox - Light Theme */
+    --doing-checkbox-color: #f59e0b;
+    --doing-checkbox-bg: rgba(245, 158, 11, 0.15);
+    /* Completed Tasks - Light Theme */
+    --completed-primary: #4CAF50;
+    --completed-primary-light: rgba(76, 175, 80, 0.1);
+    --completed-bg: rgba(241, 248, 244, 0.9);
+    --completed-bg-hover: rgba(232, 245, 233, 0.95);
+    --completed-text: #555;
+    --completed-strikethrough: rgba(76, 175, 80, 0.5);
   }
 
   .dark {
@@ -69,6 +79,16 @@
     --current-activity-bg: rgba(40, 35, 30, 0.95);
     --current-activity-label-color: #FFD700;
     --current-activity-border-subtle: rgba(255, 215, 0, 0.25);
+    /* Doing Checkbox - Dark Theme */
+    --doing-checkbox-color: #fbbf24;
+    --doing-checkbox-bg: rgba(251, 191, 36, 0.2);
+    /* Completed Tasks - Dark Theme */
+    --completed-primary: #66BB6A;
+    --completed-primary-light: rgba(102, 187, 106, 0.15);
+    --completed-bg: rgba(30, 40, 32, 0.9);
+    --completed-bg-hover: rgba(35, 50, 38, 0.95);
+    --completed-text: #ccc;
+    --completed-strikethrough: rgba(102, 187, 106, 0.5);
   }
 
   /* Rose Pine - Main (Dark) */
@@ -102,6 +122,16 @@
     --current-activity-bg: rgba(31, 29, 46, 0.95);
     --current-activity-label-color: #f6c177;
     --current-activity-border-subtle: rgba(246, 193, 119, 0.3);
+    /* Doing Checkbox - Rose Pine */
+    --doing-checkbox-color: #f6c177;
+    --doing-checkbox-bg: rgba(246, 193, 119, 0.2);
+    /* Completed Tasks - Rose Pine */
+    --completed-primary: #9ccfd8;
+    --completed-primary-light: rgba(156, 207, 216, 0.15);
+    --completed-bg: rgba(35, 33, 54, 0.9);
+    --completed-bg-hover: rgba(40, 38, 60, 0.95);
+    --completed-text: #e0def4;
+    --completed-strikethrough: rgba(156, 207, 216, 0.5);
   }
 
   /* Rose Pine Moon (Dark) */
@@ -135,6 +165,16 @@
     --current-activity-bg: rgba(42, 39, 63, 0.95);
     --current-activity-label-color: #f6c177;
     --current-activity-border-subtle: rgba(246, 193, 119, 0.25);
+    /* Doing Checkbox - Rose Pine Moon */
+    --doing-checkbox-color: #f6c177;
+    --doing-checkbox-bg: rgba(246, 193, 119, 0.2);
+    /* Completed Tasks - Rose Pine Moon */
+    --completed-primary: #9ccfd8;
+    --completed-primary-light: rgba(156, 207, 216, 0.15);
+    --completed-bg: rgba(45, 42, 68, 0.9);
+    --completed-bg-hover: rgba(50, 47, 75, 0.95);
+    --completed-text: #e0def4;
+    --completed-strikethrough: rgba(156, 207, 216, 0.5);
   }
 
   /* Rose Pine Dawn (Light) */
@@ -168,6 +208,16 @@
     --current-activity-bg: rgba(255, 250, 243, 0.95);
     --current-activity-label-color: #ea9d34;
     --current-activity-border-subtle: rgba(234, 157, 52, 0.3);
+    /* Doing Checkbox - Rose Pine Dawn */
+    --doing-checkbox-color: #ea9d34;
+    --doing-checkbox-bg: rgba(234, 157, 52, 0.15);
+    /* Completed Tasks - Rose Pine Dawn */
+    --completed-primary: #56949f;
+    --completed-primary-light: rgba(86, 148, 159, 0.12);
+    --completed-bg: rgba(248, 245, 240, 0.9);
+    --completed-bg-hover: rgba(243, 240, 233, 0.95);
+    --completed-text: #575279;
+    --completed-strikethrough: rgba(86, 148, 159, 0.5);
   }
 }
 
