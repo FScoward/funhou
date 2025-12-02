@@ -1,4 +1,5 @@
-import CustomInput from '@/components/CustomInput'
+import { forwardRef } from 'react'
+import CustomInput, { CustomInputRef } from '@/components/CustomInput'
 import { Tag } from '@/types'
 
 interface InputSectionProps {
@@ -16,7 +17,7 @@ interface InputSectionProps {
   ollamaModel?: string
 }
 
-export function InputSection({
+export const InputSection = forwardRef<CustomInputRef, InputSectionProps>(function InputSection({
   currentEntry,
   onEntryChange,
   onSubmit,
@@ -29,10 +30,11 @@ export function InputSection({
   recentTags,
   ollamaEnabled,
   ollamaModel,
-}: InputSectionProps) {
+}, ref) {
   return (
     <div className="input-section">
       <CustomInput
+        ref={ref}
         value={currentEntry}
         onChange={onEntryChange}
         onSubmit={onSubmit}
@@ -48,4 +50,4 @@ export function InputSection({
       />
     </div>
   )
-}
+})

@@ -1,4 +1,4 @@
-import { useRef, useState } from "react"
+import { useRef, useState, forwardRef, useImperativeHandle } from "react"
 import TextareaAutosize from "react-textarea-autosize"
 import { ArrowUp, Mic, MicOff, Loader2 } from "lucide-react"
 
@@ -31,7 +31,11 @@ interface CustomInputProps {
   ollamaModel?: string
 }
 
-export default function CustomInput({
+export interface CustomInputRef {
+  toggleMic: () => void
+}
+
+const CustomInput = forwardRef<CustomInputRef, CustomInputProps>(function CustomInput({
   value,
   onChange,
   onSubmit,
@@ -46,7 +50,7 @@ export default function CustomInput({
   recentTags = [],
   ollamaEnabled = false,
   ollamaModel = 'gemma3:4b',
-}: CustomInputProps) {
+}, ref) {
   const hasContent = value.trim().length > 0
   const showTagSelector = onTagAdd && onTagRemove
 
@@ -205,6 +209,14 @@ export default function CustomInput({
     }
   }
 
+  // 外部からマイクトグルを呼び出せるようにする
+  useImperativeHandle(ref, () => ({
+    toggleMic: () => {
+      if (!isAvailable || isFormatting) return
+      toggleRecognition()
+    }
+  }), [isAvailable, isFormatting, toggleRecognition])
+
   // 送信時にマイクをオフにする
   const handleSubmit = async () => {
     if (isActive) {
@@ -229,7 +241,17 @@ export default function CustomInput({
           placeholder={placeholder}
           value={value}
           onChange={(e) => handleChange(e.target.value)}
-          onKeyDown={onKeyDown}
+          onKeyDown={(e) => {
+            // Cmd+D (Mac) または Ctrl+D (Windows/Linux) でマイクトグル
+            if ((e.metaKey || e.ctrlKey) && e.key === 'd') {
+              e.preventDefault()
+              if (isAvailable && !isFormatting) {
+                toggleRecognition()
+              }
+              return
+            }
+            onKeyDown?.(e)
+          }}
           onBlur={onBlur}
           minRows={1}
         />
@@ -287,4 +309,6 @@ export default function CustomInput({
       )}
     </div>
   )
-}
+})
+
+export default CustomInput
