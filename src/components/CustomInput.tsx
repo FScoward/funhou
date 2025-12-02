@@ -63,6 +63,15 @@ export default function CustomInput({
   // 最後にプログラムで設定した値（キーボード編集検出用）
   const lastProgramValueRef = useRef<string>('')
 
+  // デバウンスタイマー
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // 整形中フラグ（音声認識の再開制御用）
+  const isFormattingRef = useRef<boolean>(false)
+
+  // 音声認識の開始/停止関数をrefで保持（順序依存を解決）
+  const startRecognitionRef = useRef<() => Promise<void>>(() => Promise.resolve())
+  const stopRecognitionRef = useRef<() => Promise<void>>(() => Promise.resolve())
 
   // Ollama整形フック
   const { formatText, isFormatting } = useOllamaFormatting({
@@ -73,8 +82,50 @@ export default function CustomInput({
     },
   })
 
+  // ポーズ検出時に音声認識を停止→整形→再開
+  const handlePauseDetected = async (fullText: string) => {
+    if (!isActiveRef.current || !ollamaEnabled || isFormattingRef.current) return
+
+    console.log('[CustomInput] ポーズ検出 → 音声認識停止 → Ollama整形開始:', fullText)
+    isFormattingRef.current = true
+
+    // 音声認識を一時停止（refを使って呼ぶ）
+    await stopRecognitionRef.current()
+
+    // Ollamaで整形
+    const formattedText = await formatText(fullText)
+    console.log('[CustomInput] Ollama整形結果:', formattedText)
+
+    // 整形結果を反映
+    lastProgramValueRef.current = formattedText
+    onChange(formattedText)
+
+    // 整形後のテキストを新しいベースにする
+    baseTextRef.current = formattedText
+    currentSpeechTextRef.current = ''
+
+    // マイクがまだアクティブ状態なら音声認識を再開（refを使って呼ぶ）
+    if (isActiveRef.current) {
+      console.log('[CustomInput] 音声認識を再開')
+      await startRecognitionRef.current()
+    }
+
+    isFormattingRef.current = false
+  }
+
+  // デバウンス付きでポーズ検出
+  const scheduleFormatting = (fullText: string) => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current)
+    }
+
+    debounceTimerRef.current = setTimeout(() => {
+      handlePauseDetected(fullText)
+    }, 1500)
+  }
+
   // 音声認識フック
-  const { isAvailable, toggleRecognition: originalToggle } = useSpeechRecognition({
+  const { isAvailable, startRecognition, stopRecognition, toggleRecognition: originalToggle } = useSpeechRecognition({
     onResult: (text, isFinal) => {
       console.log('[CustomInput] 音声認識結果:', { text, isFinal, isActive: isActiveRef.current })
 
@@ -92,11 +143,20 @@ export default function CustomInput({
 
       lastProgramValueRef.current = fullText
       onChange(fullText)
+
+      // Ollamaが有効なら、ポーズ検出後に整形をスケジュール
+      if (ollamaEnabled && !isFormattingRef.current) {
+        scheduleFormatting(fullText)
+      }
     },
     onError: (error) => {
       console.error('Speech recognition error:', error)
     },
   })
+
+  // refに関数を設定
+  startRecognitionRef.current = startRecognition
+  stopRecognitionRef.current = stopRecognition
 
   // キーボード編集を検出
   const handleChange = (newValue: string) => {
@@ -113,6 +173,12 @@ export default function CustomInput({
       baseTextRef.current = newValue
       currentSpeechTextRef.current = ''
       lastProgramValueRef.current = newValue
+
+      // 整形タイマーをクリア
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current)
+        debounceTimerRef.current = null
+      }
     }
   }
 
@@ -129,6 +195,12 @@ export default function CustomInput({
       await originalToggle()
     } else {
       // 停止時
+      // 整形タイマーをクリア
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current)
+        debounceTimerRef.current = null
+      }
+
       isActiveRef.current = false
       setIsActive(false)
       await originalToggle()
@@ -147,6 +219,11 @@ export default function CustomInput({
   // 送信時にマイクをオフにする
   const handleSubmit = async () => {
     if (isActive) {
+      // 整形タイマーをクリア
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current)
+        debounceTimerRef.current = null
+      }
       isActiveRef.current = false
       setIsActive(false)
       await originalToggle()
