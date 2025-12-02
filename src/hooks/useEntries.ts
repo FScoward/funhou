@@ -288,12 +288,23 @@ export function useEntries({ database, timelineItems, setTimelineItems, loadAvai
         [newArchived, entryId]
       )
 
-      // stateを更新
-      setTimelineItems(timelineItems.map(item =>
-        item.type === 'entry' && item.id === entryId
-          ? { ...item, archived: newArchived === 1 }
-          : item
-      ))
+      // stateを更新（エントリー自体と、そのエントリーを親とする返信のparentEntry.archivedも更新）
+      setTimelineItems(timelineItems.map(item => {
+        if (item.type === 'entry' && item.id === entryId) {
+          return { ...item, archived: newArchived === 1 }
+        }
+        // 返信の場合、親エントリーのアーカイブ状態も更新
+        if (item.type === 'reply' && item.entryId === entryId && item.parentEntry) {
+          return {
+            ...item,
+            parentEntry: {
+              ...item.parentEntry,
+              archived: newArchived === 1
+            }
+          }
+        }
+        return item
+      }))
     } catch (error) {
       console.error('アーカイブ状態の切り替えに失敗しました:', error)
     }

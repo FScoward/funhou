@@ -107,7 +107,7 @@ export function useTimeline({ database, selectedDate, selectedTags, filterMode, 
 
       if (selectedTags.length > 0 || isSearching) {
         // タグフィルタまたは検索が有効な場合：返信もフィルタリング
-        let replyQuery = 'SELECT id, entry_id, content, timestamp FROM replies WHERE 1=1'
+        let replyQuery = 'SELECT id, entry_id, content, timestamp, archived FROM replies WHERE 1=1'
         const replyParams: (string | number)[] = []
 
         if (replyTagFilter.condition) {
@@ -169,7 +169,7 @@ export function useTimeline({ database, selectedDate, selectedTags, filterMode, 
         }
 
         replies = await database.select<Reply[]>(
-          `SELECT id, entry_id, content, timestamp FROM replies WHERE entry_id IN (${entryIds.join(',')})`,
+          `SELECT id, entry_id, content, timestamp, archived FROM replies WHERE entry_id IN (${entryIds.join(',')})`,
           []
         )
 
@@ -206,9 +206,11 @@ export function useTimeline({ database, selectedDate, selectedTags, filterMode, 
           content: reply.content,
           timestamp: reply.timestamp,
           tags: reply.tags,
+          replyArchived: reply.archived === 1,
           parentEntry: parentEntry ? {
             id: parentEntry.id,
-            content: parentEntry.content
+            content: parentEntry.content,
+            archived: parentEntry.archived === 1
           } : undefined
         }
       })

@@ -27,6 +27,7 @@ export interface Reply {
   content: string
   timestamp: string
   tags?: Tag[]
+  archived?: number
 }
 
 export interface TodoItem {
@@ -63,5 +64,7 @@ export interface TimelineItem {
   parentEntry?: {
     id: number
     content: string
+    archived?: boolean
   }
+  replyArchived?: boolean
 }

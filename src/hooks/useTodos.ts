@@ -43,12 +43,13 @@ export function useTodos({ database }: UseTodosProps) {
         })
       }
 
-      // 返信からもTODOを取得（親エントリーがアーカイブされていないもの）
+      // 返信からもTODOを取得（親エントリーがアーカイブされていないもの、かつ返信自体もアーカイブされていないもの）
       const replies = await database.select<(Reply & { entry_id: number })[]>(
         `SELECT r.id, r.entry_id, r.content
          FROM replies r
          JOIN entries e ON r.entry_id = e.id
          WHERE (e.archived = 0 OR e.archived IS NULL)
+         AND (r.archived = 0 OR r.archived IS NULL)
          AND (r.content LIKE ? OR r.content LIKE ?)`,
         ['%[ ]%', '%[/]%']
       )

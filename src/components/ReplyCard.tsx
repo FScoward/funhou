@@ -1,8 +1,8 @@
 import { useState } from 'react'
-import { Trash2, Pencil, X, FileCode, Type } from 'lucide-react'
+import { Trash2, Pencil, X, FileCode, Type, Archive } from 'lucide-react'
 import CustomInput from '@/components/CustomInput'
 import { TagBadge } from '@/components/TagBadge'
-import { truncateText } from '@/utils/textUtils'
+import { truncateText, getFirstLine } from '@/utils/textUtils'
 import { Tag } from '@/types'
 import MarkdownPreview from '@/components/MarkdownPreview'
 
@@ -15,6 +15,7 @@ interface ReplyCardProps {
     id: number
     content: string
   }
+  archived?: boolean
   isEditing: boolean
   editContent: string
   editManualTags: string[]
@@ -30,6 +31,7 @@ interface ReplyCardProps {
   onTagClick: (tag: string) => void
   onScrollToEntry: (entryId: number) => void
   onUpdateReplyDirectly: (replyId: number, newContent: string) => void
+  onToggleArchive: (replyId: number, entryId: number) => void
 }
 
 export function ReplyCard({
@@ -38,6 +40,7 @@ export function ReplyCard({
   content,
   tags,
   parentEntry,
+  archived,
   isEditing,
   editContent,
   editManualTags,
@@ -53,11 +56,35 @@ export function ReplyCard({
   onTagClick,
   onScrollToEntry,
   onUpdateReplyDirectly,
+  onToggleArchive,
 }: ReplyCardProps) {
   const [showMarkdown, setShowMarkdown] = useState(true)
 
+  // アーカイブ済みの場合は折りたたみ表示
+  if (archived) {
+    return (
+      <div className="reply-card archived collapsed">
+        <div
+          className="archived-preview"
+          onClick={() => onToggleArchive(replyId, entryId)}
+          title="クリックしてアーカイブを解除"
+        >
+          <Archive size={14} className="archived-icon" />
+          <span className="archived-text">{getFirstLine(content)}</span>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="reply-card">
+      <button
+        className="archive-button"
+        onClick={() => onToggleArchive(replyId, entryId)}
+        aria-label="アーカイブ"
+      >
+        <Archive size={16} />
+      </button>
       <button
         className="edit-button"
         onClick={() => isEditing ? onCancelEdit() : onEdit(replyId, content)}

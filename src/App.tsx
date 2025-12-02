@@ -216,6 +216,7 @@ function App() {
     openDeleteReplyDialog,
     handleDeleteReply,
     handleDirectUpdateReply,
+    handleToggleReplyArchive,
   } = useReplies({
     database,
     timelineItems: filteredTimelineItems,
@@ -419,6 +420,10 @@ function App() {
             await handleDirectUpdateReply(replyId, newContent)
             await loadTodos()
             await loadCompletedTodos()
+          }}
+          onToggleReplyArchive={async (replyId, entryId) => {
+            await handleToggleReplyArchive(replyId, entryId)
+            await loadTodos()
           }}
         />
       </div>
