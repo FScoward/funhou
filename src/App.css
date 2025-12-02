@@ -555,6 +555,19 @@ textarea::placeholder {
   background-color: rgba(0, 0, 0, 0.03);
 }
 
+/* クリック可能な返信コンテンツ */
+.reply-content-clickable {
+  cursor: pointer;
+  padding: 0.25rem;
+  margin: -0.25rem;
+  border-radius: 8px;
+  transition: background-color 0.15s;
+}
+
+.reply-content-clickable:hover {
+  background-color: rgba(0, 0, 0, 0.03);
+}
+
 .empty {
   color: #666;
   font-style: italic;
