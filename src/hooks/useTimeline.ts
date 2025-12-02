@@ -270,6 +270,43 @@ export function useTimeline({ database, selectedDate, selectedTags, filterMode, 
     }
   }
 
+  const handleScrollToReply = async (replyId: number) => {
+    const element = document.getElementById(`item-reply-${replyId}`)
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      // ハイライト表示
+      element.classList.add('highlight-flash')
+      setTimeout(() => {
+        element.classList.remove('highlight-flash')
+      }, 2000)
+    } else if (database && onDateChange) {
+      // 返信が現在のタイムラインにない場合、その返信の日付に移動
+      try {
+        const result = await database.select<{ timestamp: string }[]>(
+          'SELECT timestamp FROM replies WHERE id = ?',
+          [replyId]
+        )
+        if (result.length > 0) {
+          const entryDate = new Date(result[0].timestamp)
+          onDateChange(entryDate)
+          // 日付変更後にスクロール
+          setTimeout(() => {
+            const el = document.getElementById(`item-reply-${replyId}`)
+            if (el) {
+              el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+              el.classList.add('highlight-flash')
+              setTimeout(() => {
+                el.classList.remove('highlight-flash')
+              }, 2000)
+            }
+          }, 300)
+        }
+      } catch (error) {
+        console.error('返信の日付取得に失敗しました:', error)
+      }
+    }
+  }
+
   const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE)
 
   return {
@@ -277,6 +314,7 @@ export function useTimeline({ database, selectedDate, selectedTags, filterMode, 
     setTimelineItems,
     loadEntries,
     handleScrollToEntry,
+    handleScrollToReply,
     currentPage,
     setCurrentPage,
     totalPages,

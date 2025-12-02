@@ -115,6 +115,7 @@ function App() {
     timelineItems: filteredTimelineItems,
     setTimelineItems: setFilteredTimelineItems,
     handleScrollToEntry: scrollToEntry,
+    handleScrollToReply: scrollToReply,
     currentPage,
     setCurrentPage,
     totalPages,
@@ -135,6 +136,7 @@ function App() {
     loadTodos,
     isLoading: isTodosLoading,
     updateEntryLine,
+    updateReplyLine,
   } = useTodos({ database })
 
   // 完了タスク
@@ -213,6 +215,7 @@ function App() {
     cancelEditReply,
     openDeleteReplyDialog,
     handleDeleteReply,
+    handleDirectUpdateReply,
   } = useReplies({
     database,
     timelineItems: filteredTimelineItems,
@@ -298,15 +301,38 @@ function App() {
           isLoading={isTodosLoading}
           todoItems={todoItems}
           onScrollToEntry={scrollToEntry}
+          onScrollToReply={scrollToReply}
           onStatusChange={async (todo, newStatus) => {
-            const newContent = await updateEntryLine(todo.entryId, todo.lineIndex, newStatus)
-            if (newContent) {
-              // タイムラインのエントリーも更新
-              setFilteredTimelineItems(filteredTimelineItems.map(item =>
-                item.type === 'entry' && item.id === todo.entryId
-                  ? { ...item, content: newContent }
-                  : item
-              ))
+            if (todo.replyId) {
+              // 返信のタスクを更新
+              const newContent = await updateReplyLine(todo.replyId, todo.lineIndex, newStatus)
+              if (newContent) {
+                // タイムラインの返信も更新
+                setFilteredTimelineItems(filteredTimelineItems.map(item => {
+                  if (item.type === 'reply' && item.replyId === todo.replyId) {
+                    return { ...item, content: newContent }
+                  }
+                  // 親エントリーのrepliesリストも更新
+                  if (item.type === 'entry' && item.id === todo.entryId && item.replies) {
+                    const updatedReplies = item.replies.map(reply =>
+                      reply.id === todo.replyId ? { ...reply, content: newContent } : reply
+                    )
+                    return { ...item, replies: updatedReplies }
+                  }
+                  return item
+                }))
+              }
+            } else {
+              // エントリーのタスクを更新
+              const newContent = await updateEntryLine(todo.entryId, todo.lineIndex, newStatus)
+              if (newContent) {
+                // タイムラインのエントリーも更新
+                setFilteredTimelineItems(filteredTimelineItems.map(item =>
+                  item.type === 'entry' && item.id === todo.entryId
+                    ? { ...item, content: newContent }
+                    : item
+                ))
+              }
             }
             await loadTodos()
             await loadCompletedTodos()
@@ -389,6 +415,11 @@ function App() {
           }}
           onDirectTagAdd={handleDirectTagAdd}
           onDirectTagRemove={handleDirectTagRemove}
+          onUpdateReplyDirectly={async (replyId, newContent) => {
+            await handleDirectUpdateReply(replyId, newContent)
+            await loadTodos()
+            await loadCompletedTodos()
+          }}
         />
       </div>
 

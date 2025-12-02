@@ -29,6 +29,7 @@ interface ReplyCardProps {
   onEditTagRemove: (tag: string) => void
   onTagClick: (tag: string) => void
   onScrollToEntry: (entryId: number) => void
+  onUpdateReplyDirectly: (replyId: number, newContent: string) => void
 }
 
 export function ReplyCard({
@@ -51,6 +52,7 @@ export function ReplyCard({
   onEditTagRemove,
   onTagClick,
   onScrollToEntry,
+  onUpdateReplyDirectly,
 }: ReplyCardProps) {
   const [showMarkdown, setShowMarkdown] = useState(true)
 
@@ -109,11 +111,27 @@ export function ReplyCard({
         </div>
       ) : (
         <>
-          {showMarkdown ? (
-            <MarkdownPreview content={content} className="reply-text" />
-          ) : (
-            <div className="reply-text">{content}</div>
-          )}
+          <div
+            className="reply-content-clickable"
+            onClick={(e) => {
+              // チェックボックスのクリックは編集モードにしない
+              if ((e.target as HTMLElement).tagName === 'INPUT') {
+                return
+              }
+              onEdit(replyId, content)
+            }}
+            title="クリックして編集"
+          >
+            {showMarkdown ? (
+              <MarkdownPreview
+                content={content}
+                className="reply-text"
+                onContentUpdate={(newContent) => onUpdateReplyDirectly(replyId, newContent)}
+              />
+            ) : (
+              <div className="reply-text">{content}</div>
+            )}
+          </div>
           {tags && tags.length > 0 && (
             <div className="entry-tags">
               {tags.map(tag => (
