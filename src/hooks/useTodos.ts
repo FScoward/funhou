@@ -1,11 +1,19 @@
 import { useState, useCallback } from 'react'
 import Database from '@tauri-apps/plugin-sql'
-import { TodoItem, Entry, Reply } from '@/types'
+import { TodoItem, Entry, Reply, getTodoUniqueId } from '@/types'
 import {
   CHECKBOX_PATTERN_INCOMPLETE,
   CHECKBOX_PATTERN_ALL,
   type CheckboxStatus
 } from '@/utils/checkboxUtils'
+import { arrayMove } from '@dnd-kit/sortable'
+
+interface DoingOrderRow {
+  entry_id: number
+  reply_id: number | null
+  line_index: number
+  sort_order: number
+}
 
 interface UseTodosProps {
   database: Database | null
@@ -70,7 +78,30 @@ export function useTodos({ database }: UseTodosProps) {
         })
       }
 
-      setTodoItems(todos)
+      // DOINGタスクにソート順序を適用
+      const orderData = await database.select<DoingOrderRow[]>(
+        'SELECT entry_id, reply_id, line_index, sort_order FROM doing_order ORDER BY sort_order'
+      )
+
+      // ソート順序マップを作成
+      const orderMap = new Map<string, number>()
+      orderData.forEach(row => {
+        const key = `${row.reply_id ?? row.entry_id}-${row.line_index}`
+        orderMap.set(key, row.sort_order)
+      })
+
+      // DOINGタスクとそれ以外を分離
+      const doingTodos = todos.filter(t => t.status === '/')
+      const otherTodos = todos.filter(t => t.status !== '/')
+
+      // DOINGタスクをソート順序で並び替え
+      doingTodos.sort((a, b) => {
+        const orderA = orderMap.get(getTodoUniqueId(a)) ?? Infinity
+        const orderB = orderMap.get(getTodoUniqueId(b)) ?? Infinity
+        return orderA - orderB
+      })
+
+      setTodoItems([...doingTodos, ...otherTodos])
     } catch (error) {
       console.error('TODO項目の読み込みに失敗しました:', error)
     } finally {
@@ -158,11 +189,50 @@ export function useTodos({ database }: UseTodosProps) {
     return null
   }, [database])
 
+  // DOINGタスクの順序を保存する
+  const saveDoingOrder = useCallback(async (doingTodos: TodoItem[]) => {
+    if (!database) return
+
+    try {
+      // 既存のソート順序をクリア
+      await database.execute('DELETE FROM doing_order')
+
+      // 新しいソート順序を保存
+      for (let i = 0; i < doingTodos.length; i++) {
+        const todo = doingTodos[i]
+        await database.execute(
+          'INSERT INTO doing_order (entry_id, reply_id, line_index, sort_order) VALUES (?, ?, ?, ?)',
+          [todo.entryId, todo.replyId ?? null, todo.lineIndex, i]
+        )
+      }
+    } catch (error) {
+      console.error('DOINGタスクの順序保存に失敗しました:', error)
+    }
+  }, [database])
+
+  // DOINGタスクを並び替える
+  const reorderDoingTodos = useCallback((activeId: string, overId: string) => {
+    const doingTodos = todoItems.filter(todo => todo.status === '/')
+    const otherTodos = todoItems.filter(todo => todo.status !== '/')
+
+    const oldIndex = doingTodos.findIndex(t => getTodoUniqueId(t) === activeId)
+    const newIndex = doingTodos.findIndex(t => getTodoUniqueId(t) === overId)
+
+    if (oldIndex !== -1 && newIndex !== -1) {
+      const reorderedDoingTodos = arrayMove(doingTodos, oldIndex, newIndex)
+      setTodoItems([...reorderedDoingTodos, ...otherTodos])
+      return reorderedDoingTodos
+    }
+    return null
+  }, [todoItems])
+
   return {
     todoItems,
     isLoading,
     loadTodos,
     updateEntryLine,
-    updateReplyLine
+    updateReplyLine,
+    saveDoingOrder,
+    reorderDoingTodos
   }
 }

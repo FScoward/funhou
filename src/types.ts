@@ -38,6 +38,11 @@ export interface TodoItem {
   status: ' ' | '/'    // 未完了 or Doing
 }
 
+// TodoItemのユニークIDを生成（ドラッグ&ドロップ用）
+export function getTodoUniqueId(todo: TodoItem): string {
+  return `${todo.replyId ?? todo.entryId}-${todo.lineIndex}`
+}
+
 export interface CompletedTodoItem {
   entryId: number        // 元のエントリーID
   lineIndex: number      // エントリー内の行番号（1始まり）

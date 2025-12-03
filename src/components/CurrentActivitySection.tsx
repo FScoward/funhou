@@ -1,5 +1,20 @@
-import { Sparkles, ExternalLink } from 'lucide-react'
-import { TodoItem } from '@/types'
+import { Sparkles } from 'lucide-react'
+import { TodoItem, getTodoUniqueId } from '@/types'
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core'
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable'
+import { SortableDoingItem } from './SortableDoingItem'
 
 interface CurrentActivitySectionProps {
   isLoading?: boolean
@@ -7,6 +22,7 @@ interface CurrentActivitySectionProps {
   onScrollToEntry?: (entryId: number) => void
   onScrollToReply?: (replyId: number) => void
   onStatusChange?: (todo: TodoItem, newStatus: 'x') => Promise<void>
+  onReorder?: (activeId: string, overId: string) => Promise<void>
 }
 
 export function CurrentActivitySection({
@@ -15,9 +31,29 @@ export function CurrentActivitySection({
   onScrollToEntry,
   onScrollToReply,
   onStatusChange,
+  onReorder,
 }: CurrentActivitySectionProps) {
   // DOINGのみフィルタリング
   const doingTodos = todoItems.filter(todo => todo.status === '/')
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8, // 8px移動後にドラッグ開始
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  )
+
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event
+
+    if (over && active.id !== over.id && onReorder) {
+      await onReorder(active.id as string, over.id as string)
+    }
+  }
 
   if (isLoading) {
     return (
@@ -42,40 +78,28 @@ export function CurrentActivitySection({
         </div>
 
         {doingTodos.length > 0 ? (
-          <div className="current-activity-doing-list">
-            {doingTodos.map((todo) => (
-              <div
-                key={`${todo.replyId ?? todo.entryId}-${todo.lineIndex}`}
-                className="doing-list-item"
-              >
-                {onStatusChange && (
-                  <button
-                    className="doing-list-item-checkbox"
-                    onClick={() => onStatusChange(todo, 'x')}
-                    title="完了にする"
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext
+              items={doingTodos.map(getTodoUniqueId)}
+              strategy={verticalListSortingStrategy}
+            >
+              <div className="current-activity-doing-list">
+                {doingTodos.map((todo) => (
+                  <SortableDoingItem
+                    key={getTodoUniqueId(todo)}
+                    todo={todo}
+                    onStatusChange={onStatusChange}
+                    onScrollToEntry={onScrollToEntry}
+                    onScrollToReply={onScrollToReply}
                   />
-                )}
-                <span className="doing-list-item-text">{todo.text}</span>
-                {todo.replyId && onScrollToReply ? (
-                  <button
-                    className="doing-list-item-jump"
-                    onClick={() => onScrollToReply(todo.replyId!)}
-                    title="返信に移動"
-                  >
-                    <ExternalLink size={14} />
-                  </button>
-                ) : onScrollToEntry && (
-                  <button
-                    className="doing-list-item-jump"
-                    onClick={() => onScrollToEntry(todo.entryId)}
-                    title="エントリーに移動"
-                  >
-                    <ExternalLink size={14} />
-                  </button>
-                )}
+                ))}
               </div>
-            ))}
-          </div>
+            </SortableContext>
+          </DndContext>
         ) : (
           <div className="current-activity-empty">
             なにもしていない
