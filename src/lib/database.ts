@@ -177,6 +177,22 @@ export async function getDb() {
     } catch (error) {
       console.log('replies.archived column already exists or migration error:', error)
     }
+
+    // DOINGタスクの並び順テーブルを作成
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS doing_order (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        entry_id INTEGER NOT NULL,
+        reply_id INTEGER,
+        line_index INTEGER NOT NULL,
+        sort_order INTEGER NOT NULL,
+        UNIQUE(entry_id, reply_id, line_index)
+      )
+    `)
+
+    await db.execute(`
+      CREATE INDEX IF NOT EXISTS idx_doing_order_sort ON doing_order(sort_order)
+    `)
   }
   return db
 }

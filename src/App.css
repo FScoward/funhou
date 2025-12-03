@@ -1926,6 +1926,43 @@ textarea::placeholder {
   color: var(--doing-checkbox-color, #f59e0b);
 }
 
+/* ドラッグハンドル */
+.doing-list-item-drag-handle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: none;
+  background: transparent;
+  cursor: grab;
+  color: var(--text-muted, #999);
+  opacity: 0;
+  transition: opacity 0.2s ease, color 0.15s ease;
+  flex-shrink: 0;
+  padding: 0;
+}
+
+.doing-list-item:hover .doing-list-item-drag-handle {
+  opacity: 0.6;
+}
+
+.doing-list-item-drag-handle:hover {
+  opacity: 1;
+  color: var(--doing-checkbox-color, #f59e0b);
+}
+
+.doing-list-item-drag-handle:active {
+  cursor: grabbing;
+}
+
+/* ドラッグ中のアイテム */
+.doing-list-item.is-dragging {
+  opacity: 0.5;
+  background-color: rgba(245, 158, 11, 0.1);
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2);
+}
+
 /* 空状態 */
 .current-activity-empty {
   text-align: center;

@@ -146,6 +146,8 @@ function App() {
     isLoading: isTodosLoading,
     updateEntryLine,
     updateReplyLine,
+    saveDoingOrder,
+    reorderDoingTodos,
   } = useTodos({ database })
 
   // 完了タスク
@@ -350,6 +352,12 @@ function App() {
             }
             await loadTodos()
             await loadCompletedTodos()
+          }}
+          onReorder={async (activeId, overId) => {
+            const reorderedDoingTodos = reorderDoingTodos(activeId, overId)
+            if (reorderedDoingTodos) {
+              await saveDoingOrder(reorderedDoingTodos)
+            }
           }}
         />
 
