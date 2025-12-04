@@ -10,6 +10,7 @@ import {
   DialogTrigger,
 } from './ui/dialog'
 import { ProjectInfo, SessionSummary, onClaudeSessionFinished } from '../lib/claudeLogs'
+import MarkdownPreview from './MarkdownPreview'
 
 interface ClaudeLogImporterProps {
   onImport: (content: string) => void
@@ -332,10 +333,12 @@ export function ClaudeLogImporter({ onImport, trigger, linkedSessionId, linkedPr
                         {msg.role === 'user' ? 'User' : 'Assistant'} -{' '}
                         {formatTimestamp(msg.timestamp)}
                       </div>
-                      <div className="whitespace-pre-wrap text-sm">
-                        {expandedMessageIndices.has(index)
-                          ? msg.content
-                          : truncateText(msg.content, 500)}
+                      <div className="text-sm">
+                        <MarkdownPreview
+                          content={expandedMessageIndices.has(index)
+                            ? msg.content
+                            : truncateText(msg.content, 500)}
+                        />
                       </div>
                       {msg.content.length > 500 && (
                         <button
