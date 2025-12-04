@@ -333,11 +333,12 @@ export function ClaudeLogImporter({ onImport, trigger, linkedSessionId, linkedPr
                         {msg.role === 'user' ? 'User' : 'Assistant'} -{' '}
                         {formatTimestamp(msg.timestamp)}
                       </div>
-                      <div className="text-sm">
+                      <div className="text-sm font-mono">
                         <MarkdownPreview
                           content={expandedMessageIndices.has(index)
                             ? msg.content
                             : truncateText(msg.content, 500)}
+                          className="log-preview"
                         />
                       </div>
                       {msg.content.length > 500 && (
