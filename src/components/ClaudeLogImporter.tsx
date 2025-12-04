@@ -36,7 +36,9 @@ export function ClaudeLogImporter({ onImport, trigger, linkedSessionId, linkedPr
   const [view, setView] = useState<'projects' | 'sessions' | 'messages'>('projects')
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedMessageIndices, setSelectedMessageIndices] = useState<Set<number>>(new Set())
+  const [expandedMessageIndices, setExpandedMessageIndices] = useState<Set<number>>(new Set())
   const scrollContainerRef = useRef<HTMLDivElement>(null)
+  const shouldScrollToBottomRef = useRef(false)
 
   const filteredProjects = useMemo(() => {
     if (!searchQuery.trim()) return projects
@@ -52,8 +54,10 @@ export function ClaudeLogImporter({ onImport, trigger, linkedSessionId, linkedPr
   useEffect(() => {
     if (open) {
       setSelectedMessageIndices(new Set())
+      setExpandedMessageIndices(new Set())
       if (hasLinkedSession) {
         // 紐付け済みの場合は直接メッセージを取得
+        shouldScrollToBottomRef.current = true
         fetchMessages(linkedProjectPath, linkedSessionId)
         setView('messages')
         setSelectedProject(null)
@@ -68,6 +72,18 @@ export function ClaudeLogImporter({ onImport, trigger, linkedSessionId, linkedPr
       }
     }
   }, [open, fetchProjects, fetchMessages, hasLinkedSession, linkedProjectPath, linkedSessionId])
+
+  // メッセージ読み込み完了時に一番下までスクロール
+  useEffect(() => {
+    if (view === 'messages' && !loading && messages.length > 0 && shouldScrollToBottomRef.current) {
+      shouldScrollToBottomRef.current = false
+      requestAnimationFrame(() => {
+        if (scrollContainerRef.current) {
+          scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight
+        }
+      })
+    }
+  }, [view, loading, messages])
 
   // Claude Codeセッション終了時にメッセージを再読み込み（スクロール位置を保持）
   useEffect(() => {
@@ -110,6 +126,7 @@ export function ClaudeLogImporter({ onImport, trigger, linkedSessionId, linkedPr
 
   const handleSessionSelect = (session: SessionSummary) => {
     setSelectedSession(session)
+    shouldScrollToBottomRef.current = true
     fetchMessages(session.project_path, session.session_id)
     setSelectedMessageIndices(new Set())
     setView('messages')
@@ -144,6 +161,19 @@ export function ClaudeLogImporter({ onImport, trigger, linkedSessionId, linkedPr
 
   const toggleMessageSelection = (index: number) => {
     setSelectedMessageIndices(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(index)) {
+        newSet.delete(index)
+      } else {
+        newSet.add(index)
+      }
+      return newSet
+    })
+  }
+
+  const toggleMessageExpansion = (index: number, e: React.MouseEvent) => {
+    e.stopPropagation()
+    setExpandedMessageIndices(prev => {
       const newSet = new Set(prev)
       if (newSet.has(index)) {
         newSet.delete(index)
@@ -303,8 +333,18 @@ export function ClaudeLogImporter({ onImport, trigger, linkedSessionId, linkedPr
                         {formatTimestamp(msg.timestamp)}
                       </div>
                       <div className="whitespace-pre-wrap text-sm">
-                        {truncateText(msg.content, 500)}
+                        {expandedMessageIndices.has(index)
+                          ? msg.content
+                          : truncateText(msg.content, 500)}
                       </div>
+                      {msg.content.length > 500 && (
+                        <button
+                          className="text-xs text-blue-500 hover:text-blue-700 mt-1"
+                          onClick={(e) => toggleMessageExpansion(index, e)}
+                        >
+                          {expandedMessageIndices.has(index) ? '閉じる' : 'もっと見る'}
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
