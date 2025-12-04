@@ -516,10 +516,16 @@ function App() {
       <DeleteConfirmDialogs
         deleteDialogOpen={deleteDialogOpen}
         onDeleteDialogOpenChange={setDeleteDialogOpen}
-        onDeleteEntry={handleDeleteEntry}
+        onDeleteEntry={async () => {
+          await handleDeleteEntry()
+          await loadIncompleteTodos()
+        }}
         deleteReplyDialogOpen={deleteReplyDialogOpen}
         onDeleteReplyDialogOpenChange={setDeleteReplyDialogOpen}
-        onDeleteReply={handleDeleteReply}
+        onDeleteReply={async () => {
+          await handleDeleteReply()
+          await loadIncompleteTodos()
+        }}
         deleteTagDialogOpen={deleteTagDialogOpen}
         onDeleteTagDialogOpenChange={setDeleteTagDialogOpen}
         onDeleteTag={handleDeleteTag}
