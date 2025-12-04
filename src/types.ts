@@ -19,6 +19,9 @@ export interface Entry {
   pinned?: number
   archived?: number
   is_current?: number
+  claude_session_id?: string | null
+  claude_cwd?: string | null
+  claude_project_path?: string | null
 }
 
 export interface Reply {
@@ -71,6 +74,9 @@ export interface TimelineItem {
   pinned?: boolean
   archived?: boolean
   isCurrent?: boolean
+  claudeSessionId?: string | null
+  claudeCwd?: string | null
+  claudeProjectPath?: string | null
   // reply specific fields
   replyId?: number
   entryId?: number
@@ -78,6 +84,9 @@ export interface TimelineItem {
     id: number
     content: string
     archived?: boolean
+    claudeSessionId?: string | null
+    claudeCwd?: string | null
+    claudeProjectPath?: string | null
   }
   replyArchived?: boolean
 }

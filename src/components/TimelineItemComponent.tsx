@@ -49,6 +49,8 @@ interface TimelineItemComponentProps {
   onDirectTagRemove: (entryId: number, tag: string) => void
   onUpdateReplyDirectly: (replyId: number, newContent: string) => void
   onToggleReplyArchive: (replyId: number, entryId: number) => void
+  onImportAsReply?: (entryId: number, content: string) => void
+  onLinkClaudeSession?: (entryId: number, sessionId: string, cwd: string, projectPath: string) => void
 }
 
 export function TimelineItemComponent({
@@ -97,6 +99,8 @@ export function TimelineItemComponent({
   onDirectTagRemove,
   onUpdateReplyDirectly,
   onToggleReplyArchive,
+  onImportAsReply,
+  onLinkClaudeSession,
 }: TimelineItemComponentProps) {
   const itemDate = new Date(item.timestamp)
   const day = itemDate.getDate()
@@ -134,6 +138,9 @@ export function TimelineItemComponent({
             replies={item.replies}
             pinned={item.pinned}
             archived={item.archived}
+            claudeSessionId={item.claudeSessionId}
+            claudeCwd={item.claudeCwd}
+            claudeProjectPath={item.claudeProjectPath}
             isEditing={editingEntryId === item.id}
             editContent={editContent}
             editManualTags={editManualTags}
@@ -164,6 +171,8 @@ export function TimelineItemComponent({
             onUpdateEntryDirectly={onUpdateEntryDirectly}
             onDirectTagAdd={(tag) => onDirectTagAdd(item.id, tag)}
             onDirectTagRemove={(tag) => onDirectTagRemove(item.id, tag)}
+            onImportAsReply={onImportAsReply}
+            onLinkClaudeSession={onLinkClaudeSession}
           />
         ) : (
           <ReplyCard

@@ -1,8 +1,12 @@
 import { useState } from 'react'
-import { Trash2, X, Pin, FileCode, Type, Archive } from 'lucide-react'
+import { Trash2, X, Pin, FileCode, Type, Archive, Terminal, FileDown, Link } from 'lucide-react'
 import CustomInput from '@/components/CustomInput'
 import { TagBadge } from '@/components/TagBadge'
 import { TagSelector } from '@/components/TagSelector'
+import { ClaudeLaunchDialog } from '@/components/ClaudeLaunchDialog'
+import { ClaudeLogImporter } from '@/components/ClaudeLogImporter'
+import { ClaudeSessionLinkDialog } from '@/components/ClaudeSessionLinkDialog'
+import { resumeClaudeCode } from '@/lib/claudeLogs'
 import { formatTimestamp } from '@/utils/dateUtils'
 import { getFirstLine } from '@/utils/textUtils'
 import { Reply, Tag } from '@/types'
@@ -16,6 +20,9 @@ interface EntryCardProps {
   replies?: Reply[]
   pinned?: boolean
   archived?: boolean
+  claudeSessionId?: string | null
+  claudeCwd?: string | null
+  claudeProjectPath?: string | null
   isEditing: boolean
   editContent: string
   editManualTags: string[]
@@ -46,6 +53,8 @@ interface EntryCardProps {
   onUpdateEntryDirectly: (entryId: number, newContent: string) => void
   onDirectTagAdd: (tag: string) => void
   onDirectTagRemove: (tag: string) => void
+  onImportAsReply?: (entryId: number, content: string) => void
+  onLinkClaudeSession?: (entryId: number, sessionId: string, cwd: string, projectPath: string) => void
 }
 
 export function EntryCard({
@@ -56,6 +65,9 @@ export function EntryCard({
   replies,
   pinned,
   archived,
+  claudeSessionId,
+  claudeCwd,
+  claudeProjectPath,
   isEditing,
   editContent,
   editManualTags,
@@ -86,6 +98,8 @@ export function EntryCard({
   onUpdateEntryDirectly,
   onDirectTagAdd,
   onDirectTagRemove,
+  onImportAsReply,
+  onLinkClaudeSession,
 }: EntryCardProps) {
   const [showMarkdown, setShowMarkdown] = useState(true)
 
@@ -240,6 +254,43 @@ export function EntryCard({
             {expandedReplies ? '▼' : '▶'} 返信を表示
           </button>
         )}
+        <ClaudeLaunchDialog
+          initialPrompt={content}
+          trigger={
+            <button className="claude-launch-button" title="Claude Codeで実行">
+              <Terminal size={16} style={{ display: 'inline-block', marginRight: '4px' }} />
+              Claude Code
+            </button>
+          }
+        />
+        {onImportAsReply && (
+          <ClaudeLogImporter
+            onImport={(logContent) => onImportAsReply(id, logContent)}
+            linkedSessionId={claudeSessionId}
+            linkedProjectPath={claudeProjectPath}
+            trigger={
+              <button className="claude-import-button" title="ログを返信として取込">
+                <FileDown size={16} style={{ display: 'inline-block', marginRight: '4px' }} />
+                ログ取込
+              </button>
+            }
+          />
+        )}
+        {onLinkClaudeSession && (
+          <ClaudeSessionLinkDialog
+            entryId={id}
+            onLink={onLinkClaudeSession}
+            trigger={
+              <button
+                className={`claude-link-button ${claudeSessionId ? 'linked' : ''}`}
+                title={claudeSessionId ? `セッション: ${claudeSessionId}\ncwd: ${claudeCwd || 'N/A'}` : 'セッション紐付け'}
+              >
+                <Link size={16} style={{ display: 'inline-block', marginRight: '4px' }} />
+                {claudeSessionId ? '紐付済' : '紐付け'}
+              </button>
+            }
+          />
+        )}
       </div>
 
       {replyingToId === id && (
@@ -261,6 +312,25 @@ export function EntryCard({
             onTagRemove={onReplyTagRemove}
             frequentTags={frequentTags}
             recentTags={recentTags}
+            additionalButtons={
+              claudeSessionId && claudeCwd && replyContent.trim() && (
+                <button
+                  className="claude-resume-button-inline"
+                  onClick={async () => {
+                    try {
+                      await resumeClaudeCode(claudeSessionId, claudeCwd, replyContent)
+                      onAddReply(id) // 返信も追加
+                    } catch (error) {
+                      console.error('Failed to resume Claude Code session:', error)
+                    }
+                  }}
+                  title="返信内容をプロンプトとしてセッションを再開"
+                >
+                  <Terminal size={16} style={{ display: 'inline-block', marginRight: '4px' }} />
+                  セッション続行
+                </button>
+              )
+            }
           />
         </div>
       )}

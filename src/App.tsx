@@ -214,6 +214,7 @@ function App() {
     handleDirectUpdateEntry,
     handleDirectTagAdd,
     handleDirectTagRemove,
+    handleLinkClaudeSession,
   } = useEntries({
     database,
     timelineItems: filteredTimelineItems,
@@ -237,6 +238,7 @@ function App() {
     deleteReplyDialogOpen,
     setDeleteReplyDialogOpen,
     handleAddReply,
+    addReplyWithContent,
     toggleReplyForm,
     toggleEntryReplies,
     startEditReply,
@@ -339,6 +341,9 @@ function App() {
           recentTags={recentTags}
           ollamaEnabled={ollamaEnabled}
           ollamaModel={ollamaModel}
+          onImportLog={async (content) => {
+            setCurrentEntry(content)
+          }}
         />
 
         <CurrentActivitySection
@@ -480,6 +485,11 @@ function App() {
             await loadTodos()
             await loadIncompleteTodos()
           }}
+          onImportAsReply={async (entryId, content) => {
+            await addReplyWithContent(entryId, content)
+            await loadIncompleteTodos()
+          }}
+          onLinkClaudeSession={handleLinkClaudeSession}
         />
       </div>
 

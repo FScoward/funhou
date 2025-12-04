@@ -48,6 +48,8 @@ interface TimelineProps {
   onDirectTagRemove: (entryId: number, tag: string) => void
   onUpdateReplyDirectly: (replyId: number, newContent: string) => void
   onToggleReplyArchive: (replyId: number, entryId: number) => void
+  onImportAsReply?: (entryId: number, content: string) => void
+  onLinkClaudeSession?: (entryId: number, sessionId: string, cwd: string, projectPath: string) => void
 }
 
 export function Timeline({
@@ -96,6 +98,8 @@ export function Timeline({
   onDirectTagRemove,
   onUpdateReplyDirectly,
   onToggleReplyArchive,
+  onImportAsReply,
+  onLinkClaudeSession,
 }: TimelineProps) {
   // タグフィルタリング時は日付別にグループ化
   const groupedItems = isTagFiltering ? groupTimelineItemsByDate(timelineItems) : null
@@ -162,6 +166,8 @@ export function Timeline({
                   onDirectTagRemove={onDirectTagRemove}
                   onUpdateReplyDirectly={onUpdateReplyDirectly}
                   onToggleReplyArchive={onToggleReplyArchive}
+                  onImportAsReply={onImportAsReply}
+                  onLinkClaudeSession={onLinkClaudeSession}
                 />
               ))}
             </div>
@@ -218,6 +224,8 @@ export function Timeline({
               onDirectTagRemove={onDirectTagRemove}
               onUpdateReplyDirectly={onUpdateReplyDirectly}
               onToggleReplyArchive={onToggleReplyArchive}
+              onImportAsReply={onImportAsReply}
+              onLinkClaudeSession={onLinkClaudeSession}
             />
           ))}
         </div>

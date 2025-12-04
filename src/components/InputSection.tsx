@@ -1,5 +1,6 @@
 import { forwardRef } from 'react'
 import CustomInput, { CustomInputRef } from '@/components/CustomInput'
+import { ClaudeLogImporter } from '@/components/ClaudeLogImporter'
 import { Tag } from '@/types'
 
 interface InputSectionProps {
@@ -15,6 +16,7 @@ interface InputSectionProps {
   recentTags?: Tag[]
   ollamaEnabled?: boolean
   ollamaModel?: string
+  onImportLog?: (content: string) => void
 }
 
 export const InputSection = forwardRef<CustomInputRef, InputSectionProps>(function InputSection({
@@ -30,9 +32,13 @@ export const InputSection = forwardRef<CustomInputRef, InputSectionProps>(functi
   recentTags,
   ollamaEnabled,
   ollamaModel,
+  onImportLog,
 }, ref) {
   return (
     <div className="input-section">
+      <div className="input-section-header">
+        {onImportLog && <ClaudeLogImporter onImport={onImportLog} />}
+      </div>
       <CustomInput
         ref={ref}
         value={currentEntry}

@@ -2,6 +2,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod autohide;
+mod claude_logs;
 mod speech;
 
 use autohide::{AutohideConfig, AutohideManager, ScreenEdge};
@@ -248,6 +249,11 @@ fn main() {
             start_speech_recognition,
             stop_speech_recognition,
             get_speech_state,
+            claude_logs::list_claude_projects,
+            claude_logs::list_claude_sessions,
+            claude_logs::read_claude_session,
+            claude_logs::launch_claude_code,
+            claude_logs::resume_claude_code,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
