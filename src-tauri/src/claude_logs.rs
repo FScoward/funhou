@@ -147,7 +147,6 @@ pub fn list_claude_sessions(project_path: String) -> Result<Vec<SessionSummary>,
             let mut timestamp = None;
             let mut git_branch = None;
             let mut cwd = None;
-            let mut message_count = 0;
 
             for line in &lines {
                 if let Ok(entry) = serde_json::from_str::<ClaudeLogEntry>(line) {
@@ -168,7 +167,7 @@ pub fn list_claude_sessions(project_path: String) -> Result<Vec<SessionSummary>,
             }
 
             // Count total messages
-            message_count = content.lines()
+            let message_count = content.lines()
                 .filter(|line| {
                     serde_json::from_str::<ClaudeLogEntry>(line)
                         .map(|e| e.entry_type.as_deref() == Some("user") || e.entry_type.as_deref() == Some("assistant"))
