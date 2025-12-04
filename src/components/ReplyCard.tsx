@@ -38,6 +38,7 @@ interface ReplyCardProps {
   onUpdateReplyDirectly: (replyId: number, newContent: string) => void
   onToggleArchive: (replyId: number, entryId: number) => void
   onImportAsReply?: (entryId: number, content: string) => void
+  onReplyToParent?: (entryId: number) => void
 }
 
 export function ReplyCard({
@@ -68,6 +69,7 @@ export function ReplyCard({
   onUpdateReplyDirectly,
   onToggleArchive,
   onImportAsReply,
+  onReplyToParent,
 }: ReplyCardProps) {
   const [showMarkdown, setShowMarkdown] = useState(true)
 
@@ -191,19 +193,33 @@ export function ReplyCard({
               ))}
             </div>
           )}
-          {onImportAsReply && (
+          {(onReplyToParent || onImportAsReply) && (
             <div className="reply-actions">
-              <ClaudeLogImporter
-                onImport={(logContent) => onImportAsReply(entryId, logContent)}
-                linkedSessionId={parentClaudeSessionId}
-                linkedProjectPath={parentClaudeProjectPath}
-                trigger={
-                  <button className="claude-import-button" title="ログを返信として取込">
-                    <FileDown size={16} style={{ display: 'inline-block', marginRight: '4px' }} />
-                    ログ取込
-                  </button>
-                }
-              />
+              {onReplyToParent && (
+                <button
+                  className="reply-to-parent-button"
+                  onClick={() => {
+                    onScrollToEntry(entryId)
+                    onReplyToParent(entryId)
+                  }}
+                  title="親エントリに返信"
+                >
+                  💬 返信する
+                </button>
+              )}
+              {onImportAsReply && (
+                <ClaudeLogImporter
+                  onImport={(logContent) => onImportAsReply(entryId, logContent)}
+                  linkedSessionId={parentClaudeSessionId}
+                  linkedProjectPath={parentClaudeProjectPath}
+                  trigger={
+                    <button className="claude-import-button" title="ログを返信として取込">
+                      <FileDown size={16} style={{ display: 'inline-block', marginRight: '4px' }} />
+                      ログ取込
+                    </button>
+                  }
+                />
+              )}
             </div>
           )}
         </>

@@ -211,6 +211,7 @@ export function TimelineItemComponent({
             onUpdateReplyDirectly={onUpdateReplyDirectly}
             onToggleArchive={onToggleReplyArchive}
             onImportAsReply={onImportAsReply}
+            onReplyToParent={onReplyToggle}
           />
         )}
       </div>
