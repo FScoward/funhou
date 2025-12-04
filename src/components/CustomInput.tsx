@@ -1,6 +1,7 @@
-import { useRef, useState, forwardRef, useImperativeHandle } from "react"
+import { useRef, useState, useEffect, forwardRef, useImperativeHandle } from "react"
+import { createPortal } from "react-dom"
 import TextareaAutosize from "react-textarea-autosize"
-import { ArrowUp, Mic, MicOff, Loader2 } from "lucide-react"
+import { ArrowUp, Mic, MicOff, Loader2, ListTodo } from "lucide-react"
 
 import {
   InputGroup,
@@ -10,6 +11,7 @@ import {
 import { TagSelector } from "@/components/TagSelector"
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition"
 import { useOllamaFormatting } from "@/hooks/useOllamaFormatting"
+import { convertSelectionToTasks } from "@/utils/taskConversionUtils"
 import type { Tag } from "@/types"
 
 interface CustomInputProps {
@@ -31,6 +33,8 @@ interface CustomInputProps {
   ollamaModel?: string
   /** 送信ボタンの横に表示する追加ボタン */
   additionalButtons?: React.ReactNode
+  /** 選択行をタスクに変換する右クリックメニューを有効にするか */
+  enableTaskConversion?: boolean
 }
 
 export interface CustomInputRef {
@@ -53,6 +57,7 @@ const CustomInput = forwardRef<CustomInputRef, CustomInputProps>(function Custom
   ollamaEnabled = false,
   ollamaModel = 'gemma3:4b',
   additionalButtons,
+  enableTaskConversion = false,
 }, ref) {
   const hasContent = value.trim().length > 0
   const showTagSelector = onTagAdd && onTagRemove
@@ -60,6 +65,13 @@ const CustomInput = forwardRef<CustomInputRef, CustomInputProps>(function Custom
   // このインスタンスがアクティブかどうか
   const [isActive, setIsActive] = useState(false)
   const isActiveRef = useRef<boolean>(false)
+
+  // コンテキストメニューの状態（タスク変換用）
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 })
+  const [selection, setSelection] = useState({ start: 0, end: 0 })
+  const menuRef = useRef<HTMLDivElement>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   // マイクON時点でのテキスト（この後ろに音声認識結果を追加）
   const baseTextRef = useRef<string>('')
@@ -88,6 +100,54 @@ const CustomInput = forwardRef<CustomInputRef, CustomInputProps>(function Custom
       console.error('Ollama formatting error:', error)
     },
   })
+
+  // メニュー外クリックで閉じる
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setMenuOpen(false)
+      }
+    }
+    if (menuOpen) {
+      document.addEventListener('mousedown', handleClickOutside)
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [menuOpen])
+
+  // 右クリックハンドラ（タスク変換用）
+  const handleContextMenu = (e: React.MouseEvent<HTMLTextAreaElement>) => {
+    if (!enableTaskConversion) return
+
+    const textarea = e.currentTarget
+    const start = textarea.selectionStart
+    const end = textarea.selectionEnd
+
+    // テキストが選択されている場合のみメニューを表示
+    if (start !== end) {
+      e.preventDefault()
+      setMenuPosition({ x: e.clientX + 8, y: e.clientY + 8 })
+      setSelection({ start, end })
+      setMenuOpen(true)
+    }
+  }
+
+  // タスクに変換
+  const handleConvertToTask = () => {
+    const result = convertSelectionToTasks(value, selection.start, selection.end)
+    onChange(result.text)
+
+    // 変換後の選択範囲を設定
+    requestAnimationFrame(() => {
+      if (textareaRef.current) {
+        textareaRef.current.setSelectionRange(result.newSelectionStart, result.newSelectionEnd)
+        textareaRef.current.focus()
+      }
+    })
+
+    setMenuOpen(false)
+  }
 
   // ポーズ検出時に音声認識を停止→整形→再開
   const handlePauseDetected = async (fullText: string) => {
@@ -239,6 +299,7 @@ const CustomInput = forwardRef<CustomInputRef, CustomInputProps>(function Custom
     <div className="w-full space-y-2">
       <InputGroup>
         <TextareaAutosize
+          ref={textareaRef}
           data-slot="input-group-control"
           className="flex field-sizing-content min-h-16 w-full resize-none bg-transparent px-3 py-2.5 text-base transition-[color,box-shadow] outline-none md:text-sm border-0 focus-visible:ring-0 dark:bg-transparent"
           placeholder={placeholder}
@@ -256,6 +317,7 @@ const CustomInput = forwardRef<CustomInputRef, CustomInputProps>(function Custom
             onKeyDown?.(e)
           }}
           onBlur={onBlur}
+          onContextMenu={handleContextMenu}
           minRows={1}
         />
         <InputGroupAddon align="block-end">
@@ -313,6 +375,28 @@ const CustomInput = forwardRef<CustomInputRef, CustomInputProps>(function Custom
             recentTags={recentTags}
           />
         </div>
+      )}
+
+      {/* タスク変換用コンテキストメニュー */}
+      {menuOpen && enableTaskConversion && createPortal(
+        <div
+          ref={menuRef}
+          className="textarea-context-menu"
+          style={{
+            position: 'fixed',
+            left: menuPosition.x,
+            top: menuPosition.y,
+          }}
+        >
+          <button
+            className="textarea-context-menu-option"
+            onClick={handleConvertToTask}
+          >
+            <ListTodo size={14} />
+            <span>タスクに変換</span>
+          </button>
+        </div>,
+        document.body
       )}
     </div>
   )

@@ -3412,3 +3412,61 @@ textarea::placeholder {
 .summary-empty-small p {
   margin: 0;
 }
+
+/* ========================================
+   テキストエリア コンテキストメニュー
+   (タスク変換用)
+   ======================================== */
+
+.textarea-context-menu {
+  z-index: 1000;
+  min-width: 160px;
+  padding: 4px;
+  background: var(--bg-glass, rgba(255, 255, 255, 0.95));
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--border-glass, rgba(0, 0, 0, 0.1));
+  border-radius: 8px;
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.12),
+    0 2px 4px rgba(0, 0, 0, 0.08);
+}
+
+.textarea-context-menu-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-primary, #333);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: left;
+}
+
+.textarea-context-menu-option:hover {
+  background: var(--bg-hover, rgba(0, 0, 0, 0.06));
+}
+
+.textarea-context-menu-option svg {
+  color: var(--doing-checkbox-color, #f59e0b);
+}
+
+/* ダークモード対応 */
+@media (prefers-color-scheme: dark) {
+  .textarea-context-menu {
+    background: var(--bg-glass-dark, rgba(30, 30, 30, 0.95));
+    border-color: var(--border-glass-dark, rgba(255, 255, 255, 0.1));
+  }
+
+  .textarea-context-menu-option {
+    color: var(--text-primary-dark, #eee);
+  }
+
+  .textarea-context-menu-option:hover {
+    background: var(--bg-hover-dark, rgba(255, 255, 255, 0.08));
+  }
+}

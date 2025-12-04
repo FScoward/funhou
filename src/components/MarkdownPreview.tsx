@@ -2,12 +2,13 @@ import React, { createContext, useContext, useState, useRef, useEffect } from 'r
 import { createPortal } from 'react-dom';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { Circle, Slash, CheckCircle, XCircle } from 'lucide-react';
+import { Circle, Slash, CheckCircle, XCircle, ListTodo } from 'lucide-react';
 import {
   CHECKBOX_PATTERN_ALL,
   getNextCheckboxStatus,
   type CheckboxStatus
 } from '@/utils/checkboxUtils';
+import { convertLineToTask, isTaskLine } from '@/utils/taskConversionUtils';
 
 interface MarkdownPreviewProps {
   content: string;
@@ -34,12 +35,19 @@ const STATUS_OPTIONS: { status: CheckboxStatus; label: string; icon: React.React
 ];
 
 const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({ content, className, onContentUpdate }) => {
-  // コンテキストメニューの状態（コンポーネントレベルで管理）
+  // チェックボックスステータスメニューの状態
   const [menuOpen, setMenuOpen] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
   const [menuTargetLine, setMenuTargetLine] = useState<number | null>(null);
   const [menuTargetInfo, setMenuTargetInfo] = useState<CheckboxInfo | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  // タスク変換メニューの状態
+  const [taskMenuOpen, setTaskMenuOpen] = useState(false);
+  const [taskMenuPosition, setTaskMenuPosition] = useState({ x: 0, y: 0 });
+  const [targetLineNumber, setTargetLineNumber] = useState<number | null>(null);
+  const taskMenuRef = useRef<HTMLDivElement>(null);
+  const previewRef = useRef<HTMLDivElement>(null);
 
   // メニュー外クリックで閉じる
   useEffect(() => {
@@ -47,14 +55,17 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({ content, className, o
       if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
         setMenuOpen(false);
       }
+      if (taskMenuRef.current && !taskMenuRef.current.contains(event.target as Node)) {
+        setTaskMenuOpen(false);
+      }
     };
-    if (menuOpen) {
+    if (menuOpen || taskMenuOpen) {
       document.addEventListener('mousedown', handleClickOutside);
     }
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [menuOpen]);
+  }, [menuOpen, taskMenuOpen]);
 
   // - [/] と - [-] を一時的に - [ ] に変換してGFMで解析可能にし、後でスタイルを適用
   const doingLines = new Set<number>();
@@ -132,7 +143,7 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({ content, className, o
     }
   };
 
-  // 行の右クリックハンドラ
+  // 行の右クリックハンドラ（チェックボックスのステータス変更用）
   const handleLineContextMenu = (e: React.MouseEvent, info: CheckboxInfo) => {
     if (!onContentUpdate || !info.hasCheckbox) return;
     e.preventDefault();
@@ -142,8 +153,48 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({ content, className, o
     setMenuOpen(true);
   };
 
+  // 要素の右クリックハンドラ（タスク変換用）- 行番号を受け取る
+  const handleElementContextMenu = (e: React.MouseEvent, lineNumber: number) => {
+    if (!onContentUpdate) return;
+
+    // すでにタスク形式の行はスキップ
+    const lines = content.split('\n');
+    const line = lines[lineNumber - 1];
+    if (line && isTaskLine(line)) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+    setTargetLineNumber(lineNumber);
+    setTaskMenuPosition({ x: e.clientX + 8, y: e.clientY + 8 });
+    setTaskMenuOpen(true);
+  };
+
+  // 指定行をタスクに変換
+  const handleConvertToTask = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!onContentUpdate || targetLineNumber === null) return;
+
+    const lines = content.split('\n');
+    const index = targetLineNumber - 1;
+
+    if (index >= 0 && index < lines.length) {
+      const line = lines[index];
+      if (!isTaskLine(line)) {
+        lines[index] = convertLineToTask(line);
+        onContentUpdate(lines.join('\n'));
+      }
+    }
+
+    setTaskMenuOpen(false);
+  };
+
   return (
-    <div className={`markdown-preview ${className || ''}`}>
+    <div
+      ref={previewRef}
+      className={`markdown-preview ${className || ''}`}
+    >
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
@@ -151,6 +202,20 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({ content, className, o
           a: ({ node, ...props }) => (
             <a {...props} target="_blank" rel="noopener noreferrer" />
           ),
+          // 段落のカスタマイズ（タスク変換用）
+          p: ({ node, children, ...props }: any) => {
+            const line = node?.position?.start?.line;
+            return (
+              <p
+                {...props}
+                onContextMenu={(e: React.MouseEvent) => {
+                  if (line) handleElementContextMenu(e, line);
+                }}
+              >
+                {children}
+              </p>
+            );
+          },
           // コードブロックのスタイリング
           code: ({ node, className, ...props }: any) => {
             const isInline = !className || !className.startsWith('language-');
@@ -177,12 +242,21 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({ content, className, o
               hasCheckbox,
             };
 
+            // チェックボックスがある場合はステータスメニュー、ない場合はタスク変換メニュー
+            const handleContext = (e: React.MouseEvent) => {
+              if (hasCheckbox) {
+                handleLineContextMenu(e, info);
+              } else if (line) {
+                handleElementContextMenu(e, line);
+              }
+            };
+
             return (
               <CheckboxInfoContext.Provider value={info}>
                 <li
                   {...props}
                   className={`${itemClassName || ''} ${hasCheckbox ? 'checkbox-item' : ''}`.trim() || undefined}
-                  onContextMenu={(e: React.MouseEvent) => handleLineContextMenu(e, info)}
+                  onContextMenu={handleContext}
                 >
                   {children}
                 </li>
@@ -255,6 +329,31 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({ content, className, o
               <span>{option.label}</span>
             </button>
           ))}
+        </div>,
+        document.body
+      )}
+
+      {/* タスク変換メニュー */}
+      {taskMenuOpen && createPortal(
+        <div
+          ref={taskMenuRef}
+          className="textarea-context-menu"
+          style={{
+            position: 'fixed',
+            left: taskMenuPosition.x,
+            top: taskMenuPosition.y,
+          }}
+          onMouseDown={(e) => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            className="textarea-context-menu-option"
+            onClick={handleConvertToTask}
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            <ListTodo size={14} />
+            <span>タスクに変換</span>
+          </button>
         </div>,
         document.body
       )}

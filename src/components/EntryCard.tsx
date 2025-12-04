@@ -194,6 +194,7 @@ export function EntryCard({
             onTagRemove={onEditTagRemove}
             frequentTags={frequentTags}
             recentTags={recentTags}
+            enableTaskConversion={true}
           />
         </div>
       ) : (
