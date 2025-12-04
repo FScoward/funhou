@@ -1852,6 +1852,19 @@ textarea::placeholder {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
+  position: relative;
+  padding-left: 1.5rem;
+}
+
+/* SVG接続線（左レーン） */
+.doing-list-lines {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
 }
 
 .doing-list-item {
@@ -1861,6 +1874,9 @@ textarea::placeholder {
   padding: 0.4rem 0.5rem;
   border-radius: 8px;
   transition: background-color 0.15s;
+  position: relative;
+  z-index: 1;
+  background: var(--glass-bg, rgba(255, 255, 255, 0.8));
 }
 
 .doing-list-item:hover {
@@ -1871,42 +1887,28 @@ textarea::placeholder {
 .doing-list-item-checkbox {
   appearance: none;
   -webkit-appearance: none;
-  width: 1.25em;
-  height: 1.25em;
-  border: 2.5px solid var(--doing-checkbox-color, #f59e0b);
-  border-radius: 7px;
-  background: linear-gradient(
-    135deg,
-    var(--doing-checkbox-bg, rgba(245, 158, 11, 0.25)) 0%,
-    rgba(255, 255, 255, 0.15) 100%
-  );
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid var(--parent-color, #f59e0b);
+  border-radius: 50%;
+  background: transparent;
   position: relative;
   cursor: pointer;
   flex-shrink: 0;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow:
-    0 3px 8px rgba(245, 158, 11, 0.25),
-    inset 0 1px 3px rgba(255, 255, 255, 0.4);
+  transition: all 0.2s ease;
 }
 
-/* スラッシュマーク（進行中の印） */
+/* 中央のドット（進行中の印） */
 .doing-list-item-checkbox::after {
   content: '';
   position: absolute;
   top: 50%;
-  left: 18%;
-  right: 18%;
-  height: 3px;
-  background: linear-gradient(
-    90deg,
-    var(--doing-checkbox-color, #f59e0b) 0%,
-    color-mix(in srgb, var(--doing-checkbox-color, #f59e0b), white 30%) 100%
-  );
-  transform: translateY(-50%) rotate(-45deg);
-  border-radius: 2px;
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
+  left: 50%;
+  width: 6px;
+  height: 6px;
+  background: var(--parent-color, #f59e0b);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
 }
 
 .doing-list-item-checkbox:hover {
@@ -1946,7 +1948,6 @@ textarea::placeholder {
 }
 
 .doing-list-item-text {
-  flex: 1;
   font-size: 0.9rem;
   line-height: 1.4;
   word-break: break-word;
@@ -2010,6 +2011,22 @@ textarea::placeholder {
   opacity: 0.5;
   background-color: rgba(245, 158, 11, 0.1);
   box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2);
+}
+
+/* 子タスクのインデント */
+.doing-list-item.is-child {
+  margin-left: 1.5rem;
+}
+
+/* 子タスクバッジ */
+.doing-list-item-badge {
+  font-size: 0.65rem;
+  padding: 0.1rem 0.4rem;
+  background: var(--parent-color, #f59e0b);
+  color: white;
+  border-radius: 10px;
+  font-weight: 500;
+  flex-shrink: 0;
 }
 
 /* 空状態 */

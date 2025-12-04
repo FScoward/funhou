@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react'
 import Database from '@tauri-apps/plugin-sql'
-import { TodoItem, Entry, Reply, getTodoUniqueId } from '@/types'
+import { TodoItem, Entry, Reply, Tag, getTodoUniqueId } from '@/types'
 import {
   CHECKBOX_PATTERN_INCOMPLETE,
   CHECKBOX_PATTERN_ALL,
@@ -52,8 +52,8 @@ export function useTodos({ database }: UseTodosProps) {
       }
 
       // 返信からもTODOを取得（親エントリーがアーカイブされていないもの、かつ返信自体もアーカイブされていないもの）
-      const replies = await database.select<(Reply & { entry_id: number })[]>(
-        `SELECT r.id, r.entry_id, r.content
+      const replies = await database.select<(Reply & { entry_id: number; entry_content: string })[]>(
+        `SELECT r.id, r.entry_id, r.content, e.content as entry_content
          FROM replies r
          JOIN entries e ON r.entry_id = e.id
          WHERE (e.archived = 0 OR e.archived IS NULL)
@@ -62,8 +62,37 @@ export function useTodos({ database }: UseTodosProps) {
         ['%[ ]%', '%[/]%']
       )
 
+      // 親エントリIDのリストを作成してタグを一括取得
+      const parentEntryIds = [...new Set(replies.map(r => r.entry_id))]
+      const entryTagsMap = new Map<number, Tag[]>()
+
+      if (parentEntryIds.length > 0) {
+        // 各親エントリのタグを取得
+        for (const entryId of parentEntryIds) {
+          const tags = await database.select<Tag[]>(
+            `SELECT t.id, t.name
+             FROM tags t
+             INNER JOIN entry_tags et ON t.id = et.tag_id
+             WHERE et.entry_id = ?`,
+            [entryId]
+          )
+          entryTagsMap.set(entryId, tags)
+        }
+      }
+
       for (const reply of replies) {
         const lines = reply.content.split('\n')
+        // 親エントリのテキストの最初の行を取得（短縮表示用）
+        // チェックボックス記法を除去: "- [ ] テキスト" → "テキスト"
+        let parentEntryFirstLine = reply.entry_content.split('\n')[0]
+        const checkboxMatch = parentEntryFirstLine.match(/^(\s*[-*+]\s+)\[[ /xX]\]\s*(.*)$/)
+        if (checkboxMatch) {
+          parentEntryFirstLine = checkboxMatch[2]
+        }
+        parentEntryFirstLine = parentEntryFirstLine.substring(0, 50)
+        const parentEntryText = parentEntryFirstLine + (parentEntryFirstLine.length >= 50 ? '...' : '')
+        const parentEntryTags = entryTagsMap.get(reply.entry_id) || []
+
         lines.forEach((line, index) => {
           const match = line.match(CHECKBOX_PATTERN_INCOMPLETE)
           if (match) {
@@ -72,7 +101,9 @@ export function useTodos({ database }: UseTodosProps) {
               replyId: reply.id,
               lineIndex: index + 1, // 1始まり
               text: match[3].trim(),
-              status: match[2] as ' ' | '/'
+              status: match[2] as ' ' | '/',
+              parentEntryText,
+              parentEntryTags
             })
           }
         })
