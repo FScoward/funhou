@@ -342,8 +342,8 @@ export function EntryCard({
                       console.error('Failed to resume Claude Code session:', error)
                     }
                   }}
-                  title={isRunning ? "セッション実行中" : "セッションを再開（返信内容があればプロンプトとして使用）"}
-                  disabled={isRunning}
+                  title={isRunning ? "セッション実行中" : !replyContent.trim() ? "返信内容を入力してください" : "セッションを再開（返信内容をプロンプトとして使用）"}
+                  disabled={isRunning || !replyContent.trim()}
                 >
                   {isRunning ? (
                     <>
