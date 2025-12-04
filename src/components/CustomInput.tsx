@@ -286,16 +286,18 @@ const CustomInput = forwardRef<CustomInputRef, CustomInputProps>(function Custom
             )}
           </InputGroupButton>
           {/* 追加ボタン（セッション続行など） */}
-          {additionalButtons}
-          {/* 送信ボタン */}
-          <InputGroupButton
-            className={`ml-auto rounded-full transition-opacity ${hasContent ? 'opacity-100' : 'opacity-30'}`}
-            size="icon-xs"
-            variant="default"
-            onClick={handleSubmit}
-          >
-            <ArrowUp className="size-[14px]" />
-          </InputGroupButton>
+          <div className="ml-auto flex items-center gap-1">
+            {additionalButtons}
+            {/* 送信ボタン */}
+            <InputGroupButton
+              className={`rounded-full transition-opacity ${hasContent ? 'opacity-100' : 'opacity-30'}`}
+              size="icon-xs"
+              variant="default"
+              onClick={handleSubmit}
+            >
+              <ArrowUp className="size-[14px]" />
+            </InputGroupButton>
+          </div>
         </InputGroupAddon>
       </InputGroup>
 

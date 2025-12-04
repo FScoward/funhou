@@ -313,18 +313,21 @@ export function EntryCard({
             frequentTags={frequentTags}
             recentTags={recentTags}
             additionalButtons={
-              claudeSessionId && claudeCwd && replyContent.trim() && (
+              claudeSessionId && claudeCwd && (
                 <button
                   className="claude-resume-button-inline"
                   onClick={async () => {
                     try {
-                      await resumeClaudeCode(claudeSessionId, claudeCwd, replyContent)
-                      onAddReply(id) // 返信も追加
+                      const prompt = replyContent.trim() || undefined
+                      await resumeClaudeCode(claudeSessionId, claudeCwd, prompt)
+                      if (prompt) {
+                        onAddReply(id) // 返信内容がある場合のみ追加
+                      }
                     } catch (error) {
                       console.error('Failed to resume Claude Code session:', error)
                     }
                   }}
-                  title="返信内容をプロンプトとしてセッションを再開"
+                  title="セッションを再開（返信内容があればプロンプトとして使用）"
                 >
                   <Terminal size={16} style={{ display: 'inline-block', marginRight: '4px' }} />
                   セッション続行
