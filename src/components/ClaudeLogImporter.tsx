@@ -38,6 +38,8 @@ export function ClaudeLogImporter({ onImport, trigger, linkedSessionId, linkedPr
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedMessageIndices, setSelectedMessageIndices] = useState<Set<number>>(new Set())
   const [expandedMessageIndices, setExpandedMessageIndices] = useState<Set<number>>(new Set())
+  const positionRef = useRef({ x: window.innerWidth - 520, y: window.innerHeight * 0.1 })
+  const sizeRef = useRef({ width: 500, height: window.innerHeight * 0.7 })
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const shouldScrollToBottomRef = useRef(false)
 
@@ -205,8 +207,52 @@ export function ClaudeLogImporter({ onImport, trigger, linkedSessionId, linkedPr
     return text.slice(0, maxLength) + '...'
   }
 
+  // ドラッグ＆リサイズ処理
+  const handleDragStart = (e: React.MouseEvent, type: 'drag' | 'resize') => {
+    e.preventDefault()
+    if (type === 'drag') {
+      e.stopPropagation()
+    }
+
+    const startX = e.clientX
+    const startY = e.clientY
+    const startPosX = positionRef.current.x
+    const startPosY = positionRef.current.y
+    const startWidth = sizeRef.current.width
+    const startHeight = sizeRef.current.height
+    const dialog = (e.currentTarget as HTMLElement).closest('[role="dialog"]') as HTMLElement
+    if (!dialog) return
+
+    const onMouseMove = (moveEvent: MouseEvent) => {
+      const deltaX = moveEvent.clientX - startX
+      const deltaY = moveEvent.clientY - startY
+
+      if (type === 'drag') {
+        const newX = Math.max(0, Math.min(window.innerWidth - startWidth, startPosX + deltaX))
+        const newY = Math.max(0, Math.min(window.innerHeight - 100, startPosY + deltaY))
+        dialog.style.left = `${newX}px`
+        dialog.style.top = `${newY}px`
+        positionRef.current = { x: newX, y: newY }
+      } else {
+        const newWidth = Math.max(300, startWidth + deltaX)
+        const newHeight = Math.max(200, startHeight + deltaY)
+        dialog.style.width = `${newWidth}px`
+        dialog.style.height = `${newHeight}px`
+        sizeRef.current = { width: newWidth, height: newHeight }
+      }
+    }
+
+    const onMouseUp = () => {
+      document.removeEventListener('mousemove', onMouseMove)
+      document.removeEventListener('mouseup', onMouseUp)
+    }
+
+    document.addEventListener('mousemove', onMouseMove)
+    document.addEventListener('mouseup', onMouseUp)
+  }
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={setOpen} modal={false}>
       <DialogTrigger asChild>
         {trigger || (
           <Button variant="outline" size="sm">
@@ -214,23 +260,37 @@ export function ClaudeLogImporter({ onImport, trigger, linkedSessionId, linkedPr
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
-        <DialogHeader>
+      <DialogContent
+        className="overflow-hidden flex flex-col fixed translate-x-0 translate-y-0 p-0"
+        style={{
+          left: positionRef.current.x,
+          top: positionRef.current.y,
+          width: sizeRef.current.width,
+          height: sizeRef.current.height,
+          maxWidth: 'none',
+          maxHeight: 'none',
+        }}
+        onInteractOutside={(e) => e.preventDefault()}
+      >
+        <DialogHeader
+          className="cursor-move px-4 pt-4 pb-2 border-b bg-gray-50 select-none"
+          onMouseDown={(e) => handleDragStart(e, 'drag')}
+        >
           <DialogTitle className="flex items-center gap-2">
             {(view !== 'projects' || hasLinkedSession) && (
-              <Button variant="ghost" size="sm" onClick={handleBack}>
+              <Button variant="ghost" size="sm" onClick={handleBack} onMouseDown={(e) => e.stopPropagation()}>
                 ←
               </Button>
             )}
             {view === 'projects' && 'プロジェクト選択'}
             {view === 'sessions' && selectedProject?.name}
             {view === 'messages' && (hasLinkedSession
-              ? `紐付けセッション: ${linkedSessionId}`
-              : `セッション: ${selectedSession?.session_id}`)}
+              ? `紐付けセッション`
+              : `セッション`)}
           </DialogTitle>
         </DialogHeader>
 
-        <div ref={scrollContainerRef} className="flex-1 overflow-y-auto">
+        <div ref={scrollContainerRef} className="flex-1 overflow-y-auto px-4">
           {loading && <div className="p-4 text-center text-gray-500">読み込み中...</div>}
           {error && <div className="p-4 text-center text-red-500">{error}</div>}
 
@@ -358,7 +418,7 @@ export function ClaudeLogImporter({ onImport, trigger, linkedSessionId, linkedPr
         </div>
 
         {view === 'messages' && messages.length > 0 && (
-          <div className="pt-4 border-t">
+          <div className="p-4 border-t">
             <Button
               onClick={handleImport}
               className="w-full"
@@ -370,6 +430,14 @@ export function ClaudeLogImporter({ onImport, trigger, linkedSessionId, linkedPr
             </Button>
           </div>
         )}
+        {/* リサイズハンドル */}
+        <div
+          className="absolute bottom-0 right-0 w-4 h-4 cursor-se-resize"
+          onMouseDown={(e) => handleDragStart(e, 'resize')}
+          style={{
+            background: 'linear-gradient(135deg, transparent 50%, #ccc 50%)',
+          }}
+        />
       </DialogContent>
     </Dialog>
   )
