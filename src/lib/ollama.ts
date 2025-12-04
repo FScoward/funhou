@@ -120,3 +120,81 @@ export async function tryFormatText(
     return text
   }
 }
+
+/**
+ * 日次サマリー生成用のプロンプトを作成
+ */
+function createDailySummaryPrompt(entries: string[]): string {
+  const entriesText = entries.join('\n---\n')
+  return `以下は今日の分報（作業ログ）の一覧です。これらを要約して、今日やったことを簡潔にまとめてください。
+
+ルール:
+- 箇条書き形式で出力
+- 重要な作業や成果を中心にまとめる
+- 同じような内容は統合する
+- 技術的な詳細は省略可能だが、何をしたかは明確に
+- 日本語で出力
+
+分報一覧:
+${entriesText}
+
+まとめ:`
+}
+
+/**
+ * 日次サマリーを生成
+ */
+export async function generateDailySummary(
+  entries: string[],
+  model: string = DEFAULT_MODEL
+): Promise<string> {
+  if (entries.length === 0) {
+    return 'まとめる内容がありません。'
+  }
+
+  const prompt = createDailySummaryPrompt(entries)
+
+  const response = await fetch(`${OLLAMA_BASE_URL}/api/generate`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model,
+      prompt,
+      stream: false,
+    } as OllamaGenerateRequest),
+    signal: AbortSignal.timeout(60000), // 60秒タイムアウト（サマリーは時間がかかる可能性あり）
+  })
+
+  if (!response.ok) {
+    throw new Error(`Ollama API error: ${response.status} ${response.statusText}`)
+  }
+
+  const data: OllamaGenerateResponse = await response.json()
+  return data.response.trim()
+}
+
+/**
+ * 日次サマリー生成を試行し、失敗時はエラーメッセージを返す
+ */
+export async function tryGenerateDailySummary(
+  entries: string[],
+  model: string = DEFAULT_MODEL,
+  onError?: (error: Error) => void
+): Promise<string> {
+  try {
+    const isAvailable = await checkOllamaAvailable()
+    if (!isAvailable) {
+      const error = new Error('Ollamaサーバーが起動していません')
+      onError?.(error)
+      return error.message
+    }
+
+    return await generateDailySummary(entries, model)
+  } catch (error) {
+    const err = error instanceof Error ? error : new Error(String(error))
+    onError?.(err)
+    return `サマリー生成に失敗しました: ${err.message}`
+  }
+}

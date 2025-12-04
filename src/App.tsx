@@ -24,6 +24,7 @@ import { useIncompleteTodos } from '@/hooks/useIncompleteTodos'
 import { CurrentActivitySection } from '@/components/CurrentActivitySection'
 import { CompletedTasksSidebar } from '@/components/CompletedTasksSidebar'
 import { IncompleteTasksSidebar } from '@/components/IncompleteTasksSidebar'
+import { DailySummarySidebar } from '@/components/DailySummarySidebar'
 import { getSettings, applyFont, applyFontSize } from '@/lib/settings'
 import { applyTheme, ThemeVariant } from '@/lib/themes'
 import { onClaudeSessionFinished } from '@/lib/claudeLogs'
@@ -33,6 +34,7 @@ function App() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [doneSidebarOpen, setDoneSidebarOpen] = useState(false)
   const [incompleteSidebarOpen, setIncompleteSidebarOpen] = useState(false)
+  const [summarySidebarOpen, setSummarySidebarOpen] = useState(false)
   const [searchText, setSearchText] = useState('')
   const [ollamaEnabled, setOllamaEnabled] = useState(false)
   const [ollamaModel, setOllamaModel] = useState('gemma3:4b')
@@ -552,6 +554,14 @@ function App() {
         }}
         isOpen={incompleteSidebarOpen}
         onToggle={() => setIncompleteSidebarOpen(!incompleteSidebarOpen)}
+      />
+
+      <DailySummarySidebar
+        timelineItems={filteredTimelineItems}
+        selectedDate={selectedDate}
+        ollamaModel={ollamaModel}
+        isOpen={summarySidebarOpen}
+        onToggle={() => setSummarySidebarOpen(!summarySidebarOpen)}
       />
 
       <DeleteConfirmDialogs
