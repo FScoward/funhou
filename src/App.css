@@ -1574,6 +1574,127 @@ textarea::placeholder {
   opacity: 0.85;
 }
 
+/* キャンセル状態 - [-] のチェックボックス */
+.markdown-preview input[type="checkbox"].checkbox-cancelled {
+  border-color: var(--cancelled-checkbox-color, #ef4444);
+  background: linear-gradient(
+    135deg,
+    var(--cancelled-checkbox-bg, rgba(239, 68, 68, 0.15)) 0%,
+    rgba(255, 255, 255, 0.05) 100%
+  );
+  box-shadow:
+    0 2px 6px rgba(239, 68, 68, 0.15),
+    inset 0 1px 2px rgba(255, 255, 255, 0.2);
+}
+
+.markdown-preview input[type="checkbox"].checkbox-cancelled:hover {
+  box-shadow:
+    0 4px 12px rgba(239, 68, 68, 0.25),
+    0 0 16px var(--cancelled-checkbox-bg, rgba(239, 68, 68, 0.2)),
+    inset 0 1px 2px rgba(255, 255, 255, 0.3);
+}
+
+.markdown-preview input[type="checkbox"].checkbox-cancelled::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 15%;
+  right: 15%;
+  height: 2.5px;
+  background: var(--cancelled-checkbox-color, #ef4444);
+  transform: translateY(-50%);
+  border-radius: 2px;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.15));
+}
+
+/* キャンセル状態のリストアイテム - 取り消し線 */
+.markdown-preview li.cancelled-item {
+  text-decoration: line-through;
+  text-decoration-color: var(--cancelled-strikethrough, rgba(239, 68, 68, 0.5));
+  text-decoration-thickness: 2px;
+  color: var(--cancelled-text, #888);
+  opacity: 0.7;
+  padding: 0.25em 0.5em;
+  margin: 0.15em 0;
+  border-radius: 8px;
+  background: linear-gradient(
+    135deg,
+    var(--cancelled-checkbox-bg, rgba(239, 68, 68, 0.05)) 0%,
+    transparent 100%
+  );
+}
+
+/* ========================================
+   チェックボックス ステータスメニュー（右クリック）
+   ======================================== */
+
+/* ステータス選択メニュー */
+.checkbox-status-menu {
+  z-index: 1000;
+  min-width: 140px;
+  padding: 4px;
+  background: var(--bg-glass, rgba(255, 255, 255, 0.95));
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--border-glass, rgba(0, 0, 0, 0.1));
+  border-radius: 8px;
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.12),
+    0 2px 4px rgba(0, 0, 0, 0.08);
+}
+
+/* ステータスオプション */
+.checkbox-status-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-primary, #333);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: left;
+}
+
+.checkbox-status-option:hover {
+  background: var(--bg-hover, rgba(0, 0, 0, 0.06));
+}
+
+.checkbox-status-option.active {
+  background: var(--bg-active, rgba(59, 130, 246, 0.1));
+  color: var(--color-primary, #3b82f6);
+  font-weight: 500;
+}
+
+/* ステータスオプションのアイコン色 */
+.checkbox-status-option:nth-child(1) svg { color: var(--text-secondary, #888); }
+.checkbox-status-option:nth-child(2) svg { color: var(--doing-checkbox-color, #f59e0b); }
+.checkbox-status-option:nth-child(3) svg { color: var(--completed-checkbox-color, #4CAF50); }
+.checkbox-status-option:nth-child(4) svg { color: var(--cancelled-checkbox-color, #ef4444); }
+
+/* ダークモード対応 */
+@media (prefers-color-scheme: dark) {
+  .checkbox-status-menu {
+    background: var(--bg-glass-dark, rgba(30, 30, 30, 0.95));
+    border-color: var(--border-glass-dark, rgba(255, 255, 255, 0.1));
+  }
+
+  .checkbox-status-option {
+    color: var(--text-primary-dark, #eee);
+  }
+
+  .checkbox-status-option:hover {
+    background: var(--bg-hover-dark, rgba(255, 255, 255, 0.08));
+  }
+
+  .checkbox-status-option.active {
+    background: var(--bg-active-dark, rgba(59, 130, 246, 0.2));
+  }
+}
+
 /* TODO選択ボタン - Liquid Glass Style */
 .todo-selector-trigger {
   display: flex;
