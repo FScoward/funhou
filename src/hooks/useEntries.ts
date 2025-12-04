@@ -310,6 +310,39 @@ export function useEntries({ database, timelineItems, setTimelineItems, loadAvai
     }
   }
 
+  const handleLinkClaudeSession = async (entryId: number, sessionId: string, cwd: string, projectPath: string) => {
+    if (!database) return
+
+    try {
+      await database.execute(
+        'UPDATE entries SET claude_session_id = ?, claude_cwd = ?, claude_project_path = ? WHERE id = ?',
+        [sessionId, cwd, projectPath, entryId]
+      )
+
+      // stateを更新（エントリー自体と、そのエントリーを親とする返信のparentEntryも更新）
+      setTimelineItems(timelineItems.map(item => {
+        if (item.type === 'entry' && item.id === entryId) {
+          return { ...item, claudeSessionId: sessionId, claudeCwd: cwd, claudeProjectPath: projectPath }
+        }
+        // 返信の場合、親エントリーのセッション情報も更新
+        if (item.type === 'reply' && item.entryId === entryId && item.parentEntry) {
+          return {
+            ...item,
+            parentEntry: {
+              ...item.parentEntry,
+              claudeSessionId: sessionId,
+              claudeCwd: cwd,
+              claudeProjectPath: projectPath
+            }
+          }
+        }
+        return item
+      }))
+    } catch (error) {
+      console.error('Claude Codeセッションの紐付けに失敗しました:', error)
+    }
+  }
+
   return {
     // State
     currentEntry,
@@ -336,5 +369,6 @@ export function useEntries({ database, timelineItems, setTimelineItems, loadAvai
     handleDirectUpdateEntry,
     handleDirectTagAdd,
     handleDirectTagRemove,
+    handleLinkClaudeSession,
   }
 }

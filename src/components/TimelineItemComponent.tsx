@@ -49,6 +49,11 @@ interface TimelineItemComponentProps {
   onDirectTagRemove: (entryId: number, tag: string) => void
   onUpdateReplyDirectly: (replyId: number, newContent: string) => void
   onToggleReplyArchive: (replyId: number, entryId: number) => void
+  onImportAsReply?: (entryId: number, content: string) => void
+  onLinkClaudeSession?: (entryId: number, sessionId: string, cwd: string, projectPath: string) => void
+  runningSessionIds?: Set<string>
+  onSessionStart?: (sessionId: string) => void
+  latestReplyIdByEntryId?: Map<number, number>
 }
 
 export function TimelineItemComponent({
@@ -97,6 +102,11 @@ export function TimelineItemComponent({
   onDirectTagRemove,
   onUpdateReplyDirectly,
   onToggleReplyArchive,
+  onImportAsReply,
+  onLinkClaudeSession,
+  runningSessionIds = new Set(),
+  onSessionStart,
+  latestReplyIdByEntryId = new Map(),
 }: TimelineItemComponentProps) {
   const itemDate = new Date(item.timestamp)
   const day = itemDate.getDate()
@@ -134,6 +144,9 @@ export function TimelineItemComponent({
             replies={item.replies}
             pinned={item.pinned}
             archived={item.archived}
+            claudeSessionId={item.claudeSessionId}
+            claudeCwd={item.claudeCwd}
+            claudeProjectPath={item.claudeProjectPath}
             isEditing={editingEntryId === item.id}
             editContent={editContent}
             editManualTags={editManualTags}
@@ -164,6 +177,10 @@ export function TimelineItemComponent({
             onUpdateEntryDirectly={onUpdateEntryDirectly}
             onDirectTagAdd={(tag) => onDirectTagAdd(item.id, tag)}
             onDirectTagRemove={(tag) => onDirectTagRemove(item.id, tag)}
+            onImportAsReply={onImportAsReply}
+            onLinkClaudeSession={onLinkClaudeSession}
+            runningSessionIds={runningSessionIds}
+            onSessionStart={onSessionStart}
           />
         ) : (
           <ReplyCard
@@ -173,6 +190,10 @@ export function TimelineItemComponent({
             tags={item.tags}
             parentEntry={item.parentEntry}
             archived={item.replyArchived}
+            parentClaudeSessionId={item.parentEntry?.claudeSessionId}
+            parentClaudeProjectPath={item.parentEntry?.claudeProjectPath}
+            runningSessionIds={runningSessionIds}
+            isLatestReply={latestReplyIdByEntryId.get(item.entryId!) === item.replyId}
             isEditing={editingReplyId === item.replyId}
             editContent={editReplyContent}
             editManualTags={editReplyManualTags}
@@ -189,6 +210,8 @@ export function TimelineItemComponent({
             onScrollToEntry={onScrollToEntry}
             onUpdateReplyDirectly={onUpdateReplyDirectly}
             onToggleArchive={onToggleReplyArchive}
+            onImportAsReply={onImportAsReply}
+            onReplyToParent={onReplyToggle}
           />
         )}
       </div>

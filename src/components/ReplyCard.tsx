@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { Trash2, Pencil, X, FileCode, Type, Archive } from 'lucide-react'
+import { Trash2, Pencil, X, FileCode, Type, Archive, Loader2, FileDown } from 'lucide-react'
 import CustomInput from '@/components/CustomInput'
 import { TagBadge } from '@/components/TagBadge'
+import { ClaudeLogImporter } from '@/components/ClaudeLogImporter'
 import { truncateText, getFirstLine } from '@/utils/textUtils'
 import { Tag } from '@/types'
 import MarkdownPreview from '@/components/MarkdownPreview'
@@ -16,6 +17,10 @@ interface ReplyCardProps {
     content: string
   }
   archived?: boolean
+  parentClaudeSessionId?: string | null
+  parentClaudeProjectPath?: string | null
+  runningSessionIds?: Set<string>
+  isLatestReply?: boolean
   isEditing: boolean
   editContent: string
   editManualTags: string[]
@@ -32,6 +37,8 @@ interface ReplyCardProps {
   onScrollToEntry: (entryId: number) => void
   onUpdateReplyDirectly: (replyId: number, newContent: string) => void
   onToggleArchive: (replyId: number, entryId: number) => void
+  onImportAsReply?: (entryId: number, content: string) => void
+  onReplyToParent?: (entryId: number) => void
 }
 
 export function ReplyCard({
@@ -41,6 +48,10 @@ export function ReplyCard({
   tags,
   parentEntry,
   archived,
+  parentClaudeSessionId,
+  parentClaudeProjectPath,
+  runningSessionIds = new Set(),
+  isLatestReply = false,
   isEditing,
   editContent,
   editManualTags,
@@ -57,8 +68,13 @@ export function ReplyCard({
   onScrollToEntry,
   onUpdateReplyDirectly,
   onToggleArchive,
+  onImportAsReply,
+  onReplyToParent,
 }: ReplyCardProps) {
   const [showMarkdown, setShowMarkdown] = useState(true)
+
+  // 親エントリーが実行中かつ最新の返信かどうか
+  const isRunning = parentClaudeSessionId && isLatestReply ? runningSessionIds.has(parentClaudeSessionId) : false
 
   // アーカイブ済みの場合は折りたたみ表示
   if (archived) {
@@ -77,7 +93,13 @@ export function ReplyCard({
   }
 
   return (
-    <div className="reply-card">
+    <div className={`reply-card ${isRunning ? 'running' : ''}`}>
+      {isRunning && (
+        <div className="running-badge">
+          <Loader2 size={12} className="running-spinner" />
+          実行中
+        </div>
+      )}
       <button
         className="archive-button"
         onClick={() => onToggleArchive(replyId, entryId)}
@@ -169,6 +191,35 @@ export function ReplyCard({
                   onClick={onTagClick}
                 />
               ))}
+            </div>
+          )}
+          {(onReplyToParent || onImportAsReply) && (
+            <div className="reply-actions">
+              {onReplyToParent && (
+                <button
+                  className="reply-to-parent-button"
+                  onClick={() => {
+                    onScrollToEntry(entryId)
+                    onReplyToParent(entryId)
+                  }}
+                  title="親エントリに返信"
+                >
+                  💬 返信する
+                </button>
+              )}
+              {onImportAsReply && (
+                <ClaudeLogImporter
+                  onImport={(logContent) => onImportAsReply(entryId, logContent)}
+                  linkedSessionId={parentClaudeSessionId}
+                  linkedProjectPath={parentClaudeProjectPath}
+                  trigger={
+                    <button className="claude-import-button" title="ログを返信として取込">
+                      <FileDown size={16} style={{ display: 'inline-block', marginRight: '4px' }} />
+                      ログ取込
+                    </button>
+                  }
+                />
+              )}
             </div>
           )}
         </>

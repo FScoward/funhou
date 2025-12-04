@@ -1,8 +1,18 @@
 import { useState } from 'react'
-import { Trash2, X, Pin, FileCode, Type, Archive } from 'lucide-react'
+import { Trash2, X, Pin, FileCode, Type, Archive, Terminal, FileDown, Link, Loader2, MoreHorizontal } from 'lucide-react'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import CustomInput from '@/components/CustomInput'
 import { TagBadge } from '@/components/TagBadge'
 import { TagSelector } from '@/components/TagSelector'
+import { ClaudeLaunchDialog } from '@/components/ClaudeLaunchDialog'
+import { ClaudeLogImporter } from '@/components/ClaudeLogImporter'
+import { ClaudeSessionLinkDialog } from '@/components/ClaudeSessionLinkDialog'
+import { resumeClaudeCode } from '@/lib/claudeLogs'
 import { formatTimestamp } from '@/utils/dateUtils'
 import { getFirstLine } from '@/utils/textUtils'
 import { Reply, Tag } from '@/types'
@@ -16,6 +26,9 @@ interface EntryCardProps {
   replies?: Reply[]
   pinned?: boolean
   archived?: boolean
+  claudeSessionId?: string | null
+  claudeCwd?: string | null
+  claudeProjectPath?: string | null
   isEditing: boolean
   editContent: string
   editManualTags: string[]
@@ -46,6 +59,10 @@ interface EntryCardProps {
   onUpdateEntryDirectly: (entryId: number, newContent: string) => void
   onDirectTagAdd: (tag: string) => void
   onDirectTagRemove: (tag: string) => void
+  onImportAsReply?: (entryId: number, content: string) => void
+  onLinkClaudeSession?: (entryId: number, sessionId: string, cwd: string, projectPath: string) => void
+  runningSessionIds?: Set<string>
+  onSessionStart?: (sessionId: string) => void
 }
 
 export function EntryCard({
@@ -56,6 +73,9 @@ export function EntryCard({
   replies,
   pinned,
   archived,
+  claudeSessionId,
+  claudeCwd,
+  claudeProjectPath,
   isEditing,
   editContent,
   editManualTags,
@@ -86,8 +106,15 @@ export function EntryCard({
   onUpdateEntryDirectly,
   onDirectTagAdd,
   onDirectTagRemove,
+  onImportAsReply,
+  onLinkClaudeSession,
+  runningSessionIds = new Set(),
+  onSessionStart,
 }: EntryCardProps) {
   const [showMarkdown, setShowMarkdown] = useState(true)
+  const [claudeLaunchOpen, setClaudeLaunchOpen] = useState(false)
+  const [claudeImportOpen, setClaudeImportOpen] = useState(false)
+  const [claudeLinkOpen, setClaudeLinkOpen] = useState(false)
 
   // アーカイブ済みで折りたたまれた表示
   if (archived) {
@@ -105,8 +132,17 @@ export function EntryCard({
     )
   }
 
+  // 実行中かどうか
+  const isRunning = claudeSessionId ? runningSessionIds.has(claudeSessionId) : false
+
   return (
-    <div className={`entry-card ${pinned ? 'pinned' : ''}`}>
+    <div className={`entry-card ${pinned ? 'pinned' : ''} ${isRunning ? 'running' : ''}`}>
+      {isRunning && (
+        <div className="running-badge">
+          <Loader2 size={12} className="running-spinner" />
+          実行中
+        </div>
+      )}
       <button
         className="delete-button"
         onClick={() => onDelete(id)}
@@ -240,7 +276,59 @@ export function EntryCard({
             {expandedReplies ? '▼' : '▶'} 返信を表示
           </button>
         )}
+
+        {/* Claudeドロップダウンメニュー */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className={`claude-menu-button ${claudeSessionId ? 'has-linked' : ''}`}>
+              <MoreHorizontal size={16} />
+              Claude
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start">
+            <DropdownMenuItem onSelect={() => setClaudeLaunchOpen(true)}>
+              <Terminal size={16} className="mr-2" />
+              Claude Code
+            </DropdownMenuItem>
+            {onImportAsReply && (
+              <DropdownMenuItem onSelect={() => setClaudeImportOpen(true)}>
+                <FileDown size={16} className="mr-2" />
+                ログ取込
+              </DropdownMenuItem>
+            )}
+            {onLinkClaudeSession && (
+              <DropdownMenuItem onSelect={() => setClaudeLinkOpen(true)}>
+                <Link size={16} className="mr-2" />
+                {claudeSessionId ? '紐付済' : '紐付け'}
+              </DropdownMenuItem>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
+
+      {/* Dialogコンポーネント（triggerなしで配置） */}
+      <ClaudeLaunchDialog
+        initialPrompt={content}
+        open={claudeLaunchOpen}
+        onOpenChange={setClaudeLaunchOpen}
+      />
+      {onImportAsReply && (
+        <ClaudeLogImporter
+          onImport={(logContent) => onImportAsReply(id, logContent)}
+          linkedSessionId={claudeSessionId}
+          linkedProjectPath={claudeProjectPath}
+          open={claudeImportOpen}
+          onOpenChange={setClaudeImportOpen}
+        />
+      )}
+      {onLinkClaudeSession && (
+        <ClaudeSessionLinkDialog
+          entryId={id}
+          onLink={onLinkClaudeSession}
+          open={claudeLinkOpen}
+          onOpenChange={setClaudeLinkOpen}
+        />
+      )}
 
       {replyingToId === id && (
         <div className="reply-input-section">
@@ -261,6 +349,40 @@ export function EntryCard({
             onTagRemove={onReplyTagRemove}
             frequentTags={frequentTags}
             recentTags={recentTags}
+            additionalButtons={
+              claudeSessionId && claudeCwd && (
+                <button
+                  className={`claude-resume-button-inline ${isRunning ? 'running' : ''}`}
+                  onClick={async () => {
+                    if (isRunning) return
+                    try {
+                      const prompt = replyContent.trim() || undefined
+                      onSessionStart?.(claudeSessionId)
+                      await resumeClaudeCode(claudeSessionId, claudeCwd, prompt)
+                      if (prompt) {
+                        onAddReply(id) // 返信内容がある場合のみ追加
+                      }
+                    } catch (error) {
+                      console.error('Failed to resume Claude Code session:', error)
+                    }
+                  }}
+                  title={isRunning ? "セッション実行中" : !replyContent.trim() ? "返信内容を入力してください" : "セッションを再開（返信内容をプロンプトとして使用）"}
+                  disabled={isRunning || !replyContent.trim()}
+                >
+                  {isRunning ? (
+                    <>
+                      <Loader2 size={16} className="running-spinner" style={{ display: 'inline-block', marginRight: '4px' }} />
+                      実行中...
+                    </>
+                  ) : (
+                    <>
+                      <Terminal size={16} style={{ display: 'inline-block', marginRight: '4px' }} />
+                      セッション続行
+                    </>
+                  )}
+                </button>
+              )
+            }
           />
         </div>
       )}

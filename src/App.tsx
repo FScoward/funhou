@@ -26,6 +26,7 @@ import { CompletedTasksSidebar } from '@/components/CompletedTasksSidebar'
 import { IncompleteTasksSidebar } from '@/components/IncompleteTasksSidebar'
 import { getSettings, applyFont, applyFontSize } from '@/lib/settings'
 import { applyTheme, ThemeVariant } from '@/lib/themes'
+import { onClaudeSessionFinished } from '@/lib/claudeLogs'
 
 function App() {
   const [settingsSidebarOpen, setSettingsSidebarOpen] = useState(false)
@@ -35,6 +36,12 @@ function App() {
   const [searchText, setSearchText] = useState('')
   const [ollamaEnabled, setOllamaEnabled] = useState(false)
   const [ollamaModel, setOllamaModel] = useState('gemma3:4b')
+  const [runningSessionIds, setRunningSessionIds] = useState<Set<string>>(new Set())
+
+  // セッション開始時のコールバック
+  const handleSessionStart = (sessionId: string) => {
+    setRunningSessionIds(prev => new Set(prev).add(sessionId))
+  }
 
   // InputSectionのref（マイクトグル用）
   const inputSectionRef = useRef<CustomInputRef>(null)
@@ -83,6 +90,28 @@ function App() {
     }
 
     const unlistenPromise = setupMoveListener()
+
+    return () => {
+      unlistenPromise.then(unlisten => unlisten())
+    }
+  }, [])
+
+  // Claude Codeセッション終了イベントを監視
+  useEffect(() => {
+    const setupClaudeListener = async () => {
+      const unlisten = await onClaudeSessionFinished((payload) => {
+        console.log('Claude session finished:', payload)
+        // 実行中リストから削除
+        setRunningSessionIds(prev => {
+          const next = new Set(prev)
+          next.delete(payload.session_id)
+          return next
+        })
+      })
+      return unlisten
+    }
+
+    const unlistenPromise = setupClaudeListener()
 
     return () => {
       unlistenPromise.then(unlisten => unlisten())
@@ -214,6 +243,7 @@ function App() {
     handleDirectUpdateEntry,
     handleDirectTagAdd,
     handleDirectTagRemove,
+    handleLinkClaudeSession,
   } = useEntries({
     database,
     timelineItems: filteredTimelineItems,
@@ -237,6 +267,7 @@ function App() {
     deleteReplyDialogOpen,
     setDeleteReplyDialogOpen,
     handleAddReply,
+    addReplyWithContent,
     toggleReplyForm,
     toggleEntryReplies,
     startEditReply,
@@ -339,6 +370,9 @@ function App() {
           recentTags={recentTags}
           ollamaEnabled={ollamaEnabled}
           ollamaModel={ollamaModel}
+          onImportLog={async (content) => {
+            setCurrentEntry(content)
+          }}
         />
 
         <CurrentActivitySection
@@ -480,6 +514,13 @@ function App() {
             await loadTodos()
             await loadIncompleteTodos()
           }}
+          onImportAsReply={async (entryId, content) => {
+            await addReplyWithContent(entryId, content)
+            await loadIncompleteTodos()
+          }}
+          onLinkClaudeSession={handleLinkClaudeSession}
+          runningSessionIds={runningSessionIds}
+          onSessionStart={handleSessionStart}
         />
       </div>
 

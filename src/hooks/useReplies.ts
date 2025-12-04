@@ -62,7 +62,10 @@ export function useReplies({ database, timelineItems, setTimelineItems, loadAvai
           tags: savedTags,
           parentEntry: parentEntry ? {
             id: parentEntry.id,
-            content: parentEntry.content
+            content: parentEntry.content,
+            claudeSessionId: parentEntry.claudeSessionId,
+            claudeCwd: parentEntry.claudeCwd,
+            claudeProjectPath: parentEntry.claudeProjectPath
           } : undefined
         }
 
@@ -90,6 +93,71 @@ export function useReplies({ database, timelineItems, setTimelineItems, loadAvai
         setReplyContent('')
         setReplyingToId(null)
         setReplyManualTags([]) // 手動選択タグをクリア
+      } catch (error) {
+        console.error('返信の追加に失敗しました:', error)
+      }
+    }
+  }
+
+  const addReplyWithContent = async (entryId: number, content: string) => {
+    if (content.trim() && database) {
+      try {
+        const timestamp = new Date().toISOString()
+
+        const result = await database.execute(
+          'INSERT INTO replies (entry_id, content, timestamp) VALUES (?, ?, ?)',
+          [entryId, content, timestamp]
+        )
+
+        const replyId = Number(result.lastInsertId)
+
+        // 親エントリーを探す
+        const parentEntry = timelineItems.find(item => item.type === 'entry' && item.id === entryId)
+
+        const newReply: Reply = {
+          id: replyId,
+          entry_id: entryId,
+          content: content,
+          timestamp: timestamp,
+          tags: []
+        }
+
+        const newReplyItem: TimelineItem = {
+          type: 'reply',
+          id: replyId,
+          replyId: replyId,
+          entryId: entryId,
+          content: content,
+          timestamp: timestamp,
+          tags: [],
+          parentEntry: parentEntry ? {
+            id: parentEntry.id,
+            content: parentEntry.content,
+            claudeSessionId: parentEntry.claudeSessionId,
+            claudeCwd: parentEntry.claudeCwd,
+            claudeProjectPath: parentEntry.claudeProjectPath
+          } : undefined
+        }
+
+        // 親エントリーのrepliesリストも更新
+        const updatedItems = timelineItems.map(item => {
+          if (item.type === 'entry' && item.id === entryId) {
+            return {
+              ...item,
+              replies: [...(item.replies || []), newReply],
+              replyCount: (item.replyCount || 0) + 1
+            }
+          }
+          return item
+        })
+
+        // 新しい返信をタイムラインに追加して時系列順に再ソート
+        const allItems = [...updatedItems, newReplyItem].sort((a, b) =>
+          new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+        )
+        setTimelineItems(allItems)
+
+        loadAvailableTags()
       } catch (error) {
         console.error('返信の追加に失敗しました:', error)
       }
@@ -301,6 +369,7 @@ export function useReplies({ database, timelineItems, setTimelineItems, loadAvai
     setDeleteReplyDialogOpen,
     // Handlers
     handleAddReply,
+    addReplyWithContent,
     toggleReplyForm,
     toggleEntryReplies,
     startEditReply,

@@ -29,6 +29,8 @@ interface CustomInputProps {
   ollamaEnabled?: boolean
   /** 使用するOllamaモデル */
   ollamaModel?: string
+  /** 送信ボタンの横に表示する追加ボタン */
+  additionalButtons?: React.ReactNode
 }
 
 export interface CustomInputRef {
@@ -50,6 +52,7 @@ const CustomInput = forwardRef<CustomInputRef, CustomInputProps>(function Custom
   recentTags = [],
   ollamaEnabled = false,
   ollamaModel = 'gemma3:4b',
+  additionalButtons,
 }, ref) {
   const hasContent = value.trim().length > 0
   const showTagSelector = onTagAdd && onTagRemove
@@ -157,8 +160,8 @@ const CustomInput = forwardRef<CustomInputRef, CustomInputProps>(function Custom
 
   // キーボード編集を検出
   const handleChange = (newValue: string) => {
-    // プログラムからの更新の場合は何もしない
-    if (newValue === lastProgramValueRef.current) {
+    // マイクがアクティブな場合のみ、プログラムからの更新を検出してスキップ
+    if (isActiveRef.current && newValue === lastProgramValueRef.current) {
       return
     }
 
@@ -282,15 +285,19 @@ const CustomInput = forwardRef<CustomInputRef, CustomInputProps>(function Custom
               <Mic className="size-[14px]" />
             )}
           </InputGroupButton>
-          {/* 送信ボタン */}
-          <InputGroupButton
-            className={`ml-auto rounded-full transition-opacity ${hasContent ? 'opacity-100' : 'opacity-30'}`}
-            size="icon-xs"
-            variant="default"
-            onClick={handleSubmit}
-          >
-            <ArrowUp className="size-[14px]" />
-          </InputGroupButton>
+          {/* 追加ボタン（セッション続行など） */}
+          <div className="ml-auto flex items-center gap-1">
+            {additionalButtons}
+            {/* 送信ボタン */}
+            <InputGroupButton
+              className={`rounded-full transition-opacity ${hasContent ? 'opacity-100' : 'opacity-30'}`}
+              size="icon-xs"
+              variant="default"
+              onClick={handleSubmit}
+            >
+              <ArrowUp className="size-[14px]" />
+            </InputGroupButton>
+          </div>
         </InputGroupAddon>
       </InputGroup>
 

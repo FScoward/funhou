@@ -193,6 +193,31 @@ export async function getDb() {
     await db.execute(`
       CREATE INDEX IF NOT EXISTS idx_doing_order_sort ON doing_order(sort_order)
     `)
+
+    // Claude Codeセッション紐付け用カラムを追加
+    try {
+      await db.execute(`
+        ALTER TABLE entries ADD COLUMN claude_session_id TEXT DEFAULT NULL
+      `)
+    } catch (error) {
+      console.log('claude_session_id column already exists or migration error:', error)
+    }
+
+    try {
+      await db.execute(`
+        ALTER TABLE entries ADD COLUMN claude_cwd TEXT DEFAULT NULL
+      `)
+    } catch (error) {
+      console.log('claude_cwd column already exists or migration error:', error)
+    }
+
+    try {
+      await db.execute(`
+        ALTER TABLE entries ADD COLUMN claude_project_path TEXT DEFAULT NULL
+      `)
+    } catch (error) {
+      console.log('claude_project_path column already exists or migration error:', error)
+    }
   }
   return db
 }

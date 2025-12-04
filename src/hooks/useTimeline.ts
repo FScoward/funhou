@@ -48,7 +48,7 @@ export function useTimeline({ database, selectedDate, selectedTags, filterMode, 
       const isCrossDateQuery = isTagFiltering || isSearching
 
       // エントリーをSQLクエリで取得（pinned, archived状態も含める）
-      let entryQuery = 'SELECT id, content, timestamp, pinned, archived FROM entries WHERE 1=1'
+      let entryQuery = 'SELECT id, content, timestamp, pinned, archived, claude_session_id, claude_cwd, claude_project_path FROM entries WHERE 1=1'
       const entryParams: (string | number)[] = []
 
       // タグフィルタリングまたは検索時以外は日付条件を追加
@@ -137,7 +137,7 @@ export function useTimeline({ database, selectedDate, selectedTags, filterMode, 
 
         if (additionalParentIds.length > 0) {
           // タグフィルタリングまたは検索時は日付条件なしで親エントリーを取得
-          let additionalParentsQuery = `SELECT id, content, timestamp, pinned, archived FROM entries WHERE id IN (${additionalParentIds.join(',')})`
+          let additionalParentsQuery = `SELECT id, content, timestamp, pinned, archived, claude_session_id, claude_cwd, claude_project_path FROM entries WHERE id IN (${additionalParentIds.join(',')})`
           const additionalParentsParams: (string | number)[] = []
 
           if (!isCrossDateQuery) {
@@ -191,7 +191,10 @@ export function useTimeline({ database, selectedDate, selectedTags, filterMode, 
           replyCount: entryReplies.length,
           tags: entry.tags,
           pinned: entry.pinned === 1,
-          archived: entry.archived === 1
+          archived: entry.archived === 1,
+          claudeSessionId: entry.claude_session_id,
+          claudeCwd: entry.claude_cwd,
+          claudeProjectPath: entry.claude_project_path
         }
       })
 
@@ -210,7 +213,10 @@ export function useTimeline({ database, selectedDate, selectedTags, filterMode, 
           parentEntry: parentEntry ? {
             id: parentEntry.id,
             content: parentEntry.content,
-            archived: parentEntry.archived === 1
+            archived: parentEntry.archived === 1,
+            claudeSessionId: parentEntry.claude_session_id,
+            claudeCwd: parentEntry.claude_cwd,
+            claudeProjectPath: parentEntry.claude_project_path
           } : undefined
         }
       })
