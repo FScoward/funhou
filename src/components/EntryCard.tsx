@@ -1,5 +1,11 @@
 import { useState } from 'react'
-import { Trash2, X, Pin, FileCode, Type, Archive, Terminal, FileDown, Link, Loader2 } from 'lucide-react'
+import { Trash2, X, Pin, FileCode, Type, Archive, Terminal, FileDown, Link, Loader2, MoreHorizontal } from 'lucide-react'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import CustomInput from '@/components/CustomInput'
 import { TagBadge } from '@/components/TagBadge'
 import { TagSelector } from '@/components/TagSelector'
@@ -106,6 +112,9 @@ export function EntryCard({
   onSessionStart,
 }: EntryCardProps) {
   const [showMarkdown, setShowMarkdown] = useState(true)
+  const [claudeLaunchOpen, setClaudeLaunchOpen] = useState(false)
+  const [claudeImportOpen, setClaudeImportOpen] = useState(false)
+  const [claudeLinkOpen, setClaudeLinkOpen] = useState(false)
 
   // アーカイブ済みで折りたたまれた表示
   if (archived) {
@@ -267,44 +276,59 @@ export function EntryCard({
             {expandedReplies ? '▼' : '▶'} 返信を表示
           </button>
         )}
-        <ClaudeLaunchDialog
-          initialPrompt={content}
-          trigger={
-            <button className="claude-launch-button" title="Claude Codeで実行">
-              <Terminal size={16} style={{ display: 'inline-block', marginRight: '4px' }} />
-              Claude Code
+
+        {/* Claudeドロップダウンメニュー */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className={`claude-menu-button ${claudeSessionId ? 'has-linked' : ''}`}>
+              <MoreHorizontal size={16} />
+              Claude
             </button>
-          }
-        />
-        {onImportAsReply && (
-          <ClaudeLogImporter
-            onImport={(logContent) => onImportAsReply(id, logContent)}
-            linkedSessionId={claudeSessionId}
-            linkedProjectPath={claudeProjectPath}
-            trigger={
-              <button className="claude-import-button" title="ログを返信として取込">
-                <FileDown size={16} style={{ display: 'inline-block', marginRight: '4px' }} />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start">
+            <DropdownMenuItem onSelect={() => setClaudeLaunchOpen(true)}>
+              <Terminal size={16} className="mr-2" />
+              Claude Code
+            </DropdownMenuItem>
+            {onImportAsReply && (
+              <DropdownMenuItem onSelect={() => setClaudeImportOpen(true)}>
+                <FileDown size={16} className="mr-2" />
                 ログ取込
-              </button>
-            }
-          />
-        )}
-        {onLinkClaudeSession && (
-          <ClaudeSessionLinkDialog
-            entryId={id}
-            onLink={onLinkClaudeSession}
-            trigger={
-              <button
-                className={`claude-link-button ${claudeSessionId ? 'linked' : ''}`}
-                title={claudeSessionId ? `セッション: ${claudeSessionId}\ncwd: ${claudeCwd || 'N/A'}` : 'セッション紐付け'}
-              >
-                <Link size={16} style={{ display: 'inline-block', marginRight: '4px' }} />
+              </DropdownMenuItem>
+            )}
+            {onLinkClaudeSession && (
+              <DropdownMenuItem onSelect={() => setClaudeLinkOpen(true)}>
+                <Link size={16} className="mr-2" />
                 {claudeSessionId ? '紐付済' : '紐付け'}
-              </button>
-            }
-          />
-        )}
+              </DropdownMenuItem>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
+
+      {/* Dialogコンポーネント（triggerなしで配置） */}
+      <ClaudeLaunchDialog
+        initialPrompt={content}
+        open={claudeLaunchOpen}
+        onOpenChange={setClaudeLaunchOpen}
+      />
+      {onImportAsReply && (
+        <ClaudeLogImporter
+          onImport={(logContent) => onImportAsReply(id, logContent)}
+          linkedSessionId={claudeSessionId}
+          linkedProjectPath={claudeProjectPath}
+          open={claudeImportOpen}
+          onOpenChange={setClaudeImportOpen}
+        />
+      )}
+      {onLinkClaudeSession && (
+        <ClaudeSessionLinkDialog
+          entryId={id}
+          onLink={onLinkClaudeSession}
+          open={claudeLinkOpen}
+          onOpenChange={setClaudeLinkOpen}
+        />
+      )}
 
       {replyingToId === id && (
         <div className="reply-input-section">

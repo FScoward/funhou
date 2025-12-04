@@ -17,9 +17,18 @@ interface ClaudeLogImporterProps {
   trigger?: React.ReactNode
   linkedSessionId?: string | null
   linkedProjectPath?: string | null
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
 }
 
-export function ClaudeLogImporter({ onImport, trigger, linkedSessionId, linkedProjectPath }: ClaudeLogImporterProps) {
+export function ClaudeLogImporter({
+  onImport,
+  trigger,
+  linkedSessionId,
+  linkedProjectPath,
+  open: controlledOpen,
+  onOpenChange: controlledOnOpenChange,
+}: ClaudeLogImporterProps) {
   const {
     projects,
     sessions,
@@ -31,7 +40,14 @@ export function ClaudeLogImporter({ onImport, trigger, linkedSessionId, linkedPr
     fetchMessages,
   } = useClaudeLogs()
 
-  const [open, setOpen] = useState(false)
+  const [internalOpen, setInternalOpen] = useState(false)
+
+  // 制御モードかどうかを判定
+  const isControlled = controlledOpen !== undefined
+  const open = isControlled ? controlledOpen : internalOpen
+  const setOpen = isControlled
+    ? (v: boolean) => controlledOnOpenChange?.(v)
+    : setInternalOpen
   const [selectedProject, setSelectedProject] = useState<ProjectInfo | null>(null)
   const [selectedSession, setSelectedSession] = useState<SessionSummary | null>(null)
   const [view, setView] = useState<'projects' | 'sessions' | 'messages'>('projects')
@@ -253,13 +269,11 @@ export function ClaudeLogImporter({ onImport, trigger, linkedSessionId, linkedPr
 
   return (
     <Dialog open={open} onOpenChange={setOpen} modal={false}>
-      <DialogTrigger asChild>
-        {trigger || (
-          <Button variant="outline" size="sm">
-            Claude Codeログ取込
-          </Button>
-        )}
-      </DialogTrigger>
+      {trigger && (
+        <DialogTrigger asChild>
+          {trigger}
+        </DialogTrigger>
+      )}
       <DialogContent
         className="overflow-hidden flex flex-col fixed translate-x-0 translate-y-0 p-0"
         style={{

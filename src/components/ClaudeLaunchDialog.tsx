@@ -15,11 +15,25 @@ import { Label } from './ui/label'
 interface ClaudeLaunchDialogProps {
   initialPrompt?: string
   trigger?: React.ReactNode
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
 }
 
-export function ClaudeLaunchDialog({ initialPrompt, trigger }: ClaudeLaunchDialogProps) {
+export function ClaudeLaunchDialog({
+  initialPrompt,
+  trigger,
+  open: controlledOpen,
+  onOpenChange: controlledOnOpenChange,
+}: ClaudeLaunchDialogProps) {
   const { launch, loading, error } = useClaudeLogs()
-  const [open, setOpen] = useState(false)
+  const [internalOpen, setInternalOpen] = useState(false)
+
+  // 制御モードかどうかを判定
+  const isControlled = controlledOpen !== undefined
+  const open = isControlled ? controlledOpen : internalOpen
+  const setOpen = isControlled
+    ? (v: boolean) => controlledOnOpenChange?.(v)
+    : setInternalOpen
   const [cwd, setCwd] = useState('')
   const [prompt, setPrompt] = useState(initialPrompt || '')
   const [launched, setLaunched] = useState(false)
@@ -47,13 +61,11 @@ export function ClaudeLaunchDialog({ initialPrompt, trigger }: ClaudeLaunchDialo
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild>
-        {trigger || (
-          <Button variant="outline" size="sm">
-            Claude Codeで実行
-          </Button>
-        )}
-      </DialogTrigger>
+      {trigger && (
+        <DialogTrigger asChild>
+          {trigger}
+        </DialogTrigger>
+      )}
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Claude Codeを起動</DialogTitle>

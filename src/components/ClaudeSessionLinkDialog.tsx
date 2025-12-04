@@ -14,10 +14,25 @@ interface ClaudeSessionLinkDialogProps {
   entryId: number
   onLink: (entryId: number, sessionId: string, cwd: string, projectPath: string) => void
   trigger?: React.ReactNode
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
 }
 
-export function ClaudeSessionLinkDialog({ entryId, onLink, trigger }: ClaudeSessionLinkDialogProps) {
-  const [open, setOpen] = useState(false)
+export function ClaudeSessionLinkDialog({
+  entryId,
+  onLink,
+  trigger,
+  open: controlledOpen,
+  onOpenChange: controlledOnOpenChange,
+}: ClaudeSessionLinkDialogProps) {
+  const [internalOpen, setInternalOpen] = useState(false)
+
+  // 制御モードかどうかを判定
+  const isControlled = controlledOpen !== undefined
+  const open = isControlled ? controlledOpen : internalOpen
+  const setOpen = isControlled
+    ? (v: boolean) => controlledOnOpenChange?.(v)
+    : setInternalOpen
   const [projects, setProjects] = useState<ProjectInfo[]>([])
   const [sessions, setSessions] = useState<SessionSummary[]>([])
   const [selectedProject, setSelectedProject] = useState<ProjectInfo | null>(null)
@@ -94,13 +109,11 @@ export function ClaudeSessionLinkDialog({ entryId, onLink, trigger }: ClaudeSess
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {trigger || (
-          <Button variant="outline" size="sm">
-            セッション紐付け
-          </Button>
-        )}
-      </DialogTrigger>
+      {trigger && (
+        <DialogTrigger asChild>
+          {trigger}
+        </DialogTrigger>
+      )}
       <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
