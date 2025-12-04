@@ -34,11 +34,15 @@ export interface Reply {
 }
 
 export interface TodoItem {
-  entryId: number      // 元のエントリーID（返信の場合は親エントリーID）
-  replyId?: number     // 返信のID（返信の場合のみ）
-  lineIndex: number    // エントリー/返信内の行番号（1始まり）
-  text: string         // タスクのテキスト部分
-  status: ' ' | '/'    // 未完了 or Doing
+  entryId: number           // 元のエントリーID（返信の場合は親エントリーID）
+  replyId?: number          // 返信のID（返信の場合のみ）
+  lineIndex: number         // エントリー/返信内の行番号（1始まり）
+  text: string              // タスクのテキスト部分
+  status: ' ' | '/'         // 未完了 or Doing
+  parentEntryText?: string  // 親エントリーのテキスト（返信タスクの場合のみ）
+  parentEntryTags?: Tag[]   // 親エントリーのタグ（返信タスクの場合のみ）
+  childCount?: number       // 子タスクの数（親タスクの場合のみ）
+  isLastChild?: boolean     // 最後の子タスクかどうか
 }
 
 // TodoItemのユニークIDを生成（ドラッグ&ドロップ用）
