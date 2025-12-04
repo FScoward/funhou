@@ -1,21 +1,24 @@
 /**
  * チェックボックスのステータス型
- * ' ' = 未完了, '/' = DOING, 'x' = 完了
+ * ' ' = 未完了, '/' = DOING, 'x' = 完了, '-' = キャンセル
  */
-export type CheckboxStatus = ' ' | '/' | 'x' | 'X'
+export type CheckboxStatus = ' ' | '/' | 'x' | 'X' | '-'
 
 /** チェックボックスのパターン（未完了 + DOING のみ） */
 export const CHECKBOX_PATTERN_INCOMPLETE = /^(\s*[-*+]\s+)\[([ /])\](.*)$/
 
 /** チェックボックスのパターン（全ステータス） */
-export const CHECKBOX_PATTERN_ALL = /^(\s*[-*+]\s+)\[([ /xX])\](.*)$/
+export const CHECKBOX_PATTERN_ALL = /^(\s*[-*+]\s+)\[([ /xX\-])\](.*)$/
 
 /** DOING状態のパターン */
 export const CHECKBOX_PATTERN_DOING = /^(\s*[-*+]\s+)\[\/\](.*)$/
 
+/** キャンセル状態のパターン */
+export const CHECKBOX_PATTERN_CANCELLED = /^(\s*[-*+]\s+)\[\-\](.*)$/
+
 /**
  * チェックボックスの次のステータスを取得
- * ' ' -> '/' -> 'x' -> ' ' のサイクル
+ * ' ' -> '/' -> 'x' -> '-' -> ' ' のサイクル
  */
 export function getNextCheckboxStatus(current: CheckboxStatus): CheckboxStatus {
   switch (current) {
@@ -25,6 +28,8 @@ export function getNextCheckboxStatus(current: CheckboxStatus): CheckboxStatus {
       return 'x'
     case 'x':
     case 'X':
+      return '-'
+    case '-':
     default:
       return ' '
   }

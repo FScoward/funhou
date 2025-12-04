@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState, useEffect, useCallback } from 'react'
 import { Sparkles } from 'lucide-react'
 import { TodoItem, getTodoUniqueId } from '@/types'
+import { CheckboxStatus } from '@/utils/checkboxUtils'
 import {
   DndContext,
   closestCenter,
@@ -27,7 +28,7 @@ interface CurrentActivitySectionProps {
   todoItems?: TodoItem[]
   onScrollToEntry?: (entryId: number) => void
   onScrollToReply?: (replyId: number) => void
-  onStatusChange?: (todo: TodoItem, newStatus: 'x') => Promise<void>
+  onStatusChange?: (todo: TodoItem, newStatus: CheckboxStatus) => Promise<void>
   onReorder?: (activeId: string, overId: string) => Promise<void>
 }
 
