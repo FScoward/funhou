@@ -458,6 +458,7 @@ function App() {
             await handleDirectUpdateEntry(entryId, newContent)
             await loadTodos()
             await loadCompletedTodos()
+            await loadIncompleteTodos()
           }}
           onDirectTagAdd={handleDirectTagAdd}
           onDirectTagRemove={handleDirectTagRemove}
@@ -465,10 +466,12 @@ function App() {
             await handleDirectUpdateReply(replyId, newContent)
             await loadTodos()
             await loadCompletedTodos()
+            await loadIncompleteTodos()
           }}
           onToggleReplyArchive={async (replyId, entryId) => {
             await handleToggleReplyArchive(replyId, entryId)
             await loadTodos()
+            await loadIncompleteTodos()
           }}
         />
       </div>
