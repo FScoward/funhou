@@ -256,13 +256,18 @@ fn extract_text_content(content: &Option<serde_json::Value>) -> Option<String> {
 /// Launch Claude Code with specified working directory and optional prompt
 #[tauri::command]
 pub fn launch_claude_code(cwd: String, prompt: Option<String>) -> Result<(), String> {
-    let mut cmd = Command::new("claude");
+    // Build the claude command with arguments
+    let claude_cmd = if let Some(p) = prompt {
+        // Escape single quotes in the prompt for shell
+        let escaped_prompt = p.replace("'", "'\\''");
+        format!("cd '{}' && claude -p '{}'", cwd.replace("'", "'\\''"), escaped_prompt)
+    } else {
+        format!("cd '{}' && claude", cwd.replace("'", "'\\''"))
+    };
 
-    cmd.current_dir(&cwd);
-
-    if let Some(p) = prompt {
-        cmd.arg("-p").arg(p);
-    }
+    // Use login shell to inherit user's PATH (including claude command)
+    let mut cmd = Command::new("/bin/zsh");
+    cmd.arg("-l").arg("-c").arg(&claude_cmd);
 
     // Fire and forget - spawn without waiting
     cmd.spawn().map_err(|e| format!("Failed to launch Claude Code: {}", e))?;
@@ -278,14 +283,20 @@ pub fn resume_claude_code(
     cwd: String,
     prompt: Option<String>,
 ) -> Result<(), String> {
-    let mut cmd = Command::new("claude");
+    // Build the claude command with arguments
+    let escaped_cwd = cwd.replace("'", "'\\''");
+    let escaped_session_id = session_id.replace("'", "'\\''");
 
-    cmd.current_dir(&cwd);
-    cmd.arg("--resume").arg(&session_id);
+    let claude_cmd = if let Some(p) = prompt {
+        let escaped_prompt = p.replace("'", "'\\''");
+        format!("cd '{}' && claude --resume '{}' -p '{}'", escaped_cwd, escaped_session_id, escaped_prompt)
+    } else {
+        format!("cd '{}' && claude --resume '{}'", escaped_cwd, escaped_session_id)
+    };
 
-    if let Some(p) = prompt {
-        cmd.arg("-p").arg(p);
-    }
+    // Use login shell to inherit user's PATH (including claude command)
+    let mut cmd = Command::new("/bin/zsh");
+    cmd.arg("-l").arg("-c").arg(&claude_cmd);
 
     // Spawn the process
     let mut child = cmd.spawn().map_err(|e| format!("Failed to resume Claude Code session: {}", e))?;

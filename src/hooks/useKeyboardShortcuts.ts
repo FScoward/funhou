@@ -17,8 +17,9 @@ export function useKeyboardShortcuts({
 }: UseKeyboardShortcutsProps) {
   useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
-      // textareaにフォーカスがある場合はスキップ（各CustomInputで処理する）
-      if (document.activeElement?.tagName === 'TEXTAREA') {
+      // textareaまたはinputにフォーカスがある場合はスキップ（各入力要素で処理する）
+      if (document.activeElement?.tagName === 'TEXTAREA' ||
+          document.activeElement?.tagName === 'INPUT') {
         return
       }
 
