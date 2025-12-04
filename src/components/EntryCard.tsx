@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Trash2, X, Pin, FileCode, Type, Archive, Terminal, FileDown, Link } from 'lucide-react'
+import { Trash2, X, Pin, FileCode, Type, Archive, Terminal, FileDown, Link, Loader2 } from 'lucide-react'
 import CustomInput from '@/components/CustomInput'
 import { TagBadge } from '@/components/TagBadge'
 import { TagSelector } from '@/components/TagSelector'
@@ -55,6 +55,8 @@ interface EntryCardProps {
   onDirectTagRemove: (tag: string) => void
   onImportAsReply?: (entryId: number, content: string) => void
   onLinkClaudeSession?: (entryId: number, sessionId: string, cwd: string, projectPath: string) => void
+  runningSessionIds?: Set<string>
+  onSessionStart?: (sessionId: string) => void
 }
 
 export function EntryCard({
@@ -100,6 +102,8 @@ export function EntryCard({
   onDirectTagRemove,
   onImportAsReply,
   onLinkClaudeSession,
+  runningSessionIds = new Set(),
+  onSessionStart,
 }: EntryCardProps) {
   const [showMarkdown, setShowMarkdown] = useState(true)
 
@@ -119,8 +123,17 @@ export function EntryCard({
     )
   }
 
+  // 実行中かどうか
+  const isRunning = claudeSessionId ? runningSessionIds.has(claudeSessionId) : false
+
   return (
-    <div className={`entry-card ${pinned ? 'pinned' : ''}`}>
+    <div className={`entry-card ${pinned ? 'pinned' : ''} ${isRunning ? 'running' : ''}`}>
+      {isRunning && (
+        <div className="running-badge">
+          <Loader2 size={12} className="running-spinner" />
+          実行中
+        </div>
+      )}
       <button
         className="delete-button"
         onClick={() => onDelete(id)}
@@ -315,10 +328,12 @@ export function EntryCard({
             additionalButtons={
               claudeSessionId && claudeCwd && (
                 <button
-                  className="claude-resume-button-inline"
+                  className={`claude-resume-button-inline ${isRunning ? 'running' : ''}`}
                   onClick={async () => {
+                    if (isRunning) return
                     try {
                       const prompt = replyContent.trim() || undefined
+                      onSessionStart?.(claudeSessionId)
                       await resumeClaudeCode(claudeSessionId, claudeCwd, prompt)
                       if (prompt) {
                         onAddReply(id) // 返信内容がある場合のみ追加
@@ -327,10 +342,20 @@ export function EntryCard({
                       console.error('Failed to resume Claude Code session:', error)
                     }
                   }}
-                  title="セッションを再開（返信内容があればプロンプトとして使用）"
+                  title={isRunning ? "セッション実行中" : "セッションを再開（返信内容があればプロンプトとして使用）"}
+                  disabled={isRunning}
                 >
-                  <Terminal size={16} style={{ display: 'inline-block', marginRight: '4px' }} />
-                  セッション続行
+                  {isRunning ? (
+                    <>
+                      <Loader2 size={16} className="running-spinner" style={{ display: 'inline-block', marginRight: '4px' }} />
+                      実行中...
+                    </>
+                  ) : (
+                    <>
+                      <Terminal size={16} style={{ display: 'inline-block', marginRight: '4px' }} />
+                      セッション続行
+                    </>
+                  )}
                 </button>
               )
             }

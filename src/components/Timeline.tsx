@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { TimelineItem, Tag } from '@/types'
 import { TimelineItemComponent } from './TimelineItemComponent'
 import { groupTimelineItemsByDate } from '@/utils/timelineUtils'
@@ -50,6 +51,8 @@ interface TimelineProps {
   onToggleReplyArchive: (replyId: number, entryId: number) => void
   onImportAsReply?: (entryId: number, content: string) => void
   onLinkClaudeSession?: (entryId: number, sessionId: string, cwd: string, projectPath: string) => void
+  runningSessionIds?: Set<string>
+  onSessionStart?: (sessionId: string) => void
 }
 
 export function Timeline({
@@ -100,9 +103,26 @@ export function Timeline({
   onToggleReplyArchive,
   onImportAsReply,
   onLinkClaudeSession,
+  runningSessionIds = new Set(),
+  onSessionStart,
 }: TimelineProps) {
   // タグフィルタリング時は日付別にグループ化
   const groupedItems = isTagFiltering ? groupTimelineItemsByDate(timelineItems) : null
+
+  // 各エントリーの最新返信IDを計算（実行中バッジ表示用）
+  const latestReplyIdByEntryId = useMemo(() => {
+    const map = new Map<number, number>()
+    // タイムラインは時系列降順でソートされているので、
+    // 各entryIdに対して最初に見つかった返信が最新
+    for (const item of timelineItems) {
+      if (item.type === 'reply' && item.entryId && item.replyId) {
+        if (!map.has(item.entryId)) {
+          map.set(item.entryId, item.replyId)
+        }
+      }
+    }
+    return map
+  }, [timelineItems])
 
   return (
     <div className="timeline">
@@ -168,6 +188,9 @@ export function Timeline({
                   onToggleReplyArchive={onToggleReplyArchive}
                   onImportAsReply={onImportAsReply}
                   onLinkClaudeSession={onLinkClaudeSession}
+                  runningSessionIds={runningSessionIds}
+                  onSessionStart={onSessionStart}
+                  latestReplyIdByEntryId={latestReplyIdByEntryId}
                 />
               ))}
             </div>
@@ -226,6 +249,9 @@ export function Timeline({
               onToggleReplyArchive={onToggleReplyArchive}
               onImportAsReply={onImportAsReply}
               onLinkClaudeSession={onLinkClaudeSession}
+              runningSessionIds={runningSessionIds}
+              onSessionStart={onSessionStart}
+              latestReplyIdByEntryId={latestReplyIdByEntryId}
             />
           ))}
         </div>

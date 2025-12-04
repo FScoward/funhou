@@ -62,7 +62,10 @@ export function useReplies({ database, timelineItems, setTimelineItems, loadAvai
           tags: savedTags,
           parentEntry: parentEntry ? {
             id: parentEntry.id,
-            content: parentEntry.content
+            content: parentEntry.content,
+            claudeSessionId: parentEntry.claudeSessionId,
+            claudeCwd: parentEntry.claudeCwd,
+            claudeProjectPath: parentEntry.claudeProjectPath
           } : undefined
         }
 
@@ -129,7 +132,10 @@ export function useReplies({ database, timelineItems, setTimelineItems, loadAvai
           tags: [],
           parentEntry: parentEntry ? {
             id: parentEntry.id,
-            content: parentEntry.content
+            content: parentEntry.content,
+            claudeSessionId: parentEntry.claudeSessionId,
+            claudeCwd: parentEntry.claudeCwd,
+            claudeProjectPath: parentEntry.claudeProjectPath
           } : undefined
         }
 

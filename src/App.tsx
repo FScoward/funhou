@@ -36,6 +36,12 @@ function App() {
   const [searchText, setSearchText] = useState('')
   const [ollamaEnabled, setOllamaEnabled] = useState(false)
   const [ollamaModel, setOllamaModel] = useState('gemma3:4b')
+  const [runningSessionIds, setRunningSessionIds] = useState<Set<string>>(new Set())
+
+  // セッション開始時のコールバック
+  const handleSessionStart = (sessionId: string) => {
+    setRunningSessionIds(prev => new Set(prev).add(sessionId))
+  }
 
   // InputSectionのref（マイクトグル用）
   const inputSectionRef = useRef<CustomInputRef>(null)
@@ -95,12 +101,12 @@ function App() {
     const setupClaudeListener = async () => {
       const unlisten = await onClaudeSessionFinished((payload) => {
         console.log('Claude session finished:', payload)
-        // TODO: トースト通知などに置き換える
-        if (payload.success) {
-          console.log(`Claude Code session ${payload.session_id} completed successfully`)
-        } else {
-          console.log(`Claude Code session ${payload.session_id} finished with exit code: ${payload.exit_code}`)
-        }
+        // 実行中リストから削除
+        setRunningSessionIds(prev => {
+          const next = new Set(prev)
+          next.delete(payload.session_id)
+          return next
+        })
       })
       return unlisten
     }
@@ -513,6 +519,8 @@ function App() {
             await loadIncompleteTodos()
           }}
           onLinkClaudeSession={handleLinkClaudeSession}
+          runningSessionIds={runningSessionIds}
+          onSessionStart={handleSessionStart}
         />
       </div>
 
