@@ -51,6 +51,14 @@ export interface CompletedTodoItem {
   entryTimestamp: string // エントリーのタイムスタンプ（表示用）
 }
 
+export interface IncompleteTodoItem {
+  entryId: number        // 元のエントリーID（返信の場合は親エントリーID）
+  replyId?: number       // 返信のID（返信の場合のみ）
+  lineIndex: number      // エントリー/返信内の行番号（1始まり）
+  text: string           // タスクのテキスト部分
+  timestamp: string      // エントリー/返信のタイムスタンプ（日付別グルーピング用）
+}
+
 export interface TimelineItem {
   type: 'entry' | 'reply'
   id: number
