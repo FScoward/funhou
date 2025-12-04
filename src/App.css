@@ -2461,3 +2461,271 @@ textarea::placeholder {
   background: rgba(0, 0, 0, 0.3);
   background-clip: padding-box;
 }
+
+/* ========================================
+   Incomplete Tasks Sidebar - 未完了タスクサイドバー
+   ======================================== */
+
+/* トグルボタン - 完了タスクボタンの下に配置 - Liquid Glass Style */
+.incomplete-sidebar-toggle-fab {
+  position: fixed;
+  top: 14.5rem;
+  right: 1rem;
+  width: 40px;
+  height: 40px;
+  border-radius: 14px;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.4) 0%,
+    rgba(255, 255, 255, 0.1) 50%,
+    rgba(255, 255, 255, 0.2) 100%
+  );
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  color: var(--incomplete-primary, rgba(59, 130, 246, 0.9));
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.1),
+    0 1px 3px rgba(0, 0, 0, 0.08),
+    inset 0 1px 1px rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 999;
+}
+
+.incomplete-sidebar-toggle-fab:hover {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.5) 0%,
+    rgba(255, 255, 255, 0.2) 50%,
+    rgba(255, 255, 255, 0.3) 100%
+  );
+  transform: scale(1.08);
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.15),
+    0 2px 6px rgba(0, 0, 0, 0.1),
+    0 0 16px var(--incomplete-primary-light, rgba(59, 130, 246, 0.3)),
+    inset 0 1px 2px rgba(255, 255, 255, 0.6);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.incomplete-sidebar-toggle-fab:active {
+  transform: scale(0.95);
+}
+
+.incomplete-sidebar-toggle-count {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: linear-gradient(135deg, var(--incomplete-primary, #3B82F6), color-mix(in srgb, var(--incomplete-primary, #3B82F6), black 20%));
+  color: white;
+  font-size: 0.65rem;
+  font-weight: 700;
+  min-width: 18px;
+  height: 18px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* サイドバー本体 */
+.incomplete-sidebar-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 350px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-left: 1px solid var(--glass-border);
+  box-shadow: -8px 0 32px var(--glass-shadow);
+  z-index: 1001;
+  padding: 1.5rem;
+  overflow-y: auto;
+  transition: transform 0.3s ease-in-out;
+  border-radius: 24px 0 0 24px;
+}
+
+.incomplete-sidebar-drawer.open {
+  transform: translateX(0);
+}
+
+.incomplete-sidebar-drawer.closed {
+  transform: translateX(100%);
+  pointer-events: none;
+}
+
+/* オーバーレイ */
+.incomplete-overlay {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+/* ヘッダー */
+.incomplete-sidebar-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  padding-bottom: 0.75rem;
+  padding-right: 2.5rem;
+  border-bottom: 2px solid var(--incomplete-primary, #3B82F6);
+  color: var(--incomplete-primary, #3B82F6);
+}
+
+.incomplete-sidebar-header h2 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0;
+  flex: 1;
+}
+
+.incomplete-count {
+  background: linear-gradient(135deg, var(--incomplete-primary, #3B82F6), color-mix(in srgb, var(--incomplete-primary, #3B82F6), black 15%));
+  color: white;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.25rem 0.6rem;
+  border-radius: 14px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+/* 空の状態 */
+.incomplete-sidebar-empty {
+  color: #999;
+  font-size: 0.85rem;
+  text-align: center;
+  padding: 3rem 1rem;
+}
+
+/* リスト */
+.incomplete-sidebar-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* 日付グループ */
+.incomplete-date-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.incomplete-date-header {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--incomplete-primary, #3B82F6);
+  padding: 0.25rem 0;
+  border-bottom: 1px solid var(--incomplete-primary-light, rgba(59, 130, 246, 0.2));
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.incomplete-date-count {
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: var(--text-secondary, #888);
+}
+
+/* アイテム - Liquid Glass Style */
+.incomplete-sidebar-item {
+  background: linear-gradient(
+    135deg,
+    var(--incomplete-bg, rgba(239, 246, 255, 0.9)) 0%,
+    color-mix(in srgb, var(--incomplete-bg, rgba(239, 246, 255, 0.9)), transparent 20%) 100%
+  );
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid var(--incomplete-primary, #3B82F6);
+  border-radius: 16px;
+  padding: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  box-shadow:
+    0 2px 8px rgba(0, 0, 0, 0.06),
+    inset 0 1px 2px rgba(255, 255, 255, 0.4);
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.incomplete-sidebar-item:hover {
+  background: linear-gradient(
+    135deg,
+    var(--incomplete-bg-hover, rgba(219, 234, 254, 0.95)) 0%,
+    color-mix(in srgb, var(--incomplete-bg-hover, rgba(219, 234, 254, 0.95)), transparent 10%) 100%
+  );
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.1),
+    0 0 16px var(--incomplete-primary-light, rgba(59, 130, 246, 0.2)),
+    inset 0 1px 2px rgba(255, 255, 255, 0.5);
+  transform: translateY(-2px);
+  border-color: var(--incomplete-primary, #3B82F6);
+}
+
+.incomplete-sidebar-item:active {
+  transform: translateY(0);
+}
+
+.incomplete-item-checkbox {
+  background: transparent;
+  border: none;
+  color: var(--incomplete-primary, #3B82F6);
+  cursor: pointer;
+  padding: 0.2rem;
+  border-radius: 6px;
+  transition: all 0.2s;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.incomplete-item-checkbox:hover {
+  background: var(--incomplete-primary-light, rgba(59, 130, 246, 0.15));
+  transform: scale(1.1);
+}
+
+.incomplete-item-text {
+  font-size: var(--font-size, 0.85rem);
+  color: var(--incomplete-text, #555);
+  line-height: 1.4;
+  word-break: break-word;
+  font-family: var(--font-family, inherit);
+  flex: 1;
+}
+
+.incomplete-item-jump {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  background: transparent;
+  border: none;
+  color: var(--incomplete-text, #999);
+  cursor: pointer;
+  padding: 0.3rem;
+  border-radius: 6px;
+  transition: all 0.2s;
+  opacity: 0.6;
+}
+
+.incomplete-item-jump:hover {
+  color: var(--incomplete-primary, #3B82F6);
+  background: var(--incomplete-primary-light, rgba(59, 130, 246, 0.1));
+  opacity: 1;
+}
+
+/* スクロールバー */
+.incomplete-sidebar-drawer:hover::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.3);
+  background-clip: padding-box;
+}

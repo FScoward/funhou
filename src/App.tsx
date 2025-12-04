@@ -20,8 +20,10 @@ import { useEntries } from '@/hooks/useEntries'
 import { useReplies } from '@/hooks/useReplies'
 import { useTodos } from '@/hooks/useTodos'
 import { useCompletedTodos } from '@/hooks/useCompletedTodos'
+import { useIncompleteTodos } from '@/hooks/useIncompleteTodos'
 import { CurrentActivitySection } from '@/components/CurrentActivitySection'
 import { CompletedTasksSidebar } from '@/components/CompletedTasksSidebar'
+import { IncompleteTasksSidebar } from '@/components/IncompleteTasksSidebar'
 import { getSettings, applyFont, applyFontSize } from '@/lib/settings'
 import { applyTheme, ThemeVariant } from '@/lib/themes'
 
@@ -29,6 +31,7 @@ function App() {
   const [settingsSidebarOpen, setSettingsSidebarOpen] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [doneSidebarOpen, setDoneSidebarOpen] = useState(false)
+  const [incompleteSidebarOpen, setIncompleteSidebarOpen] = useState(false)
   const [searchText, setSearchText] = useState('')
   const [ollamaEnabled, setOllamaEnabled] = useState(false)
   const [ollamaModel, setOllamaModel] = useState('gemma3:4b')
@@ -157,6 +160,14 @@ function App() {
     loadCompletedTodos,
   } = useCompletedTodos({ database, selectedDate })
 
+  // 未完了タスク
+  const {
+    incompleteTodos,
+    isLoading: isIncompleteLoading,
+    loadIncompleteTodos,
+    updateToDoingStatus,
+  } = useIncompleteTodos({ database })
+
   // TODO項目の読み込み
   useEffect(() => {
     if (database) {
@@ -170,6 +181,13 @@ function App() {
       loadCompletedTodos()
     }
   }, [database, selectedDate, loadCompletedTodos])
+
+  // 未完了タスクの読み込み
+  useEffect(() => {
+    if (database) {
+      loadIncompleteTodos()
+    }
+  }, [database, loadIncompleteTodos])
 
   // エントリー
   const {
@@ -295,7 +313,10 @@ function App() {
           ref={inputSectionRef}
           currentEntry={currentEntry}
           onEntryChange={setCurrentEntry}
-          onSubmit={handleAddEntry}
+          onSubmit={async () => {
+            await handleAddEntry()
+            await loadIncompleteTodos()
+          }}
           onKeyDown={handleKeyDown}
           availableTags={availableTags}
           selectedTags={manualTags}
@@ -425,7 +446,10 @@ function App() {
           onReplyTagRemove={(tag) => {
             setReplyManualTags(replyManualTags.filter(t => t !== tag))
           }}
-          onAddReply={handleAddReply}
+          onAddReply={async (entryId) => {
+            await handleAddReply(entryId)
+            await loadIncompleteTodos()
+          }}
           onToggleReplies={toggleEntryReplies}
           onScrollToEntry={scrollToEntry}
           onTogglePin={handleTogglePin}
@@ -462,6 +486,21 @@ function App() {
         onItemClick={scrollToEntry}
         isOpen={doneSidebarOpen}
         onToggle={() => setDoneSidebarOpen(!doneSidebarOpen)}
+      />
+
+      <IncompleteTasksSidebar
+        incompleteTodos={incompleteTodos}
+        isLoading={isIncompleteLoading}
+        onItemClick={scrollToEntry}
+        onStatusChange={async (todo) => {
+          const success = await updateToDoingStatus(todo)
+          if (success) {
+            await loadIncompleteTodos()
+            await loadTodos()
+          }
+        }}
+        isOpen={incompleteSidebarOpen}
+        onToggle={() => setIncompleteSidebarOpen(!incompleteSidebarOpen)}
       />
 
       <DeleteConfirmDialogs
