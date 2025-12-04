@@ -317,7 +317,14 @@ function App() {
             await handleAddEntry()
             await loadIncompleteTodos()
           }}
-          onKeyDown={handleKeyDown}
+          onKeyDown={async (e) => {
+            handleKeyDown(e)
+            // Cmd+Enter で送信した場合も未完了タスクを再読み込み
+            if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+              // handleKeyDown内でhandleAddEntryが呼ばれるので少し待ってから再読み込み
+              setTimeout(() => loadIncompleteTodos(), 100)
+            }
+          }}
           availableTags={availableTags}
           selectedTags={manualTags}
           onTagAdd={(tag) => {
