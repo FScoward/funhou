@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
+use tauri::Emitter;
 
 /// Claude Code session log entry
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -50,6 +51,14 @@ pub struct ProjectInfo {
     pub name: String,
     pub path: String,
     pub session_count: usize,
+}
+
+/// Claude session finished event payload
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ClaudeSessionFinishedPayload {
+    pub session_id: String,
+    pub success: bool,
+    pub exit_code: Option<i32>,
 }
 
 /// Get Claude logs directory path
@@ -264,7 +273,12 @@ pub fn launch_claude_code(cwd: String, prompt: Option<String>) -> Result<(), Str
 
 /// Resume a Claude Code session with optional prompt
 #[tauri::command]
-pub fn resume_claude_code(session_id: String, cwd: String, prompt: Option<String>) -> Result<(), String> {
+pub fn resume_claude_code(
+    app: tauri::AppHandle,
+    session_id: String,
+    cwd: String,
+    prompt: Option<String>,
+) -> Result<(), String> {
     let mut cmd = Command::new("claude");
 
     cmd.current_dir(&cwd);
@@ -274,8 +288,34 @@ pub fn resume_claude_code(session_id: String, cwd: String, prompt: Option<String
         cmd.arg("-p").arg(p);
     }
 
-    // Fire and forget - spawn without waiting
-    cmd.spawn().map_err(|e| format!("Failed to resume Claude Code session: {}", e))?;
+    // Spawn the process
+    let mut child = cmd.spawn().map_err(|e| format!("Failed to resume Claude Code session: {}", e))?;
+
+    // Clone session_id for the thread
+    let session_id_clone = session_id.clone();
+
+    // Monitor process in a separate thread
+    std::thread::spawn(move || {
+        match child.wait() {
+            Ok(status) => {
+                let payload = ClaudeSessionFinishedPayload {
+                    session_id: session_id_clone,
+                    success: status.success(),
+                    exit_code: status.code(),
+                };
+                let _ = app.emit("claude-session-finished", payload);
+            }
+            Err(e) => {
+                eprintln!("Failed to wait for Claude Code process: {}", e);
+                let payload = ClaudeSessionFinishedPayload {
+                    session_id: session_id_clone,
+                    success: false,
+                    exit_code: None,
+                };
+                let _ = app.emit("claude-session-finished", payload);
+            }
+        }
+    });
 
     Ok(())
 }

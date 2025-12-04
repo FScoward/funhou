@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, useRef } from 'react'
 import { useClaudeLogs } from '../hooks/useClaudeLogs'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
@@ -9,7 +9,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from './ui/dialog'
-import { ProjectInfo, SessionSummary } from '../lib/claudeLogs'
+import { ProjectInfo, SessionSummary, onClaudeSessionFinished } from '../lib/claudeLogs'
 
 interface ClaudeLogImporterProps {
   onImport: (content: string) => void
@@ -36,6 +36,7 @@ export function ClaudeLogImporter({ onImport, trigger, linkedSessionId, linkedPr
   const [view, setView] = useState<'projects' | 'sessions' | 'messages'>('projects')
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedMessageIndices, setSelectedMessageIndices] = useState<Set<number>>(new Set())
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
 
   const filteredProjects = useMemo(() => {
     if (!searchQuery.trim()) return projects
@@ -68,7 +69,7 @@ export function ClaudeLogImporter({ onImport, trigger, linkedSessionId, linkedPr
     }
   }, [open, fetchProjects, fetchMessages, hasLinkedSession, linkedProjectPath, linkedSessionId])
 
-  // メッセージビューでポーリング
+  // Claude Codeセッション終了時にメッセージを再読み込み（スクロール位置を保持）
   useEffect(() => {
     if (!open || view !== 'messages') return
 
@@ -77,11 +78,28 @@ export function ClaudeLogImporter({ onImport, trigger, linkedSessionId, linkedPr
 
     if (!projectPath || !sessionId) return
 
-    const intervalId = setInterval(() => {
-      fetchMessages(projectPath, sessionId)
-    }, 3000) // 3秒間隔
+    const setupListener = async () => {
+      const unlisten = await onClaudeSessionFinished(async () => {
+        // スクロール位置を保存
+        const scrollTop = scrollContainerRef.current?.scrollTop ?? 0
 
-    return () => clearInterval(intervalId)
+        await fetchMessages(projectPath, sessionId)
+
+        // スクロール位置を復元（DOMが更新された後に実行）
+        requestAnimationFrame(() => {
+          if (scrollContainerRef.current) {
+            scrollContainerRef.current.scrollTop = scrollTop
+          }
+        })
+      })
+      return unlisten
+    }
+
+    const unlistenPromise = setupListener()
+
+    return () => {
+      unlistenPromise.then(unlisten => unlisten())
+    }
   }, [open, view, hasLinkedSession, linkedProjectPath, linkedSessionId, selectedSession, fetchMessages])
 
   const handleProjectSelect = (project: ProjectInfo) => {
@@ -181,7 +199,7 @@ export function ClaudeLogImporter({ onImport, trigger, linkedSessionId, linkedPr
           </DialogTitle>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto">
+        <div ref={scrollContainerRef} className="flex-1 overflow-y-auto">
           {loading && <div className="p-4 text-center text-gray-500">読み込み中...</div>}
           {error && <div className="p-4 text-center text-red-500">{error}</div>}
 

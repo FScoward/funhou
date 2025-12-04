@@ -1,4 +1,5 @@
 import { invoke } from '@tauri-apps/api/core'
+import { listen, UnlistenFn } from '@tauri-apps/api/event'
 
 export interface ProjectInfo {
   name: string
@@ -47,4 +48,20 @@ export async function resumeClaudeCode(
   prompt?: string
 ): Promise<void> {
   return invoke<void>('resume_claude_code', { sessionId, cwd, prompt })
+}
+
+// Event types
+export interface ClaudeSessionFinishedPayload {
+  session_id: string
+  success: boolean
+  exit_code: number | null
+}
+
+// Listen for Claude session finished events
+export function onClaudeSessionFinished(
+  callback: (payload: ClaudeSessionFinishedPayload) => void
+): Promise<UnlistenFn> {
+  return listen<ClaudeSessionFinishedPayload>('claude-session-finished', (event) => {
+    callback(event.payload)
+  })
 }

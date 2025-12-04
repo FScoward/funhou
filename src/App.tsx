@@ -26,6 +26,7 @@ import { CompletedTasksSidebar } from '@/components/CompletedTasksSidebar'
 import { IncompleteTasksSidebar } from '@/components/IncompleteTasksSidebar'
 import { getSettings, applyFont, applyFontSize } from '@/lib/settings'
 import { applyTheme, ThemeVariant } from '@/lib/themes'
+import { onClaudeSessionFinished } from '@/lib/claudeLogs'
 
 function App() {
   const [settingsSidebarOpen, setSettingsSidebarOpen] = useState(false)
@@ -83,6 +84,28 @@ function App() {
     }
 
     const unlistenPromise = setupMoveListener()
+
+    return () => {
+      unlistenPromise.then(unlisten => unlisten())
+    }
+  }, [])
+
+  // Claude Codeセッション終了イベントを監視
+  useEffect(() => {
+    const setupClaudeListener = async () => {
+      const unlisten = await onClaudeSessionFinished((payload) => {
+        console.log('Claude session finished:', payload)
+        // TODO: トースト通知などに置き換える
+        if (payload.success) {
+          console.log(`Claude Code session ${payload.session_id} completed successfully`)
+        } else {
+          console.log(`Claude Code session ${payload.session_id} finished with exit code: ${payload.exit_code}`)
+        }
+      })
+      return unlisten
+    }
+
+    const unlistenPromise = setupClaudeListener()
 
     return () => {
       unlistenPromise.then(unlisten => unlisten())
