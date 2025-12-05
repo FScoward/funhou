@@ -22,6 +22,7 @@ export function WidgetTerminalDialog() {
       onOpenChange={setDialogOpen}
       linkedCwd={activeSession.cwd}
       linkedSessionId={activeSession.claudeSessionId ?? null}
+      fromWidget={true}
     />
   )
 }

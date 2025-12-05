@@ -20,6 +20,8 @@ interface ClaudeTerminalDialogProps {
   linkedSessionId?: string | null
   /** 紐付けられた作業ディレクトリ */
   linkedCwd?: string | null
+  /** Widgetから開いた場合はtrue（自動再接続を許可） */
+  fromWidget?: boolean
 }
 
 export function ClaudeTerminalDialog({
@@ -28,6 +30,7 @@ export function ClaudeTerminalDialog({
   onOpenChange: controlledOnOpenChange,
   linkedSessionId,
   linkedCwd,
+  fromWidget = false,
 }: ClaudeTerminalDialogProps) {
   const [internalOpen, setInternalOpen] = useState(false)
 
@@ -75,7 +78,11 @@ export function ClaudeTerminalDialog({
   }, [open, setDialogOpen, isControlled])
 
   // activeSessionId が存在する場合、再接続
+  // ただし、Widgetから開いた場合のみ再接続を許可（EntryCardからは新規セッション作成）
   useEffect(() => {
+    // Widgetから開いた場合のみ自動再接続
+    if (!fromWidget) return
+
     if (open && activeSessionId && !contextSessionId) {
       const session = getSession(activeSessionId)
       if (session && session.status !== 'stopped') {
@@ -84,7 +91,7 @@ export function ClaudeTerminalDialog({
         setShowTerminal(true)
       }
     }
-  }, [open, activeSessionId, contextSessionId, getSession])
+  }, [open, activeSessionId, contextSessionId, getSession, fromWidget])
 
   const handleLaunch = async () => {
     if (!cwd.trim()) return
