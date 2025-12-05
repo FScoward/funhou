@@ -190,6 +190,7 @@ fn main() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_sql::Builder::default().build())
         .plugin(tauri_plugin_pty::init())
+        .plugin(tauri_plugin_dialog::init())
         .manage(AppState {
             autohide_manager: Mutex::new(AutohideManager::new()),
             speech_manager: Mutex::new(SpeechManager::new()),

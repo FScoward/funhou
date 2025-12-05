@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
+import Database from '@tauri-apps/plugin-sql'
 import { ClaudeTerminal, type ClaudeTerminalHandle } from './ClaudeTerminal'
+import { CwdSelector } from './CwdSelector'
 import { Button } from './ui/button'
 import {
   Dialog,
@@ -11,6 +13,7 @@ import {
 import { Input } from './ui/input'
 import { Label } from './ui/label'
 import { useClaudeTerminalSession } from '../contexts/ClaudeTerminalSessionContext'
+import { getSettings } from '../lib/settings'
 
 interface ClaudeTerminalDialogProps {
   trigger?: React.ReactNode
@@ -46,6 +49,7 @@ export function ClaudeTerminalDialog({
   const [showTerminal, setShowTerminal] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isCreatingSession, setIsCreatingSession] = useState(false)
+  const [defaultClaudeCwd, setDefaultClaudeCwd] = useState<string | undefined>(undefined)
   const terminalRef = useRef<ClaudeTerminalHandle>(null)
 
   // Context を使用
@@ -63,6 +67,22 @@ export function ClaudeTerminalDialog({
 
   // セッションが紐付けられている場合は自動的にターミナルを表示
   const hasLinkedSession = linkedSessionId && linkedCwd
+
+  // デフォルトcwd設定を読み込み
+  useEffect(() => {
+    async function loadDefaultCwd() {
+      try {
+        const db = await Database.load('sqlite:funhou.db')
+        const settings = await getSettings(db)
+        if (settings.defaultClaudeCwd) {
+          setDefaultClaudeCwd(settings.defaultClaudeCwd)
+        }
+      } catch (error) {
+        console.error('デフォルトcwd設定の読み込みに失敗しました:', error)
+      }
+    }
+    loadDefaultCwd()
+  }, [])
 
   // エントリから新規で開いた時は状態をリセット
   useEffect(() => {
@@ -231,16 +251,10 @@ export function ClaudeTerminalDialog({
 
             <div className="space-y-2">
               <Label htmlFor="cwd">作業ディレクトリ</Label>
-              <Input
-                id="cwd"
-                placeholder="/path/to/project"
+              <CwdSelector
                 value={cwd}
-                onChange={(e) => setCwd(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && cwd.trim() && !isCreatingSession) {
-                    handleLaunch()
-                  }
-                }}
+                onChange={setCwd}
+                defaultCwd={defaultClaudeCwd}
                 disabled={isCreatingSession}
               />
             </div>

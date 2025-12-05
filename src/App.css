@@ -3734,3 +3734,44 @@ textarea::placeholder {
     background: rgba(167, 139, 250, 0.05);
   }
 }
+
+/* ===========================================
+   CwdSelector Component Styles
+   =========================================== */
+
+.cwd-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.cwd-selector-input-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.cwd-selector-dropdown-trigger {
+  justify-content: flex-start;
+  width: auto;
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+  color: var(--muted-foreground);
+}
+
+.cwd-selector-dropdown-trigger:hover {
+  color: var(--foreground);
+}
+
+.cwd-selector-dropdown {
+  min-width: 300px;
+  max-width: 400px;
+}
+
+.cwd-selector-dropdown [role="menuitem"] {
+  font-size: 0.8rem;
+  padding: 0.5rem 0.75rem;
+}
+
+.cwd-selector-dropdown [role="menuitem"] .truncate {
+  max-width: 250px;
+}

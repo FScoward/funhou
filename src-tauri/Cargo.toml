@@ -22,6 +22,9 @@ chrono = "0.4"
 # PTY (pseudo-terminal) support for interactive terminal
 tauri-plugin-pty = "0.1"
 
+# Dialog plugin for folder picker
+tauri-plugin-dialog = "2"
+
 # Autohide feature dependencies
 core-graphics = "0.23"
 core-foundation = "0.9"

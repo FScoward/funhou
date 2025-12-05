@@ -75,7 +75,8 @@
             "sql:allow-select",
             "sql:default",
             "pty:allow-spawn",
-            "pty:default"
+            "pty:default",
+            "dialog:allow-open"
           ]
         }
       ]
