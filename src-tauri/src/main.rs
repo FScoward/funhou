@@ -126,37 +126,6 @@ fn toggle_main_window(app: tauri::AppHandle) -> Result<(), String> {
     Ok(())
 }
 
-/// Set main window Y position (for tab drag sync)
-#[tauri::command]
-fn set_main_window_y(app: tauri::AppHandle, y: i32) -> Result<(), String> {
-    let main_window = app
-        .get_webview_window("main")
-        .ok_or("Main window not found")?;
-
-    let position = main_window
-        .outer_position()
-        .map_err(|e| e.to_string())?;
-
-    main_window
-        .set_position(tauri::PhysicalPosition::new(position.x, y))
-        .map_err(|e| e.to_string())?;
-
-    Ok(())
-}
-
-/// Set tab window Y position (for main window move sync)
-#[tauri::command]
-fn set_tab_window_y(app: tauri::AppHandle, y: i32) -> Result<(), String> {
-    let tab_window = app
-        .get_webview_window("tab")
-        .ok_or("Tab window not found")?;
-
-    tab_window
-        .set_position(tauri::PhysicalPosition::new(0, y))
-        .map_err(|e| e.to_string())?;
-
-    Ok(())
-}
 
 /// Start speech recognition
 #[tauri::command]
@@ -220,20 +189,6 @@ fn main() {
                         (main_y as f64 * scale_factor) as i32,
                     ));
 
-                    // Set tab window size and position
-                    let tab_width = 30; // ホバー時にメインウィンドウに被さるよう広めに
-                    let tab_height = 160; // タブハンドルのサイズに合わせた小さいウィンドウ
-                    if let Some(tab_window) = app.get_webview_window("tab") {
-                        let _ = tab_window.set_size(tauri::PhysicalSize::new(
-                            (tab_width as f64 * scale_factor) as u32,
-                            (tab_height as f64 * scale_factor) as u32,
-                        ));
-                        let _ = tab_window.set_position(tauri::PhysicalPosition::new(
-                            0,
-                            (main_y as f64 * scale_factor) as i32,
-                        ));
-                    }
-
                 }
             }
             Ok(())
@@ -246,8 +201,6 @@ fn main() {
             get_autohide_config,
             is_sidebar_visible,
             toggle_main_window,
-            set_main_window_y,
-            set_tab_window_y,
             start_speech_recognition,
             stop_speech_recognition,
             get_speech_state,
