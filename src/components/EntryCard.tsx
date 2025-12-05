@@ -291,11 +291,11 @@ export function EntryCard({
           <DropdownMenuContent align="start">
             <DropdownMenuItem onSelect={() => setClaudeLaunchOpen(true)}>
               <Terminal size={16} className="mr-2" />
-              Claude Code（自動）
+              Claude Code（oneshot）
             </DropdownMenuItem>
             <DropdownMenuItem onSelect={() => setClaudeTerminalOpen(true)}>
               <Terminal size={16} className="mr-2" />
-              Claude Code（対話）
+              Claude Code（interactive）
             </DropdownMenuItem>
             {onImportAsReply && (
               <DropdownMenuItem onSelect={() => setClaudeImportOpen(true)}>
