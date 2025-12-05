@@ -62,6 +62,16 @@ export function ClaudeTerminalDialog({
   // セッションが紐付けられている場合は自動的にターミナルを表示
   const hasLinkedSession = linkedSessionId && linkedCwd
 
+  // エントリから新規で開いた時は状態をリセット
+  useEffect(() => {
+    if (open && !fromWidget && !hasLinkedSession) {
+      setCwd('')
+      setShowTerminal(false)
+      setContextSessionId(null)
+      setError(null)
+    }
+  }, [open, fromWidget, hasLinkedSession])
+
   useEffect(() => {
     if (open && hasLinkedSession) {
       setCwd(linkedCwd)

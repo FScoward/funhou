@@ -8,6 +8,41 @@ import {
   type ClaudeTerminalSession,
 } from '../lib/claudeTerminal'
 
+// xterm.jsが送信するDevice Attributes (DA)クエリをフィルタリング
+// これらはClaude Codeで処理されずエコーバックされてしまう
+const DA_QUERY_PATTERNS = [
+  /\x1b\[c/g,        // Primary DA query
+  /\x1b\[0c/g,       // Primary DA query (explicit)
+  /\x1b\[>c/g,       // Secondary DA query
+  /\x1b\[>0c/g,      // Secondary DA query (explicit)
+  /\x1b\[=c/g,       // Tertiary DA query
+  /\x1b\[=0c/g,      // Tertiary DA query (explicit)
+]
+
+// DA応答パターン（PTY出力からフィルタリング）
+// Primary DA response: ESC[?Ps;Ps;...c (例: ESC[?1;2c)
+// 分割されて届く場合もあるので、?で始まるパターンも追加
+const DA_RESPONSE_PATTERNS = [
+  /\x1b\[\?[\d;]*c/g,     // 完全なDA応答 (ESC[?1;2c)
+  /\?\d+(?:;\d+)*c/g,     // ESC[が欠けた場合 (?1;2c)
+]
+
+function filterDAQueries(data: string): string {
+  let filtered = data
+  for (const pattern of DA_QUERY_PATTERNS) {
+    filtered = filtered.replace(pattern, '')
+  }
+  return filtered
+}
+
+function filterDAResponses(data: string): string {
+  let filtered = data
+  for (const pattern of DA_RESPONSE_PATTERNS) {
+    filtered = filtered.replace(pattern, '')
+  }
+  return filtered
+}
+
 interface UseClaudeTerminalOptions {
   /** Context モードで使用する場合、セッションID を指定 */
   sessionId?: string
@@ -96,13 +131,15 @@ export function useClaudeTerminal(options?: UseClaudeTerminalOptions) {
       const buffer = options.getSessionOutput(options.sessionId)
       if (buffer.length > 0) {
         console.log('[useClaudeTerminal] Restoring buffer:', buffer.length, 'chunks')
-        buffer.forEach((chunk) => terminal.write(chunk))
+        // DA応答をフィルタリングして復元
+        buffer.forEach((chunk) => terminal.write(filterDAResponses(chunk)))
       }
     }
 
     // 新しい出力を購読
     const unsubscribe = options.subscribeToOutput!(options.sessionId, (data) => {
-      terminal.write(data)
+      // DA応答をフィルタリング
+      terminal.write(filterDAResponses(data))
     })
     unsubscribeRef.current = unsubscribe
 
@@ -113,7 +150,11 @@ export function useClaudeTerminal(options?: UseClaudeTerminalOptions) {
     const sessionId = options.sessionId
     const writeToSession = options.writeToSession!
     terminalDataDisposerRef.current = terminal.onData((data) => {
-      writeToSession(sessionId, data)
+      // DAクエリをフィルタリング（Claude Codeで処理されないため）
+      const filtered = filterDAQueries(data)
+      if (filtered) {
+        writeToSession(sessionId, filtered)
+      }
     })
 
     // PTY のサイズをターミナルに同期
@@ -171,12 +212,17 @@ export function useClaudeTerminal(options?: UseClaudeTerminalOptions) {
 
         // PTY -> Terminal
         ptySession.onData((data) => {
-          terminal.write(data)
+          // DA応答をフィルタリング
+          terminal.write(filterDAResponses(data))
         })
 
         // Terminal -> PTY
         terminal.onData((data) => {
-          ptySession.write(data)
+          // DAクエリをフィルタリング（Claude Codeで処理されないため）
+          const filtered = filterDAQueries(data)
+          if (filtered) {
+            ptySession.write(filtered)
+          }
         })
 
         setSession(ptySession)
@@ -207,12 +253,17 @@ export function useClaudeTerminal(options?: UseClaudeTerminalOptions) {
 
         // PTY -> Terminal
         ptySession.onData((data) => {
-          terminal.write(data)
+          // DA応答をフィルタリング
+          terminal.write(filterDAResponses(data))
         })
 
         // Terminal -> PTY
         terminal.onData((data) => {
-          ptySession.write(data)
+          // DAクエリをフィルタリング（Claude Codeで処理されないため）
+          const filtered = filterDAQueries(data)
+          if (filtered) {
+            ptySession.write(filtered)
+          }
         })
 
         setSession(ptySession)

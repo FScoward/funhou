@@ -13,6 +13,22 @@ import {
 } from '../lib/claudeTerminal'
 import type { IDisposable } from 'tauri-pty'
 
+// DA応答パターン（PTY出力からフィルタリング）
+// Primary DA response: ESC[?Ps;Ps;...c (例: ESC[?1;2c)
+// 分割されて届く場合もあるので、?で始まるパターンも追加
+const DA_RESPONSE_PATTERNS = [
+  /\x1b\[\?[\d;]*c/g,     // 完全なDA応答 (ESC[?1;2c)
+  /\?\d+(?:;\d+)*c/g,     // ESC[が欠けた場合 (?1;2c)
+]
+
+function filterDAResponses(data: string): string {
+  let filtered = data
+  for (const pattern of DA_RESPONSE_PATTERNS) {
+    filtered = filtered.replace(pattern, '')
+  }
+  return filtered
+}
+
 // セッション状態の型定義
 export type SessionStatus = 'initializing' | 'running' | 'waiting_input' | 'stopped' | 'error'
 
@@ -84,6 +100,9 @@ export function ClaudeTerminalSessionProvider({ children }: { children: ReactNod
 
   // 出力データの処理
   const handlePtyData = useCallback((sessionId: string, data: string) => {
+    // DA応答をフィルタリング
+    const filteredData = filterDAResponses(data)
+
     // 既存のタイマーをクリア
     const existingTimer = idleTimersRef.current.get(sessionId)
     if (existingTimer) {
@@ -95,7 +114,7 @@ export function ClaudeTerminalSessionProvider({ children }: { children: ReactNod
       const session = prev.get(sessionId)
       if (!session) return prev
 
-      const newBuffer = [...session.outputBuffer, data]
+      const newBuffer = [...session.outputBuffer, filteredData]
       // バッファサイズ制限
       const trimmedBuffer = newBuffer.length > MAX_BUFFER_SIZE
         ? newBuffer.slice(-MAX_BUFFER_SIZE / 2)
@@ -133,10 +152,10 @@ export function ClaudeTerminalSessionProvider({ children }: { children: ReactNod
 
     idleTimersRef.current.set(sessionId, timer)
 
-    // 購読者に通知
+    // 購読者に通知（フィルタリング済みデータ）
     const subscribers = outputSubscribersRef.current.get(sessionId)
     if (subscribers) {
-      subscribers.forEach((callback) => callback(data))
+      subscribers.forEach((callback) => callback(filteredData))
     }
   }, [])
 
