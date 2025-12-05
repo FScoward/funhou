@@ -14,8 +14,16 @@ tauri-plugin-shell = "2"
 tauri-plugin-sql = { version = "2.1.0", features = ["sqlite"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+uuid = { version = "1", features = ["v4"] }
 font-kit = "0.14"
 dirs = "5"
+chrono = "0.4"
+
+# PTY (pseudo-terminal) support for interactive terminal
+tauri-plugin-pty = "0.1"
+
+# Dialog plugin for folder picker
+tauri-plugin-dialog = "2"
 
 # Autohide feature dependencies
 core-graphics = "0.23"

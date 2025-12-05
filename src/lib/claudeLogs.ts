@@ -5,6 +5,7 @@ export interface ProjectInfo {
   name: string
   path: string
   session_count: number
+  last_updated: string | null
 }
 
 export interface SessionSummary {
@@ -38,8 +39,8 @@ export async function readClaudeSession(
   return invoke<ConversationMessage[]>('read_claude_session', { projectPath, sessionId })
 }
 
-export async function launchClaudeCode(cwd: string, prompt?: string): Promise<void> {
-  return invoke<void>('launch_claude_code', { cwd, prompt })
+export async function launchClaudeCode(cwd: string, prompt?: string): Promise<string> {
+  return invoke<string>('launch_claude_code', { cwd, prompt })
 }
 
 export async function resumeClaudeCode(

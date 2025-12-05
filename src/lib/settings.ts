@@ -13,6 +13,7 @@ export interface Settings {
   theme?: ThemeVariant
   ollamaEnabled?: boolean
   ollamaModel?: string
+  defaultClaudeCwd?: string
 }
 
 export async function getSettings(db: Database): Promise<Settings> {
@@ -31,6 +32,7 @@ export async function getSettings(db: Database): Promise<Settings> {
       theme: 'default',
       ollamaEnabled: false,
       ollamaModel: 'gemma3:4b',
+      defaultClaudeCwd: undefined,
     }
 
     result.forEach((row) => {
@@ -52,6 +54,8 @@ export async function getSettings(db: Database): Promise<Settings> {
         settings.ollamaEnabled = row.value === 'true'
       } else if (row.key === 'ollama_model') {
         settings.ollamaModel = row.value
+      } else if (row.key === 'default_claude_cwd') {
+        settings.defaultClaudeCwd = row.value
       }
     })
 
@@ -68,6 +72,7 @@ export async function getSettings(db: Database): Promise<Settings> {
       theme: 'default',
       ollamaEnabled: false,
       ollamaModel: 'gemma3:4b',
+      defaultClaudeCwd: undefined,
     }
   }
 }
@@ -167,4 +172,11 @@ export async function setOllamaModel(
   value: string
 ): Promise<void> {
   await saveSetting(db, 'ollama_model', value)
+}
+
+export async function setDefaultClaudeCwd(
+  db: Database,
+  value: string
+): Promise<void> {
+  await saveSetting(db, 'default_claude_cwd', value)
 }

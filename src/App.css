@@ -3470,3 +3470,308 @@ textarea::placeholder {
     background: var(--bg-hover-dark, rgba(255, 255, 255, 0.08));
   }
 }
+
+/* ============================================
+   Claude Terminal Sidebar
+   ============================================ */
+
+/* FABトグルボタン */
+.claude-terminal-fab {
+  position: fixed;
+  top: 18rem;
+  right: 1rem;
+  width: auto;
+  height: 40px;
+  padding: 0 12px;
+  border-radius: 14px;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.4) 0%,
+    rgba(255, 255, 255, 0.1) 50%,
+    rgba(255, 255, 255, 0.2) 100%
+  );
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  color: rgba(139, 92, 246, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow:
+    0 4px 16px rgba(0, 0, 0, 0.1),
+    0 1px 3px rgba(0, 0, 0, 0.08),
+    inset 0 1px 1px rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+  z-index: 1000;
+}
+
+.claude-terminal-fab:hover {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.5) 0%,
+    rgba(255, 255, 255, 0.2) 50%,
+    rgba(255, 255, 255, 0.3) 100%
+  );
+  transform: scale(1.05);
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.15),
+    0 2px 6px rgba(0, 0, 0, 0.1),
+    0 0 16px rgba(139, 92, 246, 0.3),
+    inset 0 1px 2px rgba(255, 255, 255, 0.6);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+.claude-terminal-fab:active {
+  transform: scale(0.95);
+}
+
+/* 選択肢待ち状態のFAB - オレンジ色で強調表示 */
+.claude-terminal-fab.asking-question {
+  background: linear-gradient(
+    135deg,
+    rgba(251, 146, 60, 0.3) 0%,
+    rgba(249, 115, 22, 0.2) 50%,
+    rgba(234, 88, 12, 0.25) 100%
+  );
+  border-color: rgba(251, 146, 60, 0.5);
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.08),
+    0 0 20px rgba(251, 146, 60, 0.4),
+    inset 0 1px 1px rgba(255, 255, 255, 0.5);
+  animation: asking-pulse 1.5s ease-in-out infinite;
+}
+
+.claude-terminal-fab.asking-question:hover {
+  box-shadow:
+    0 2px 6px rgba(0, 0, 0, 0.1),
+    0 0 24px rgba(251, 146, 60, 0.5),
+    inset 0 1px 2px rgba(255, 255, 255, 0.6);
+}
+
+@keyframes asking-pulse {
+  0%, 100% {
+    box-shadow:
+      0 1px 3px rgba(0, 0, 0, 0.08),
+      0 0 20px rgba(251, 146, 60, 0.4),
+      inset 0 1px 1px rgba(255, 255, 255, 0.5);
+  }
+  50% {
+    box-shadow:
+      0 1px 3px rgba(0, 0, 0, 0.08),
+      0 0 32px rgba(251, 146, 60, 0.6),
+      inset 0 1px 1px rgba(255, 255, 255, 0.5);
+  }
+}
+
+/* サイドバー本体 */
+.claude-terminal-sidebar-drawer {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 320px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border-left: 1px solid var(--glass-border);
+  box-shadow: -8px 0 32px var(--glass-shadow);
+  z-index: 1001;
+  padding: 1.5rem;
+  overflow-y: auto;
+  transition: transform 0.3s ease-in-out;
+  border-radius: 24px 0 0 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.claude-terminal-sidebar-drawer.open {
+  transform: translateX(0);
+}
+
+.claude-terminal-sidebar-drawer.closed {
+  transform: translateX(100%);
+  pointer-events: none;
+}
+
+/* ヘッダー */
+.claude-terminal-sidebar-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding-bottom: 0.75rem;
+  padding-right: 2.5rem;
+  border-bottom: 2px solid #8B5CF6;
+  color: #8B5CF6;
+}
+
+.claude-terminal-sidebar-header h2 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0;
+  flex: 1;
+}
+
+/* ステータス表示 */
+.claude-terminal-sidebar-status {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: rgba(139, 92, 246, 0.1);
+  border-radius: 12px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #8B5CF6;
+}
+
+/* 入力エリア */
+.claude-terminal-sidebar-input {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.claude-terminal-sidebar-input input {
+  flex: 1;
+}
+
+/* アクションボタン */
+.claude-terminal-sidebar-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: auto;
+  padding-top: 1rem;
+  border-top: 1px solid var(--glass-border, rgba(0, 0, 0, 0.1));
+}
+
+/* セッションリスト */
+.claude-terminal-session-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+/* セッションカード */
+.claude-terminal-session-card {
+  background: rgba(139, 92, 246, 0.05);
+  border: 1px solid rgba(139, 92, 246, 0.2);
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+/* セッションヘッダー */
+.claude-terminal-session-header {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  transition: background-color 0.2s;
+  color: inherit;
+}
+
+.claude-terminal-session-header:hover {
+  background: rgba(139, 92, 246, 0.1);
+}
+
+/* セッション展開コンテンツ */
+.claude-terminal-session-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-top: 1px solid rgba(139, 92, 246, 0.15);
+  background: rgba(139, 92, 246, 0.03);
+}
+
+/* セッション入力エリア */
+.claude-terminal-session-input {
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* セッションアクションボタン */
+.claude-terminal-session-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* ダークモード対応 */
+@media (prefers-color-scheme: dark) {
+  .claude-terminal-fab {
+    color: rgba(167, 139, 250, 0.9);
+  }
+
+  .claude-terminal-sidebar-header {
+    border-bottom-color: #A78BFA;
+    color: #A78BFA;
+  }
+
+  .claude-terminal-sidebar-status {
+    background: rgba(167, 139, 250, 0.15);
+    color: #A78BFA;
+  }
+
+  .claude-terminal-session-card {
+    background: rgba(167, 139, 250, 0.08);
+    border-color: rgba(167, 139, 250, 0.25);
+  }
+
+  .claude-terminal-session-header:hover {
+    background: rgba(167, 139, 250, 0.15);
+  }
+
+  .claude-terminal-session-content {
+    border-top-color: rgba(167, 139, 250, 0.2);
+    background: rgba(167, 139, 250, 0.05);
+  }
+}
+
+/* ===========================================
+   CwdSelector Component Styles
+   =========================================== */
+
+.cwd-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.cwd-selector-input-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.cwd-selector-dropdown-trigger {
+  justify-content: flex-start;
+  width: auto;
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+  color: var(--muted-foreground);
+}
+
+.cwd-selector-dropdown-trigger:hover {
+  color: var(--foreground);
+}
+
+.cwd-selector-dropdown {
+  min-width: 300px;
+  max-width: 400px;
+}
+
+.cwd-selector-dropdown [role="menuitem"] {
+  font-size: 0.8rem;
+  padding: 0.5rem 0.75rem;
+}
+
+.cwd-selector-dropdown [role="menuitem"] .truncate {
+  max-width: 250px;
+}

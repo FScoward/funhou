@@ -2,6 +2,9 @@ import { useState, useMemo, useEffect, useRef } from 'react'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import { invoke } from '@tauri-apps/api/core'
 import './App.css'
+import { ClaudeTerminalSessionProvider } from '@/contexts/ClaudeTerminalSessionContext'
+import { ClaudeTerminalWidget } from '@/components/ClaudeTerminalWidget'
+import { WidgetTerminalDialog } from '@/components/WidgetTerminalDialog'
 import { SettingsSidebar } from '@/components/SettingsSidebar'
 import { DateNavigation } from '@/components/DateNavigation'
 import { DeleteConfirmDialogs } from '@/components/DeleteConfirmDialogs'
@@ -35,6 +38,7 @@ function App() {
   const [doneSidebarOpen, setDoneSidebarOpen] = useState(false)
   const [incompleteSidebarOpen, setIncompleteSidebarOpen] = useState(false)
   const [summarySidebarOpen, setSummarySidebarOpen] = useState(false)
+  const [claudeTerminalSidebarOpen, setClaudeTerminalSidebarOpen] = useState(false)
   const [searchText, setSearchText] = useState('')
   const [ollamaEnabled, setOllamaEnabled] = useState(false)
   const [ollamaModel, setOllamaModel] = useState('gemma3:4b')
@@ -303,6 +307,7 @@ function App() {
   }, [filteredTimelineItems])
 
   return (
+    <ClaudeTerminalSessionProvider>
     <div className="app">
       <div className="app-layout">
         <DateNavigation
@@ -593,7 +598,17 @@ function App() {
         onOllamaEnabledChange={setOllamaEnabled}
         onOllamaModelChange={setOllamaModel}
       />
+
+      {/* バックグラウンド実行中のClaude Codeサイドバー */}
+      <ClaudeTerminalWidget
+        isOpen={claudeTerminalSidebarOpen}
+        onToggle={() => setClaudeTerminalSidebarOpen(!claudeTerminalSidebarOpen)}
+      />
+
+      {/* ウィジェットから開かれるダイアログ */}
+      <WidgetTerminalDialog />
     </div>
+    </ClaudeTerminalSessionProvider>
   )
 }
 

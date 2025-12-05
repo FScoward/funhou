@@ -1,5 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import Database from '@tauri-apps/plugin-sql'
 import { useClaudeLogs } from '../hooks/useClaudeLogs'
+import { CwdSelector } from './CwdSelector'
 import { Button } from './ui/button'
 import {
   Dialog,
@@ -11,6 +13,7 @@ import {
 } from './ui/dialog'
 import { Input } from './ui/input'
 import { Label } from './ui/label'
+import { getSettings } from '../lib/settings'
 
 interface ClaudeLaunchDialogProps {
   initialPrompt?: string
@@ -37,6 +40,23 @@ export function ClaudeLaunchDialog({
   const [cwd, setCwd] = useState('')
   const [prompt, setPrompt] = useState(initialPrompt || '')
   const [launched, setLaunched] = useState(false)
+  const [defaultClaudeCwd, setDefaultClaudeCwd] = useState<string | undefined>(undefined)
+
+  // デフォルトcwd設定を読み込み
+  useEffect(() => {
+    async function loadDefaultCwd() {
+      try {
+        const db = await Database.load('sqlite:funhou.db')
+        const settings = await getSettings(db)
+        if (settings.defaultClaudeCwd) {
+          setDefaultClaudeCwd(settings.defaultClaudeCwd)
+        }
+      } catch (error) {
+        console.error('デフォルトcwd設定の読み込みに失敗しました:', error)
+      }
+    }
+    loadDefaultCwd()
+  }, [])
 
   const handleLaunch = async () => {
     if (!cwd.trim()) return
@@ -79,11 +99,11 @@ export function ClaudeLaunchDialog({
           <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="cwd">作業ディレクトリ</Label>
-              <Input
-                id="cwd"
-                placeholder="/path/to/project"
+              <CwdSelector
                 value={cwd}
-                onChange={(e) => setCwd(e.target.value)}
+                onChange={setCwd}
+                defaultCwd={defaultClaudeCwd}
+                disabled={loading}
               />
             </div>
 

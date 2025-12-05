@@ -22,7 +22,11 @@ import {
   setTheme,
   setOllamaEnabled,
   setOllamaModel,
+  setDefaultClaudeCwd,
 } from '@/lib/settings'
+import { open } from '@tauri-apps/plugin-dialog'
+import { Input } from '@/components/ui/input'
+import { FolderOpen } from 'lucide-react'
 import { checkOllamaAvailable, getAvailableModels } from '@/lib/ollama'
 import { ThemeVariant } from '@/lib/themes'
 
@@ -59,6 +63,7 @@ export function SettingsSidebar({
   const [ollamaAvailable, setOllamaAvailable] = useState<boolean | null>(null)
   const [ollamaModels, setOllamaModels] = useState<string[]>([])
   const [isCheckingOllama, setIsCheckingOllama] = useState(false)
+  const [defaultClaudeCwd, setDefaultClaudeCwdState] = useState<string>('')
 
   useEffect(() => {
     if (isOpen && db) {
@@ -79,6 +84,7 @@ export function SettingsSidebar({
     localStorage.setItem('tab_shimmer_enabled', (settings.tabShimmerEnabled ?? true) ? 'true' : 'false')
     setOllamaEnabledState(settings.ollamaEnabled ?? false)
     setOllamaModelState(settings.ollamaModel || 'gemma3:4b')
+    setDefaultClaudeCwdState(settings.defaultClaudeCwd || '')
   }
 
   const checkOllamaStatus = async () => {
@@ -212,6 +218,32 @@ export function SettingsSidebar({
       if (onOllamaModelChange) onOllamaModelChange(model)
     } catch (error) {
       console.error('Ollamaモデル設定の変更に失敗しました:', error)
+    }
+  }
+
+  const handleDefaultClaudeCwdChange = async (cwd: string) => {
+    if (!db) return
+    try {
+      setDefaultClaudeCwdState(cwd)
+      await setDefaultClaudeCwd(db, cwd)
+    } catch (error) {
+      console.error('デフォルトcwd設定の変更に失敗しました:', error)
+    }
+  }
+
+  const handleBrowseDefaultCwd = async () => {
+    try {
+      const selected = await open({
+        directory: true,
+        multiple: false,
+        title: 'デフォルトの作業ディレクトリを選択',
+      })
+
+      if (selected && typeof selected === 'string') {
+        handleDefaultClaudeCwdChange(selected)
+      }
+    } catch (error) {
+      console.error('フォルダ選択に失敗しました:', error)
     }
   }
 
@@ -428,6 +460,35 @@ export function SettingsSidebar({
               </span>
             </div>
           )}
+
+          {/* Claude Terminal 区切り線 */}
+          <div className="settings-section-divider" />
+
+          {/* デフォルト作業ディレクトリ */}
+          <div className="settings-item-vertical">
+            <Label htmlFor="default-claude-cwd">Claude Terminal デフォルトcwd</Label>
+            <div className="flex gap-2">
+              <Input
+                id="default-claude-cwd"
+                value={defaultClaudeCwd}
+                onChange={(e) => handleDefaultClaudeCwdChange(e.target.value)}
+                placeholder="/path/to/project"
+                className="flex-1"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                onClick={handleBrowseDefaultCwd}
+                title="フォルダを参照"
+              >
+                <FolderOpen size={16} />
+              </Button>
+            </div>
+            <span className="text-xs text-muted-foreground mt-1">
+              Claude Terminal起動時のデフォルト作業ディレクトリ
+            </span>
+          </div>
         </div>
       </aside>
     </>

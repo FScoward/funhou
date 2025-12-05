@@ -10,6 +10,7 @@ import CustomInput from '@/components/CustomInput'
 import { TagBadge } from '@/components/TagBadge'
 import { TagSelector } from '@/components/TagSelector'
 import { ClaudeLaunchDialog } from '@/components/ClaudeLaunchDialog'
+import { ClaudeTerminalDialog } from '@/components/ClaudeTerminalDialog'
 import { ClaudeLogImporter } from '@/components/ClaudeLogImporter'
 import { ClaudeSessionLinkDialog } from '@/components/ClaudeSessionLinkDialog'
 import { resumeClaudeCode } from '@/lib/claudeLogs'
@@ -113,6 +114,7 @@ export function EntryCard({
 }: EntryCardProps) {
   const [showMarkdown, setShowMarkdown] = useState(true)
   const [claudeLaunchOpen, setClaudeLaunchOpen] = useState(false)
+  const [claudeTerminalOpen, setClaudeTerminalOpen] = useState(false)
   const [claudeImportOpen, setClaudeImportOpen] = useState(false)
   const [claudeLinkOpen, setClaudeLinkOpen] = useState(false)
 
@@ -289,7 +291,11 @@ export function EntryCard({
           <DropdownMenuContent align="start">
             <DropdownMenuItem onSelect={() => setClaudeLaunchOpen(true)}>
               <Terminal size={16} className="mr-2" />
-              Claude Code
+              Claude Code（oneshot）
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => setClaudeTerminalOpen(true)}>
+              <Terminal size={16} className="mr-2" />
+              Claude Code（interactive）
             </DropdownMenuItem>
             {onImportAsReply && (
               <DropdownMenuItem onSelect={() => setClaudeImportOpen(true)}>
@@ -312,6 +318,12 @@ export function EntryCard({
         initialPrompt={content}
         open={claudeLaunchOpen}
         onOpenChange={setClaudeLaunchOpen}
+      />
+      <ClaudeTerminalDialog
+        open={claudeTerminalOpen}
+        onOpenChange={setClaudeTerminalOpen}
+        linkedSessionId={claudeSessionId}
+        linkedCwd={claudeCwd}
       />
       {onImportAsReply && (
         <ClaudeLogImporter

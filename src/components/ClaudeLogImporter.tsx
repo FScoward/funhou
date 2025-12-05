@@ -330,8 +330,11 @@ export function ClaudeLogImporter({
                     onClick={() => handleProjectSelect(project)}
                   >
                     <div className="font-medium">{project.name}</div>
-                    <div className="text-sm text-gray-500">
-                      {project.session_count} セッション
+                    <div className="text-sm text-gray-500 flex gap-4">
+                      <span>{project.session_count} セッション</span>
+                      {project.last_updated && (
+                        <span>{formatTimestamp(project.last_updated)}</span>
+                      )}
                     </div>
                   </div>
                 ))
