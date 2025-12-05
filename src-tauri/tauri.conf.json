@@ -73,7 +73,9 @@
             "sql:allow-load",
             "sql:allow-execute",
             "sql:allow-select",
-            "sql:default"
+            "sql:default",
+            "pty:allow-spawn",
+            "pty:default"
           ]
         }
       ]

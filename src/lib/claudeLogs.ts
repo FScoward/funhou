@@ -5,6 +5,7 @@ export interface ProjectInfo {
   name: string
   path: string
   session_count: number
+  last_updated: string | null
 }
 
 export interface SessionSummary {

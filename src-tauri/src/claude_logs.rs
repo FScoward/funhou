@@ -51,6 +51,7 @@ pub struct ProjectInfo {
     pub name: String,
     pub path: String,
     pub session_count: usize,
+    pub last_updated: Option<String>,
 }
 
 /// Claude session finished event payload
@@ -92,26 +93,46 @@ pub fn list_claude_projects() -> Result<Vec<ProjectInfo>, String> {
                 .unwrap_or("")
                 .to_string();
 
-            // Count session files
-            let session_count = fs::read_dir(&path)
-                .map(|entries| {
-                    entries.filter(|e| {
-                        e.as_ref()
-                            .map(|e| e.path().extension().map(|ext| ext == "jsonl").unwrap_or(false))
-                            .unwrap_or(false)
-                    }).count()
-                })
-                .unwrap_or(0);
+            // Count session files and find the newest one
+            let mut session_count = 0;
+            let mut newest_modified: Option<std::time::SystemTime> = None;
+
+            if let Ok(dir_entries) = fs::read_dir(&path) {
+                for dir_entry in dir_entries.flatten() {
+                    let file_path = dir_entry.path();
+                    if file_path.extension().map(|ext| ext == "jsonl").unwrap_or(false) {
+                        session_count += 1;
+                        // Get file modification time
+                        if let Ok(metadata) = fs::metadata(&file_path) {
+                            if let Ok(modified) = metadata.modified() {
+                                if newest_modified.is_none() || Some(modified) > newest_modified {
+                                    newest_modified = Some(modified);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
 
             if session_count > 0 {
+                // Convert SystemTime to ISO 8601 string
+                let last_updated = newest_modified.map(|t| {
+                    let datetime: chrono::DateTime<chrono::Utc> = t.into();
+                    datetime.to_rfc3339()
+                });
+
                 projects.push(ProjectInfo {
                     name: dir_name.replace("-", "/"),
                     path: path.to_string_lossy().to_string(),
                     session_count,
+                    last_updated,
                 });
             }
         }
     }
+
+    // Sort by last_updated descending (newest first)
+    projects.sort_by(|a, b| b.last_updated.cmp(&a.last_updated));
 
     Ok(projects)
 }
