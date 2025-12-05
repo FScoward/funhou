@@ -231,21 +231,21 @@ export function ClaudeTerminalSessionProvider({ children }: { children: ReactNod
     }
   }, [generateSessionId, handlePtyData])
 
-  // セッションの取得
+  // セッションの取得（refを使って安定した関数参照を維持）
   const getSession = useCallback((sessionId: string): TerminalSession | undefined => {
-    return sessions.get(sessionId)
-  }, [sessions])
+    return sessionsRef.current.get(sessionId)
+  }, [])
 
-  // アクティブセッション（stopped以外）を取得
+  // アクティブセッション（stopped以外）を取得（refを使って安定した関数参照を維持）
   const getActiveSessions = useCallback((): TerminalSession[] => {
-    return Array.from(sessions.values()).filter(
+    return Array.from(sessionsRef.current.values()).filter(
       (session) => session.status !== 'stopped'
     )
-  }, [sessions])
+  }, [])
 
-  // セッションの終了
+  // セッションの終了（refを使って安定した関数参照を維持）
   const terminateSession = useCallback(async (sessionId: string, graceful = true): Promise<void> => {
-    const session = sessions.get(sessionId)
+    const session = sessionsRef.current.get(sessionId)
     if (!session || !session.pty) return
 
     if (graceful) {
@@ -309,7 +309,7 @@ export function ClaudeTerminalSessionProvider({ children }: { children: ReactNod
     if (activeSessionId === sessionId) {
       setActiveSessionId(null)
     }
-  }, [sessions, activeSessionId])
+  }, [activeSessionId])
 
   // セッションへの書き込み（refを使って常に最新のsessionsを参照）
   const writeToSession = useCallback((sessionId: string, data: string) => {
@@ -328,11 +328,11 @@ export function ClaudeTerminalSessionProvider({ children }: { children: ReactNod
     }
   }, [])
 
-  // セッション出力の取得
+  // セッション出力の取得（refを使って安定した関数参照を維持）
   const getSessionOutput = useCallback((sessionId: string): string[] => {
-    const session = sessions.get(sessionId)
+    const session = sessionsRef.current.get(sessionId)
     return session?.outputBuffer ?? []
-  }, [sessions])
+  }, [])
 
   // 出力の購読
   const subscribeToOutput = useCallback((sessionId: string, callback: (data: string) => void): () => void => {

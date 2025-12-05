@@ -52,6 +52,7 @@ export function ClaudeTerminalDialog({
     createSession,
     activeSessionId,
     getSession,
+    getActiveSessions,
     terminateSession,
     setDialogOpen,
   } = useClaudeTerminalSession()
@@ -72,12 +73,38 @@ export function ClaudeTerminalDialog({
     }
   }, [open, fromWidget, hasLinkedSession])
 
+  // 紐付けセッションがある場合は既存セッションを再利用、なければ新規作成
   useEffect(() => {
-    if (open && hasLinkedSession) {
+    if (open && hasLinkedSession && !contextSessionId && !isCreatingSession) {
       setCwd(linkedCwd)
-      setShowTerminal(true)
+
+      // 既存のアクティブセッションを探す（同じclaudeSessionIdを持つもの）
+      const existingSession = getActiveSessions().find(
+        (s) => s.claudeSessionId === linkedSessionId
+      )
+
+      if (existingSession) {
+        // 既存セッションを再利用
+        setContextSessionId(existingSession.id)
+        setShowTerminal(true)
+      } else {
+        // 新規作成
+        setIsCreatingSession(true)
+        createSession(linkedCwd, linkedSessionId)
+          .then((sessionId) => {
+            setContextSessionId(sessionId)
+            setShowTerminal(true)
+          })
+          .catch((err) => {
+            const message = err instanceof Error ? err.message : String(err)
+            setError(`セッションの作成に失敗しました: ${message}`)
+          })
+          .finally(() => {
+            setIsCreatingSession(false)
+          })
+      }
     }
-  }, [open, hasLinkedSession, linkedCwd])
+  }, [open, hasLinkedSession, linkedCwd, linkedSessionId, contextSessionId, isCreatingSession, createSession, getActiveSessions])
 
   // ダイアログの開閉状態を Context に同期（非制御モードの場合のみ）
   // 制御モードでは Context が既にソースなので同期不要
