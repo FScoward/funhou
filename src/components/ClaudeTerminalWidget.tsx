@@ -6,7 +6,7 @@ import { useClaudeTerminalSession, type SessionStatus } from '../contexts/Claude
 const STATUS_COLORS: Record<SessionStatus, string> = {
   initializing: 'bg-yellow-500',
   running: 'bg-green-500',
-  waiting_input: 'bg-blue-500',
+  waiting_input: 'bg-gray-500',  // タスク完了、次の入力待ち
   stopped: 'bg-gray-500',
   error: 'bg-red-500',
 }
@@ -14,8 +14,8 @@ const STATUS_COLORS: Record<SessionStatus, string> = {
 const STATUS_LABELS: Record<SessionStatus, string> = {
   initializing: '初期化中...',
   running: '実行中',
-  waiting_input: '入力待ち',
-  stopped: '停止',
+  waiting_input: '完了',  // Claudeがユーザーの入力を待っている = タスク完了
+  stopped: '終了',
   error: 'エラー',
 }
 
@@ -90,7 +90,7 @@ export function ClaudeTerminalWidget() {
   // アクティブセッションがなければウィジェットを表示しない
   // ダイアログが開いている場合も表示しない
   // 注意: この条件チェックは全てのフックの後に行う（React Hooksのルール）
-  if (!activeSession || activeSession.status === 'stopped' || isDialogOpen) {
+  if (!activeSession || isDialogOpen) {
     return null
   }
 
@@ -113,7 +113,7 @@ export function ClaudeTerminalWidget() {
         className="flex items-center gap-2 px-3 py-2 bg-muted cursor-move select-none"
         onMouseDown={handleDragStart}
       >
-        <div className={`w-2 h-2 rounded-full ${statusColor} animate-pulse`} />
+        <div className={`w-2 h-2 rounded-full ${statusColor} ${status === 'running' || status === 'initializing' ? 'animate-pulse' : ''}`} />
         <span className="text-sm font-medium flex-1 truncate">
           Claude ({statusLabel})
         </span>

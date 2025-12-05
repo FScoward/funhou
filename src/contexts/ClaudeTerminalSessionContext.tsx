@@ -73,8 +73,19 @@ export function ClaudeTerminalSessionProvider({ children }: { children: ReactNod
     return `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
   }, [])
 
+  // 入力待ち検知用のタイマー管理
+  const idleTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
+  const IDLE_TIMEOUT_MS = 2000 // 2秒間出力がなければ「完了」
+
   // 出力データの処理
   const handlePtyData = useCallback((sessionId: string, data: string) => {
+    // 既存のタイマーをクリア
+    const existingTimer = idleTimersRef.current.get(sessionId)
+    if (existingTimer) {
+      clearTimeout(existingTimer)
+    }
+
+    // セッションを「実行中」に更新
     setSessions((prev) => {
       const session = prev.get(sessionId)
       if (!session) return prev
@@ -96,6 +107,26 @@ export function ClaudeTerminalSessionProvider({ children }: { children: ReactNod
       newMap.set(sessionId, newSession)
       return newMap
     })
+
+    // 新しいタイマーを設定（一定時間後に「完了」に変更）
+    const timer = setTimeout(() => {
+      setSessions((prev) => {
+        const session = prev.get(sessionId)
+        if (!session || session.status !== 'running') return prev
+
+        const newSession: TerminalSession = {
+          ...session,
+          status: 'waiting_input',
+        }
+
+        const newMap = new Map(prev)
+        newMap.set(sessionId, newSession)
+        return newMap
+      })
+      idleTimersRef.current.delete(sessionId)
+    }, IDLE_TIMEOUT_MS)
+
+    idleTimersRef.current.set(sessionId, timer)
 
     // 購読者に通知
     const subscribers = outputSubscribersRef.current.get(sessionId)
