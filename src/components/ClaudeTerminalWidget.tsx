@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react'
-import { ChevronRight, Terminal, ChevronDown, ChevronUp, Maximize2, X } from 'lucide-react'
+import { ChevronRight, Terminal, ChevronDown, ChevronUp, Maximize2, X, Pencil, Check } from 'lucide-react'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { useClaudeTerminalSession, type SessionStatus, type TerminalSession } from '../contexts/ClaudeTerminalSessionContext'
@@ -44,6 +44,7 @@ interface SessionCardProps {
   onOpenFullScreen: () => void
   onTerminate: () => void
   onSendInput: (input: string) => void
+  onUpdateName: (name: string) => void
 }
 
 function SessionCard({
@@ -53,8 +54,11 @@ function SessionCard({
   onOpenFullScreen,
   onTerminate,
   onSendInput,
+  onUpdateName,
 }: SessionCardProps) {
   const [inputValue, setInputValue] = useState('')
+  const [isEditingName, setIsEditingName] = useState(false)
+  const [nameValue, setNameValue] = useState(session.name || '')
 
   const handleSend = useCallback(() => {
     if (inputValue.trim()) {
@@ -63,27 +67,81 @@ function SessionCard({
     }
   }, [inputValue, onSendInput])
 
+  const handleSaveName = useCallback(() => {
+    onUpdateName(nameValue.trim())
+    setIsEditingName(false)
+  }, [nameValue, onUpdateName])
+
   const status = session.status
   const statusColor = STATUS_COLORS[status]
   const statusLabel = STATUS_LABELS[status]
   const isActive = status === 'running' || status === 'initializing' || status === 'asking_question'
 
+  // 表示名: 名前があれば名前、なければcwdの短縮形
+  const displayName = session.name || shortenCwd(session.cwd)
+
   return (
-    <div className="claude-terminal-session-card">
+    <div className="claude-terminal-session-card group">
       {/* セッションヘッダー */}
-      <button
-        className="claude-terminal-session-header"
-        onClick={onToggleExpand}
-      >
-        <div className="flex items-center gap-2 flex-1 min-w-0">
-          <div className={`w-2 h-2 rounded-full flex-shrink-0 ${statusColor} ${isActive ? 'animate-pulse' : ''}`} />
-          <span className="truncate text-sm font-medium">{shortenCwd(session.cwd)}</span>
-        </div>
-        <div className="flex items-center gap-2">
+      <div className="claude-terminal-session-header">
+        {isEditingName ? (
+          <div className="flex items-center gap-1 flex-1 min-w-0">
+            <div className={`w-2 h-2 rounded-full flex-shrink-0 ${statusColor} ${isActive ? 'animate-pulse' : ''}`} />
+            <Input
+              value={nameValue}
+              onChange={(e) => setNameValue(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault()
+                  handleSaveName()
+                } else if (e.key === 'Escape') {
+                  setIsEditingName(false)
+                  setNameValue(session.name || '')
+                }
+              }}
+              placeholder="セッション名..."
+              className="flex-1 h-6 text-xs"
+              autoFocus
+              onClick={(e) => e.stopPropagation()}
+            />
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={(e) => {
+                e.stopPropagation()
+                handleSaveName()
+              }}
+              className="h-6 w-6 p-0"
+            >
+              <Check size={12} />
+            </Button>
+          </div>
+        ) : (
+          <button
+            className="flex items-center gap-2 flex-1 min-w-0"
+            onClick={onToggleExpand}
+          >
+            <div className={`w-2 h-2 rounded-full flex-shrink-0 ${statusColor} ${isActive ? 'animate-pulse' : ''}`} />
+            <span className="truncate text-sm font-medium">{displayName}</span>
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                setIsEditingName(true)
+              }}
+              className="opacity-0 group-hover:opacity-100 hover:opacity-100 p-0.5 rounded hover:bg-purple-500/20 transition-opacity"
+            >
+              <Pencil size={10} className="text-muted-foreground" />
+            </button>
+          </button>
+        )}
+        <button
+          className="flex items-center gap-2"
+          onClick={onToggleExpand}
+        >
           <span className="text-xs text-muted-foreground">{statusLabel}</span>
           {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-        </div>
-      </button>
+        </button>
+      </div>
 
       {/* 展開時のコンテンツ */}
       {isExpanded && (
@@ -139,6 +197,7 @@ export function ClaudeTerminalWidget({ isOpen, onToggle }: ClaudeTerminalWidgetP
     getActiveSessions,
     writeToSession,
     terminateSession,
+    updateSessionName,
     setDialogOpen,
     setActiveSession,
     isDialogOpen,
@@ -252,6 +311,7 @@ export function ClaudeTerminalWidget({ isOpen, onToggle }: ClaudeTerminalWidgetP
               onOpenFullScreen={() => handleOpenFullScreen(session.id)}
               onTerminate={() => handleTerminate(session.id)}
               onSendInput={(input) => handleSendInput(session.id, input)}
+              onUpdateName={(name) => updateSessionName(session.id, name)}
             />
           ))}
         </div>

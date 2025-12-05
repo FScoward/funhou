@@ -42,6 +42,7 @@ export function ClaudeTerminalDialog({
     : setInternalOpen
 
   const [cwd, setCwd] = useState('')
+  const [sessionName, setSessionName] = useState('')
   const [showTerminal, setShowTerminal] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [isCreatingSession, setIsCreatingSession] = useState(false)
@@ -67,6 +68,7 @@ export function ClaudeTerminalDialog({
   useEffect(() => {
     if (open && !fromWidget && !hasLinkedSession) {
       setCwd('')
+      setSessionName('')
       setShowTerminal(false)
       setContextSessionId(null)
       setError(null)
@@ -137,7 +139,11 @@ export function ClaudeTerminalDialog({
 
     try {
       // Context 経由でセッションを作成
-      const sessionId = await createSession(cwd.trim(), hasLinkedSession ? linkedSessionId : undefined)
+      const sessionId = await createSession(
+        cwd.trim(),
+        hasLinkedSession ? linkedSessionId : undefined,
+        sessionName.trim() || undefined
+      )
       setContextSessionId(sessionId)
       setShowTerminal(true)
     } catch (err) {
@@ -171,6 +177,7 @@ export function ClaudeTerminalDialog({
       // ダイアログが閉じられたらUI状態をリセット（セッションは継続）
       setShowTerminal(false)
       setCwd('')
+      setSessionName('')
       setError(null)
       // contextSessionId をリセット（再接続時は activeSessionId から復元）
       setContextSessionId(null)
@@ -211,6 +218,17 @@ export function ClaudeTerminalDialog({
 
         {!showTerminal ? (
           <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="session-name">セッション名（オプション）</Label>
+              <Input
+                id="session-name"
+                placeholder="例: issue-123対応"
+                value={sessionName}
+                onChange={(e) => setSessionName(e.target.value)}
+                disabled={isCreatingSession}
+              />
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="cwd">作業ディレクトリ</Label>
               <Input

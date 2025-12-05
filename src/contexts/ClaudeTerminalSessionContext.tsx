@@ -54,6 +54,8 @@ export interface TerminalSession {
   createdAt: Date
   lastActivityAt: Date
   error?: string
+  /** セッションの表示名（オプション） */
+  name?: string
 }
 
 // Context の値の型定義
@@ -63,11 +65,12 @@ interface ClaudeTerminalSessionContextValue {
   activeSessionId: string | null
 
   // セッション操作
-  createSession: (cwd: string, claudeSessionId?: string) => Promise<string>
+  createSession: (cwd: string, claudeSessionId?: string, name?: string) => Promise<string>
   getSession: (sessionId: string) => TerminalSession | undefined
   getActiveSessions: () => TerminalSession[]
   terminateSession: (sessionId: string, graceful?: boolean) => Promise<void>
   resizeSession: (sessionId: string, cols: number, rows: number) => void
+  updateSessionName: (sessionId: string, name: string) => void
 
   // 入出力
   writeToSession: (sessionId: string, data: string) => void
@@ -189,7 +192,7 @@ export function ClaudeTerminalSessionProvider({ children }: { children: ReactNod
   }, [])
 
   // セッションの作成
-  const createSession = useCallback(async (cwd: string, claudeSessionId?: string): Promise<string> => {
+  const createSession = useCallback(async (cwd: string, claudeSessionId?: string, name?: string): Promise<string> => {
     const sessionId = generateSessionId()
 
     const newSession: TerminalSession = {
@@ -201,6 +204,7 @@ export function ClaudeTerminalSessionProvider({ children }: { children: ReactNod
       claudeSessionId,
       createdAt: new Date(),
       lastActivityAt: new Date(),
+      name,
     }
 
     // まずセッションを追加（initializingステータス）
@@ -382,6 +386,23 @@ export function ClaudeTerminalSessionProvider({ children }: { children: ReactNod
     setIsDialogOpen(open)
   }, [])
 
+  // セッション名の更新
+  const updateSessionName = useCallback((sessionId: string, name: string) => {
+    setSessions((prev) => {
+      const session = prev.get(sessionId)
+      if (!session) return prev
+
+      const updatedSession: TerminalSession = {
+        ...session,
+        name,
+      }
+
+      const newMap = new Map(prev)
+      newMap.set(sessionId, updatedSession)
+      return newMap
+    })
+  }, [])
+
   const value: ClaudeTerminalSessionContextValue = {
     sessions,
     activeSessionId,
@@ -390,6 +411,7 @@ export function ClaudeTerminalSessionProvider({ children }: { children: ReactNod
     getActiveSessions,
     terminateSession,
     resizeSession,
+    updateSessionName,
     writeToSession,
     getSessionOutput,
     subscribeToOutput,
