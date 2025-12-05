@@ -8,6 +8,7 @@ const STATUS_COLORS: Record<SessionStatus, string> = {
   initializing: 'bg-yellow-500',
   running: 'bg-green-500',
   waiting_input: 'bg-gray-500',
+  asking_question: 'bg-orange-500',
   stopped: 'bg-gray-500',
   error: 'bg-red-500',
 }
@@ -16,6 +17,7 @@ const STATUS_LABELS: Record<SessionStatus, string> = {
   initializing: '初期化中...',
   running: '実行中',
   waiting_input: '完了',
+  asking_question: '🔔 選択肢待ち',
   stopped: '終了',
   error: 'エラー',
 }
@@ -64,7 +66,7 @@ function SessionCard({
   const status = session.status
   const statusColor = STATUS_COLORS[status]
   const statusLabel = STATUS_LABELS[status]
-  const isActive = status === 'running' || status === 'initializing'
+  const isActive = status === 'running' || status === 'initializing' || status === 'asking_question'
 
   return (
     <div className="claude-terminal-session-card">
@@ -148,6 +150,9 @@ export function ClaudeTerminalWidget({ isOpen, onToggle }: ClaudeTerminalWidgetP
   const runningCount = activeSessions.filter(
     (s) => s.status === 'running' || s.status === 'initializing'
   ).length
+  const askingCount = activeSessions.filter(
+    (s) => s.status === 'asking_question'
+  ).length
 
   // セッション展開トグル
   const handleToggleExpand = useCallback((sessionId: string) => {
@@ -182,20 +187,29 @@ export function ClaudeTerminalWidget({ isOpen, onToggle }: ClaudeTerminalWidgetP
   }
 
   // FAB表示テキスト
-  const fabText = runningCount > 0
-    ? `${runningCount} セッション実行中`
-    : `${activeSessions.length} セッション`
+  const fabText = askingCount > 0
+    ? `🔔 ${askingCount} 選択肢待ち`
+    : runningCount > 0
+      ? `${runningCount} セッション実行中`
+      : `${activeSessions.length} セッション`
+
+  // FABの色
+  const fabIndicatorColor = askingCount > 0
+    ? 'bg-orange-500 animate-pulse'
+    : runningCount > 0
+      ? 'bg-green-500 animate-pulse'
+      : 'bg-gray-500'
 
   return (
     <>
       {/* FABトグルボタン（閉じている時のみ表示） */}
       {!isOpen && (
         <button
-          className="sidebar-toggle-fab claude-terminal-fab"
+          className={`sidebar-toggle-fab claude-terminal-fab ${askingCount > 0 ? 'asking-question' : ''}`}
           onClick={onToggle}
-          aria-label="Claude Terminalを開く"
+          aria-label={askingCount > 0 ? '選択肢が待機中です' : 'Claude Terminalを開く'}
         >
-          <div className={`w-2 h-2 rounded-full ${runningCount > 0 ? 'bg-green-500 animate-pulse' : 'bg-gray-500'}`} />
+          <div className={`w-2 h-2 rounded-full ${fabIndicatorColor}`} />
           <span className="ml-1 text-xs">{fabText}</span>
         </button>
       )}

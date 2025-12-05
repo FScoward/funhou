@@ -3527,6 +3527,44 @@ textarea::placeholder {
   transform: scale(0.95);
 }
 
+/* 選択肢待ち状態のFAB - オレンジ色で強調表示 */
+.claude-terminal-fab.asking-question {
+  background: linear-gradient(
+    135deg,
+    rgba(251, 146, 60, 0.3) 0%,
+    rgba(249, 115, 22, 0.2) 50%,
+    rgba(234, 88, 12, 0.25) 100%
+  );
+  border-color: rgba(251, 146, 60, 0.5);
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.08),
+    0 0 20px rgba(251, 146, 60, 0.4),
+    inset 0 1px 1px rgba(255, 255, 255, 0.5);
+  animation: asking-pulse 1.5s ease-in-out infinite;
+}
+
+.claude-terminal-fab.asking-question:hover {
+  box-shadow:
+    0 2px 6px rgba(0, 0, 0, 0.1),
+    0 0 24px rgba(251, 146, 60, 0.5),
+    inset 0 1px 2px rgba(255, 255, 255, 0.6);
+}
+
+@keyframes asking-pulse {
+  0%, 100% {
+    box-shadow:
+      0 1px 3px rgba(0, 0, 0, 0.08),
+      0 0 20px rgba(251, 146, 60, 0.4),
+      inset 0 1px 1px rgba(255, 255, 255, 0.5);
+  }
+  50% {
+    box-shadow:
+      0 1px 3px rgba(0, 0, 0, 0.08),
+      0 0 32px rgba(251, 146, 60, 0.6),
+      inset 0 1px 1px rgba(255, 255, 255, 0.5);
+  }
+}
+
 /* サイドバー本体 */
 .claude-terminal-sidebar-drawer {
   position: fixed;

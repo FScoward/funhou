@@ -29,8 +29,20 @@ function filterDAResponses(data: string): string {
   return filtered
 }
 
+// 選択肢表示パターン（Claude Codeが選択肢を出している時に表示されるテキスト）
+const QUESTION_INDICATOR_PATTERNS = [
+  /Enter to select/i,        // 選択肢の操作説明
+  /Tab\/Arrow keys to navigate/i,  // ナビゲーション説明
+  /Esc to cancel/i,          // キャンセル説明
+]
+
+// 選択肢表示が含まれているかチェック
+function containsQuestionIndicator(data: string): boolean {
+  return QUESTION_INDICATOR_PATTERNS.some(pattern => pattern.test(data))
+}
+
 // セッション状態の型定義
-export type SessionStatus = 'initializing' | 'running' | 'waiting_input' | 'stopped' | 'error'
+export type SessionStatus = 'initializing' | 'running' | 'waiting_input' | 'asking_question' | 'stopped' | 'error'
 
 export interface TerminalSession {
   id: string
@@ -98,10 +110,19 @@ export function ClaudeTerminalSessionProvider({ children }: { children: ReactNod
   const idleTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map())
   const IDLE_TIMEOUT_MS = 2000 // 2秒間出力がなければ「完了」
 
+  // 選択肢検出フラグの管理
+  const questionDetectedRef = useRef<Map<string, boolean>>(new Map())
+
   // 出力データの処理
   const handlePtyData = useCallback((sessionId: string, data: string) => {
     // DA応答をフィルタリング
     const filteredData = filterDAResponses(data)
+
+    // 選択肢表示パターンを検出
+    const isAskingQuestion = containsQuestionIndicator(filteredData)
+    if (isAskingQuestion) {
+      questionDetectedRef.current.set(sessionId, true)
+    }
 
     // 既存のタイマーをクリア
     const existingTimer = idleTimersRef.current.get(sessionId)
@@ -132,21 +153,29 @@ export function ClaudeTerminalSessionProvider({ children }: { children: ReactNod
       return newMap
     })
 
-    // 新しいタイマーを設定（一定時間後に「完了」に変更）
+    // 新しいタイマーを設定（一定時間後にステータス変更）
     const timer = setTimeout(() => {
+      const hasQuestion = questionDetectedRef.current.get(sessionId) || false
+
       setSessions((prev) => {
         const session = prev.get(sessionId)
         if (!session || session.status !== 'running') return prev
 
+        // 選択肢が検出されていれば asking_question、そうでなければ waiting_input
+        const newStatus: SessionStatus = hasQuestion ? 'asking_question' : 'waiting_input'
+
         const newSession: TerminalSession = {
           ...session,
-          status: 'waiting_input',
+          status: newStatus,
         }
 
         const newMap = new Map(prev)
         newMap.set(sessionId, newSession)
         return newMap
       })
+
+      // フラグをリセット
+      questionDetectedRef.current.set(sessionId, false)
       idleTimersRef.current.delete(sessionId)
     }, IDLE_TIMEOUT_MS)
 
