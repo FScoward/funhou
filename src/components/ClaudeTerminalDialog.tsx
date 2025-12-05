@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { ClaudeTerminal } from './ClaudeTerminal'
+import { useState, useEffect, useRef } from 'react'
+import { ClaudeTerminal, type ClaudeTerminalHandle } from './ClaudeTerminal'
 import { Button } from './ui/button'
 import {
   Dialog,
@@ -10,6 +10,7 @@ import {
 } from './ui/dialog'
 import { Input } from './ui/input'
 import { Label } from './ui/label'
+import { useClaudeTerminalSession } from '../contexts/ClaudeTerminalSessionContext'
 
 interface ClaudeTerminalDialogProps {
   trigger?: React.ReactNode
@@ -40,6 +41,20 @@ export function ClaudeTerminalDialog({
   const [cwd, setCwd] = useState('')
   const [showTerminal, setShowTerminal] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [isCreatingSession, setIsCreatingSession] = useState(false)
+  const terminalRef = useRef<ClaudeTerminalHandle>(null)
+
+  // Context を使用
+  const {
+    createSession,
+    activeSessionId,
+    getSession,
+    terminateSession,
+    setDialogOpen,
+  } = useClaudeTerminalSession()
+
+  // 内部セッションID（Context モード用）
+  const [contextSessionId, setContextSessionId] = useState<string | null>(null)
 
   // セッションが紐付けられている場合は自動的にターミナルを表示
   const hasLinkedSession = linkedSessionId && linkedCwd
@@ -51,25 +66,81 @@ export function ClaudeTerminalDialog({
     }
   }, [open, hasLinkedSession, linkedCwd])
 
-  const handleLaunch = () => {
+  // ダイアログの開閉状態を Context に同期（非制御モードの場合のみ）
+  // 制御モードでは Context が既にソースなので同期不要
+  useEffect(() => {
+    if (!isControlled) {
+      setDialogOpen(open)
+    }
+  }, [open, setDialogOpen, isControlled])
+
+  // activeSessionId が存在する場合、再接続
+  useEffect(() => {
+    if (open && activeSessionId && !contextSessionId) {
+      const session = getSession(activeSessionId)
+      if (session && session.status !== 'stopped') {
+        setContextSessionId(activeSessionId)
+        setCwd(session.cwd)
+        setShowTerminal(true)
+      }
+    }
+  }, [open, activeSessionId, contextSessionId, getSession])
+
+  const handleLaunch = async () => {
     if (!cwd.trim()) return
     setError(null)
-    setShowTerminal(true)
+    setIsCreatingSession(true)
+
+    try {
+      // Context 経由でセッションを作成
+      const sessionId = await createSession(cwd.trim(), hasLinkedSession ? linkedSessionId : undefined)
+      setContextSessionId(sessionId)
+      setShowTerminal(true)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      setError(`セッションの作成に失敗しました: ${message}`)
+    } finally {
+      setIsCreatingSession(false)
+    }
   }
 
-  const handleReset = () => {
+  const handleReset = async () => {
+    // 現在のセッションを終了
+    if (contextSessionId) {
+      await terminateSession(contextSessionId, true)
+    }
+    setContextSessionId(null)
     setShowTerminal(false)
     setError(null)
   }
 
   const handleOpenChange = (newOpen: boolean) => {
+    if (!newOpen && contextSessionId) {
+      // ダイアログを閉じる際、セッションはバックグラウンドで継続
+      // xterm.js のみアンマウントされる
+      console.log('[ClaudeTerminalDialog] Closing dialog, session continues in background:', contextSessionId)
+    }
+
     setOpen(newOpen)
+
     if (!newOpen) {
-      // ダイアログが閉じられたらリセット
+      // ダイアログが閉じられたらUI状態をリセット（セッションは継続）
       setShowTerminal(false)
       setCwd('')
       setError(null)
+      // contextSessionId をリセット（再接続時は activeSessionId から復元）
+      setContextSessionId(null)
     }
+  }
+
+  const handleTerminate = async () => {
+    if (contextSessionId) {
+      await terminateSession(contextSessionId, true)
+      setContextSessionId(null)
+    }
+    setShowTerminal(false)
+    setError(null)
+    setOpen(false)
   }
 
   const handleError = (errorMessage: string) => {
@@ -78,7 +149,13 @@ export function ClaudeTerminalDialog({
 
   const dialogTitle = hasLinkedSession
     ? 'Claude Code Terminal（セッション続行）'
-    : 'Claude Code Terminal'
+    : contextSessionId && activeSessionId === contextSessionId
+      ? 'Claude Code Terminal（バックグラウンドから復帰）'
+      : 'Claude Code Terminal'
+
+  // 現在のセッション状態を取得
+  const currentSession = contextSessionId ? getSession(contextSessionId) : null
+  const sessionStatus = currentSession?.status
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -98,17 +175,18 @@ export function ClaudeTerminalDialog({
                 value={cwd}
                 onChange={(e) => setCwd(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter' && cwd.trim()) {
+                  if (e.key === 'Enter' && cwd.trim() && !isCreatingSession) {
                     handleLaunch()
                   }
                 }}
+                disabled={isCreatingSession}
               />
             </div>
 
             {error && <div className="text-sm text-red-500">{error}</div>}
 
-            <Button onClick={handleLaunch} disabled={!cwd.trim()}>
-              起動
+            <Button onClick={handleLaunch} disabled={!cwd.trim() || isCreatingSession}>
+              {isCreatingSession ? '起動中...' : '起動'}
             </Button>
           </div>
         ) : (
@@ -116,17 +194,32 @@ export function ClaudeTerminalDialog({
             {error && (
               <div className="mb-2 text-sm text-red-500 flex-shrink-0">{error}</div>
             )}
+            {sessionStatus === 'error' && currentSession?.error && (
+              <div className="mb-2 text-sm text-red-500 flex-shrink-0">
+                エラー: {currentSession.error}
+              </div>
+            )}
             <div className="flex-1 min-h-0 overflow-hidden relative">
               <ClaudeTerminal
+                ref={terminalRef}
                 cwd={cwd}
                 sessionId={hasLinkedSession ? linkedSessionId : undefined}
                 onError={handleError}
+                useContext={!!contextSessionId}
+                contextSessionId={contextSessionId ?? undefined}
               />
             </div>
             <div className="mt-2 pt-2 border-t flex gap-2 flex-shrink-0">
               <Button variant="outline" size="sm" onClick={handleReset}>
                 新しいセッション
               </Button>
+              <Button variant="destructive" size="sm" onClick={handleTerminate}>
+                終了
+              </Button>
+              <div className="flex-1" />
+              <span className="text-xs text-muted-foreground self-center">
+                ダイアログを閉じてもバックグラウンドで実行継続
+              </span>
             </div>
           </div>
         )}

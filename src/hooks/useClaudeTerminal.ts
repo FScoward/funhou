@@ -1,13 +1,25 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
+import type { IDisposable } from '@xterm/xterm'
 import {
   spawnClaudeTerminal,
   resumeClaudeTerminal,
   type ClaudeTerminalSession,
 } from '../lib/claudeTerminal'
 
-export function useClaudeTerminal() {
+interface UseClaudeTerminalOptions {
+  /** Context モードで使用する場合、セッションID を指定 */
+  sessionId?: string
+  /** Context モードで使用する場合、出力購読関数を指定 */
+  subscribeToOutput?: (sessionId: string, callback: (data: string) => void) => () => void
+  /** Context モードで使用する場合、入力送信関数を指定 */
+  writeToSession?: (sessionId: string, data: string) => void
+  /** Context モードで使用する場合、リサイズ関数を指定 */
+  resizeSession?: (sessionId: string, cols: number, rows: number) => void
+}
+
+export function useClaudeTerminal(options?: UseClaudeTerminalOptions) {
   const [terminal, setTerminal] = useState<Terminal | null>(null)
   const [session, setSession] = useState<ClaudeTerminalSession | null>(null)
   const [isReady, setIsReady] = useState(false)
@@ -15,6 +27,12 @@ export function useClaudeTerminal() {
   const [isShuttingDown, setIsShuttingDown] = useState(false)
   const fitAddonRef = useRef<FitAddon | null>(null)
   const containerRef = useRef<HTMLElement | null>(null)
+  const unsubscribeRef = useRef<(() => void) | null>(null)
+  const terminalDataDisposerRef = useRef<IDisposable | null>(null)
+  const hasAttachedRef = useRef(false)
+
+  // Context モードかどうか
+  const isContextMode = options?.sessionId && options?.subscribeToOutput && options?.writeToSession
 
   // ターミナルの初期化
   const initTerminal = useCallback((element: HTMLElement) => {
@@ -55,7 +73,69 @@ export function useClaudeTerminal() {
     }
   }, [])
 
-  // Claude Codeを起動
+  // Context モード: セッションにアタッチ
+  const attachToSession = useCallback(() => {
+    if (!terminal || !isContextMode || !options?.sessionId) return
+
+    // 既にアタッチ済みの場合はスキップ
+    if (hasAttachedRef.current) {
+      console.log('[useClaudeTerminal] Already attached, skipping')
+      return
+    }
+
+    console.log('[useClaudeTerminal] Attaching to session:', options.sessionId)
+    hasAttachedRef.current = true
+
+    // 出力を購読（バッファは復元せず、新しい出力のみ表示）
+    const unsubscribe = options.subscribeToOutput!(options.sessionId, (data) => {
+      terminal.write(data)
+    })
+    unsubscribeRef.current = unsubscribe
+
+    // 入力をセッションに転送（既存のリスナーをクリア）
+    if (terminalDataDisposerRef.current) {
+      terminalDataDisposerRef.current.dispose()
+    }
+    const sessionId = options.sessionId
+    const writeToSession = options.writeToSession!
+    terminalDataDisposerRef.current = terminal.onData((data) => {
+      writeToSession(sessionId, data)
+    })
+
+    // PTY のサイズをターミナルに同期
+    if (options.resizeSession) {
+      console.log('[useClaudeTerminal] Resizing PTY to match terminal:', terminal.cols, terminal.rows)
+      options.resizeSession(sessionId, terminal.cols, terminal.rows)
+    }
+
+    console.log('[useClaudeTerminal] Attached to session')
+  }, [terminal, isContextMode, options?.sessionId, options?.subscribeToOutput, options?.writeToSession, options?.resizeSession])
+
+  // Context モード: セッションからデタッチ
+  const detachFromSession = useCallback(() => {
+    if (unsubscribeRef.current) {
+      unsubscribeRef.current()
+      unsubscribeRef.current = null
+    }
+    if (terminalDataDisposerRef.current) {
+      terminalDataDisposerRef.current.dispose()
+      terminalDataDisposerRef.current = null
+    }
+    hasAttachedRef.current = false
+    console.log('[useClaudeTerminal] Detached from session')
+  }, [])
+
+  // isReady になったら自動的にアタッチ（Context モードの場合）
+  useEffect(() => {
+    if (isReady && isContextMode) {
+      attachToSession()
+    }
+    return () => {
+      detachFromSession()
+    }
+  }, [isReady, isContextMode, attachToSession, detachFromSession])
+
+  // Claude Codeを起動（非Context モード用）
   const spawnClaude = useCallback(
     async (cwd: string) => {
       if (!terminal) {
@@ -94,7 +174,7 @@ export function useClaudeTerminal() {
     [terminal]
   )
 
-  // セッションを再開
+  // セッションを再開（非Context モード用）
   const resumeClaude = useCallback(
     async (sessionId: string, cwd: string) => {
       if (!terminal) {
@@ -138,7 +218,7 @@ export function useClaudeTerminal() {
     }
   }, [terminal, session])
 
-  // Claude を正常終了させる
+  // Claude を正常終了させる（非Context モード用）
   const gracefulShutdown = useCallback(async (): Promise<void> => {
     if (!session) {
       console.log('[useClaudeTerminal] No session to shutdown')
@@ -203,16 +283,18 @@ export function useClaudeTerminal() {
     return () => window.removeEventListener('resize', resize)
   }, [resize])
 
-  // クリーンアップ
+  // クリーンアップ（非Context モードの場合のみ）
   useEffect(() => {
     return () => {
-      try {
-        session?.kill()
-      } catch (e) {
-        // ignore
+      if (!isContextMode) {
+        try {
+          session?.kill()
+        } catch (e) {
+          // ignore
+        }
       }
     }
-  }, [session])
+  }, [session, isContextMode])
 
   return {
     initTerminal,
@@ -220,6 +302,8 @@ export function useClaudeTerminal() {
     resumeClaude,
     resize,
     gracefulShutdown,
+    attachToSession,
+    detachFromSession,
     isReady,
     isShuttingDown,
     error,

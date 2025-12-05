@@ -2,6 +2,9 @@ import { useState, useMemo, useEffect, useRef } from 'react'
 import { getCurrentWindow } from '@tauri-apps/api/window'
 import { invoke } from '@tauri-apps/api/core'
 import './App.css'
+import { ClaudeTerminalSessionProvider } from '@/contexts/ClaudeTerminalSessionContext'
+import { ClaudeTerminalWidget } from '@/components/ClaudeTerminalWidget'
+import { WidgetTerminalDialog } from '@/components/WidgetTerminalDialog'
 import { SettingsSidebar } from '@/components/SettingsSidebar'
 import { DateNavigation } from '@/components/DateNavigation'
 import { DeleteConfirmDialogs } from '@/components/DeleteConfirmDialogs'
@@ -303,6 +306,7 @@ function App() {
   }, [filteredTimelineItems])
 
   return (
+    <ClaudeTerminalSessionProvider>
     <div className="app">
       <div className="app-layout">
         <DateNavigation
@@ -593,7 +597,14 @@ function App() {
         onOllamaEnabledChange={setOllamaEnabled}
         onOllamaModelChange={setOllamaModel}
       />
+
+      {/* バックグラウンド実行中のClaude Codeウィジェット */}
+      <ClaudeTerminalWidget />
+
+      {/* ウィジェットから開かれるダイアログ */}
+      <WidgetTerminalDialog />
     </div>
+    </ClaudeTerminalSessionProvider>
   )
 }
 

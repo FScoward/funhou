@@ -1,11 +1,16 @@
-import { useEffect, useRef, forwardRef, useImperativeHandle } from 'react'
+import { useEffect, useRef, forwardRef, useImperativeHandle, useMemo } from 'react'
 import { useClaudeTerminal } from '../hooks/useClaudeTerminal'
+import { useClaudeTerminalSession } from '../contexts/ClaudeTerminalSessionContext'
 import '@xterm/xterm/css/xterm.css'
 
 interface ClaudeTerminalProps {
   cwd: string
   sessionId?: string
   onError?: (error: string) => void
+  /** Context モードで使用する場合 true */
+  useContext?: boolean
+  /** Context モードで使用する内部セッションID */
+  contextSessionId?: string
 }
 
 export interface ClaudeTerminalHandle {
@@ -14,17 +19,35 @@ export interface ClaudeTerminalHandle {
 }
 
 export const ClaudeTerminal = forwardRef<ClaudeTerminalHandle, ClaudeTerminalProps>(
-  function ClaudeTerminal({ cwd, sessionId, onError }, ref) {
+  function ClaudeTerminal({ cwd, sessionId, onError, useContext = false, contextSessionId }, ref) {
     const terminalRef = useRef<HTMLDivElement>(null)
-    const { initTerminal, spawnClaude, resumeClaude, gracefulShutdown, isReady, isShuttingDown, error } =
-      useClaudeTerminal()
     const hasSpawned = useRef(false)
+
+    // Context を使用する場合
+    const contextValue = useClaudeTerminalSession()
+    const { subscribeToOutput, writeToSession, resizeSession, terminateSession } = contextValue
+
+    // Context モードのオプションを構築（メモ化）
+    const contextOptions = useMemo(() => {
+      if (!useContext || !contextSessionId) return undefined
+      return {
+        sessionId: contextSessionId,
+        subscribeToOutput,
+        writeToSession,
+        resizeSession,
+      }
+    }, [useContext, contextSessionId, subscribeToOutput, writeToSession, resizeSession])
+
+    const { initTerminal, spawnClaude, resumeClaude, gracefulShutdown, isReady, isShuttingDown, error } =
+      useClaudeTerminal(contextOptions)
 
     // 親コンポーネントに gracefulShutdown を公開
     useImperativeHandle(ref, () => ({
-      gracefulShutdown,
+      gracefulShutdown: useContext && contextSessionId
+        ? () => terminateSession(contextSessionId, true)
+        : gracefulShutdown,
       isShuttingDown,
-    }), [gracefulShutdown, isShuttingDown])
+    }), [useContext, contextSessionId, gracefulShutdown, isShuttingDown, terminateSession])
 
     // ターミナルの初期化
     useEffect(() => {
@@ -34,9 +57,9 @@ export const ClaudeTerminal = forwardRef<ClaudeTerminalHandle, ClaudeTerminalPro
       return cleanup
     }, [initTerminal])
 
-    // Claude Codeの起動
+    // Claude Codeの起動（非Context モードのみ）
     useEffect(() => {
-      if (isReady && !hasSpawned.current) {
+      if (!useContext && isReady && !hasSpawned.current) {
         hasSpawned.current = true
 
         if (sessionId) {
@@ -45,7 +68,7 @@ export const ClaudeTerminal = forwardRef<ClaudeTerminalHandle, ClaudeTerminalPro
           spawnClaude(cwd)
         }
       }
-    }, [isReady, cwd, sessionId, spawnClaude, resumeClaude])
+    }, [useContext, isReady, cwd, sessionId, spawnClaude, resumeClaude])
 
     // エラーハンドリング
     useEffect(() => {
