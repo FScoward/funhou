@@ -17,6 +17,8 @@ interface UseClaudeTerminalOptions {
   writeToSession?: (sessionId: string, data: string) => void
   /** Context モードで使用する場合、リサイズ関数を指定 */
   resizeSession?: (sessionId: string, cols: number, rows: number) => void
+  /** Context モードで使用する場合、出力バッファ取得関数を指定 */
+  getSessionOutput?: (sessionId: string) => string[]
 }
 
 export function useClaudeTerminal(options?: UseClaudeTerminalOptions) {
@@ -86,7 +88,16 @@ export function useClaudeTerminal(options?: UseClaudeTerminalOptions) {
     console.log('[useClaudeTerminal] Attaching to session:', options.sessionId)
     hasAttachedRef.current = true
 
-    // 出力を購読（バッファは復元せず、新しい出力のみ表示）
+    // まずバッファから過去の出力を復元
+    if (options.getSessionOutput) {
+      const buffer = options.getSessionOutput(options.sessionId)
+      if (buffer.length > 0) {
+        console.log('[useClaudeTerminal] Restoring buffer:', buffer.length, 'chunks')
+        buffer.forEach((chunk) => terminal.write(chunk))
+      }
+    }
+
+    // 新しい出力を購読
     const unsubscribe = options.subscribeToOutput!(options.sessionId, (data) => {
       terminal.write(data)
     })
@@ -109,7 +120,7 @@ export function useClaudeTerminal(options?: UseClaudeTerminalOptions) {
     }
 
     console.log('[useClaudeTerminal] Attached to session')
-  }, [terminal, isContextMode, options?.sessionId, options?.subscribeToOutput, options?.writeToSession, options?.resizeSession])
+  }, [terminal, isContextMode, options?.sessionId, options?.subscribeToOutput, options?.writeToSession, options?.resizeSession, options?.getSessionOutput])
 
   // Context モード: セッションからデタッチ
   const detachFromSession = useCallback(() => {

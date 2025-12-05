@@ -38,6 +38,7 @@ function App() {
   const [doneSidebarOpen, setDoneSidebarOpen] = useState(false)
   const [incompleteSidebarOpen, setIncompleteSidebarOpen] = useState(false)
   const [summarySidebarOpen, setSummarySidebarOpen] = useState(false)
+  const [claudeTerminalSidebarOpen, setClaudeTerminalSidebarOpen] = useState(false)
   const [searchText, setSearchText] = useState('')
   const [ollamaEnabled, setOllamaEnabled] = useState(false)
   const [ollamaModel, setOllamaModel] = useState('gemma3:4b')
@@ -598,8 +599,11 @@ function App() {
         onOllamaModelChange={setOllamaModel}
       />
 
-      {/* バックグラウンド実行中のClaude Codeウィジェット */}
-      <ClaudeTerminalWidget />
+      {/* バックグラウンド実行中のClaude Codeサイドバー */}
+      <ClaudeTerminalWidget
+        isOpen={claudeTerminalSidebarOpen}
+        onToggle={() => setClaudeTerminalSidebarOpen(!claudeTerminalSidebarOpen)}
+      />
 
       {/* ウィジェットから開かれるダイアログ */}
       <WidgetTerminalDialog />

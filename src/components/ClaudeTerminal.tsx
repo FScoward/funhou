@@ -25,7 +25,7 @@ export const ClaudeTerminal = forwardRef<ClaudeTerminalHandle, ClaudeTerminalPro
 
     // Context を使用する場合
     const contextValue = useClaudeTerminalSession()
-    const { subscribeToOutput, writeToSession, resizeSession, terminateSession } = contextValue
+    const { subscribeToOutput, writeToSession, resizeSession, terminateSession, getSessionOutput } = contextValue
 
     // Context モードのオプションを構築（メモ化）
     const contextOptions = useMemo(() => {
@@ -35,8 +35,9 @@ export const ClaudeTerminal = forwardRef<ClaudeTerminalHandle, ClaudeTerminalPro
         subscribeToOutput,
         writeToSession,
         resizeSession,
+        getSessionOutput,
       }
-    }, [useContext, contextSessionId, subscribeToOutput, writeToSession, resizeSession])
+    }, [useContext, contextSessionId, subscribeToOutput, writeToSession, resizeSession, getSessionOutput])
 
     const { initTerminal, spawnClaude, resumeClaude, gracefulShutdown, isReady, isShuttingDown, error } =
       useClaudeTerminal(contextOptions)

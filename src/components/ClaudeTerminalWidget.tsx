@@ -1,12 +1,13 @@
-import { useState, useRef, useCallback } from 'react'
+import { useState, useCallback } from 'react'
+import { ChevronRight, Terminal, ChevronDown, ChevronUp, Maximize2, X } from 'lucide-react'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
-import { useClaudeTerminalSession, type SessionStatus } from '../contexts/ClaudeTerminalSessionContext'
+import { useClaudeTerminalSession, type SessionStatus, type TerminalSession } from '../contexts/ClaudeTerminalSessionContext'
 
 const STATUS_COLORS: Record<SessionStatus, string> = {
   initializing: 'bg-yellow-500',
   running: 'bg-green-500',
-  waiting_input: 'bg-gray-500',  // タスク完了、次の入力待ち
+  waiting_input: 'bg-gray-500',
   stopped: 'bg-gray-500',
   error: 'bg-red-500',
 }
@@ -14,168 +15,231 @@ const STATUS_COLORS: Record<SessionStatus, string> = {
 const STATUS_LABELS: Record<SessionStatus, string> = {
   initializing: '初期化中...',
   running: '実行中',
-  waiting_input: '完了',  // Claudeがユーザーの入力を待っている = タスク完了
+  waiting_input: '完了',
   stopped: '終了',
   error: 'エラー',
 }
 
-export function ClaudeTerminalWidget() {
-  const {
-    activeSessionId,
-    getSession,
-    writeToSession,
-    terminateSession,
-    setDialogOpen,
-    isDialogOpen,
-    widgetExpanded,
-    setWidgetExpanded,
-  } = useClaudeTerminalSession()
+interface ClaudeTerminalWidgetProps {
+  isOpen: boolean
+  onToggle: () => void
+}
 
-  const [inputValue, setInputValue] = useState('')
-  const positionRef = useRef({ x: window.innerWidth - 320, y: window.innerHeight - 200 })
-  const widgetRef = useRef<HTMLDivElement>(null)
-
-  const activeSession = activeSessionId ? getSession(activeSessionId) : null
-
-  // 入力送信
-  const handleSendInput = useCallback(() => {
-    if (!activeSessionId || !inputValue.trim()) return
-    writeToSession(activeSessionId, inputValue + '\n')
-    setInputValue('')
-  }, [activeSessionId, inputValue, writeToSession])
-
-  // 全画面ダイアログを開く
-  const handleOpenFullScreen = useCallback(() => {
-    setDialogOpen(true)
-  }, [setDialogOpen])
-
-  // セッション終了
-  const handleTerminate = useCallback(async () => {
-    if (activeSessionId) {
-      await terminateSession(activeSessionId, true)
-    }
-  }, [activeSessionId, terminateSession])
-
-  // ドラッグ処理
-  const handleDragStart = useCallback((e: React.MouseEvent) => {
-    e.preventDefault()
-
-    const startX = e.clientX
-    const startY = e.clientY
-    const startPosX = positionRef.current.x
-    const startPosY = positionRef.current.y
-    const widget = widgetRef.current
-    if (!widget) return
-
-    const onMouseMove = (moveEvent: MouseEvent) => {
-      const deltaX = moveEvent.clientX - startX
-      const deltaY = moveEvent.clientY - startY
-
-      const newX = Math.max(0, Math.min(window.innerWidth - 300, startPosX + deltaX))
-      const newY = Math.max(0, Math.min(window.innerHeight - 50, startPosY + deltaY))
-      widget.style.left = `${newX}px`
-      widget.style.top = `${newY}px`
-      positionRef.current = { x: newX, y: newY }
-    }
-
-    const onMouseUp = () => {
-      document.removeEventListener('mousemove', onMouseMove)
-      document.removeEventListener('mouseup', onMouseUp)
-    }
-
-    document.addEventListener('mousemove', onMouseMove)
-    document.addEventListener('mouseup', onMouseUp)
-  }, [])
-
-  // アクティブセッションがなければウィジェットを表示しない
-  // ダイアログが開いている場合も表示しない
-  // 注意: この条件チェックは全てのフックの後に行う（React Hooksのルール）
-  if (!activeSession || isDialogOpen) {
-    return null
+// cwdを短縮表示
+function shortenCwd(cwd: string): string {
+  const parts = cwd.split('/')
+  if (parts.length > 2) {
+    return '~/' + parts.slice(-2).join('/')
   }
+  return cwd
+}
 
-  const status = activeSession.status
+// セッションカードコンポーネント
+interface SessionCardProps {
+  session: TerminalSession
+  isExpanded: boolean
+  onToggleExpand: () => void
+  onOpenFullScreen: () => void
+  onTerminate: () => void
+  onSendInput: (input: string) => void
+}
+
+function SessionCard({
+  session,
+  isExpanded,
+  onToggleExpand,
+  onOpenFullScreen,
+  onTerminate,
+  onSendInput,
+}: SessionCardProps) {
+  const [inputValue, setInputValue] = useState('')
+
+  const handleSend = useCallback(() => {
+    if (inputValue.trim()) {
+      onSendInput(inputValue)
+      setInputValue('')
+    }
+  }, [inputValue, onSendInput])
+
+  const status = session.status
   const statusColor = STATUS_COLORS[status]
   const statusLabel = STATUS_LABELS[status]
+  const isActive = status === 'running' || status === 'initializing'
 
   return (
-    <div
-      ref={widgetRef}
-      className="fixed z-50 bg-background border rounded-lg shadow-lg overflow-hidden flex flex-col"
-      style={{
-        left: positionRef.current.x,
-        top: positionRef.current.y,
-        width: widgetExpanded ? 300 : 220,
-      }}
-    >
-      {/* ヘッダー（ドラッグハンドル） */}
-      <div
-        className="flex items-center gap-2 px-3 py-2 bg-muted cursor-move select-none"
-        onMouseDown={handleDragStart}
+    <div className="claude-terminal-session-card">
+      {/* セッションヘッダー */}
+      <button
+        className="claude-terminal-session-header"
+        onClick={onToggleExpand}
       >
-        <div className={`w-2 h-2 rounded-full ${statusColor} ${status === 'running' || status === 'initializing' ? 'animate-pulse' : ''}`} />
-        <span className="text-sm font-medium flex-1 truncate">
-          Claude ({statusLabel})
-        </span>
-        <div className="flex items-center gap-1">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-6 w-6 p-0"
-            onClick={(e) => {
-              e.stopPropagation()
-              setWidgetExpanded(!widgetExpanded)
-            }}
-          >
-            {widgetExpanded ? '−' : '▲'}
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
-            onClick={(e) => {
-              e.stopPropagation()
-              handleTerminate()
-            }}
-          >
-            ×
-          </Button>
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          <div className={`w-2 h-2 rounded-full flex-shrink-0 ${statusColor} ${isActive ? 'animate-pulse' : ''}`} />
+          <span className="truncate text-sm font-medium">{shortenCwd(session.cwd)}</span>
         </div>
-      </div>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-muted-foreground">{statusLabel}</span>
+          {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+        </div>
+      </button>
 
       {/* 展開時のコンテンツ */}
-      {widgetExpanded && (
-        <div className="p-2 space-y-2">
-          {/* 入力エリア */}
-          <div className="flex gap-1">
+      {isExpanded && (
+        <div className="claude-terminal-session-content">
+          {/* 入力フィールド */}
+          <div className="claude-terminal-session-input">
             <Input
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault()
-                  handleSendInput()
+                  handleSend()
                 }
               }}
-              placeholder="Claudeへの入力..."
+              placeholder="入力..."
               className="flex-1 h-8 text-sm"
             />
-            <Button size="sm" className="h-8" onClick={handleSendInput}>
+            <Button size="sm" onClick={handleSend} className="h-8">
               送信
             </Button>
           </div>
 
-          {/* 全画面ボタン */}
-          <Button
-            variant="outline"
-            size="sm"
-            className="w-full h-7 text-xs"
-            onClick={handleOpenFullScreen}
-          >
-            全画面で開く
-          </Button>
+          {/* アクションボタン */}
+          <div className="claude-terminal-session-actions">
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex-1 h-7 text-xs"
+              onClick={onOpenFullScreen}
+            >
+              <Maximize2 size={12} className="mr-1" />
+              全画面
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              className="h-7 text-xs"
+              onClick={onTerminate}
+            >
+              <X size={12} className="mr-1" />
+              終了
+            </Button>
+          </div>
         </div>
       )}
     </div>
+  )
+}
+
+export function ClaudeTerminalWidget({ isOpen, onToggle }: ClaudeTerminalWidgetProps) {
+  const {
+    getActiveSessions,
+    writeToSession,
+    terminateSession,
+    setDialogOpen,
+    setActiveSession,
+    isDialogOpen,
+  } = useClaudeTerminalSession()
+
+  const [expandedSessionId, setExpandedSessionId] = useState<string | null>(null)
+
+  const activeSessions = getActiveSessions()
+  const runningCount = activeSessions.filter(
+    (s) => s.status === 'running' || s.status === 'initializing'
+  ).length
+
+  // セッション展開トグル
+  const handleToggleExpand = useCallback((sessionId: string) => {
+    setExpandedSessionId((prev) => (prev === sessionId ? null : sessionId))
+  }, [])
+
+  // 全画面ダイアログを開く
+  const handleOpenFullScreen = useCallback((sessionId: string) => {
+    setActiveSession(sessionId)
+    setDialogOpen(true)
+    onToggle() // サイドバーを閉じる
+  }, [setActiveSession, setDialogOpen, onToggle])
+
+  // セッション終了
+  const handleTerminate = useCallback(async (sessionId: string) => {
+    await terminateSession(sessionId, true)
+    if (expandedSessionId === sessionId) {
+      setExpandedSessionId(null)
+    }
+  }, [terminateSession, expandedSessionId])
+
+  // 入力送信
+  const handleSendInput = useCallback((sessionId: string, input: string) => {
+    writeToSession(sessionId, input + '\n')
+  }, [writeToSession])
+
+  // アクティブセッションがない、またはダイアログが開いている場合は表示しない
+  if (activeSessions.length === 0 || isDialogOpen) {
+    return null
+  }
+
+  // FAB表示テキスト
+  const fabText = runningCount > 0
+    ? `${runningCount} セッション実行中`
+    : `${activeSessions.length} セッション`
+
+  return (
+    <>
+      {/* FABトグルボタン（閉じている時のみ表示） */}
+      {!isOpen && (
+        <button
+          className="sidebar-toggle-fab claude-terminal-fab"
+          onClick={onToggle}
+          aria-label="Claude Terminalを開く"
+        >
+          <div className={`w-2 h-2 rounded-full ${runningCount > 0 ? 'bg-green-500 animate-pulse' : 'bg-gray-500'}`} />
+          <span className="ml-1 text-xs">{fabText}</span>
+        </button>
+      )}
+
+      {/* オーバーレイ */}
+      {isOpen && (
+        <div
+          className="sidebar-overlay"
+          onClick={onToggle}
+          aria-label="サイドバーを閉じる"
+        />
+      )}
+
+      {/* Drawerサイドバー */}
+      <aside className={`claude-terminal-sidebar-drawer ${isOpen ? 'open' : 'closed'}`}>
+        <button
+          className="sidebar-close"
+          onClick={onToggle}
+          aria-label="サイドバーを閉じる"
+        >
+          <ChevronRight size={16} />
+        </button>
+
+        <div className="claude-terminal-sidebar-header">
+          <Terminal size={18} />
+          <h2>Claude Terminal</h2>
+          <span className="text-xs text-muted-foreground ml-auto">
+            {activeSessions.length}個
+          </span>
+        </div>
+
+        {/* セッションリスト */}
+        <div className="claude-terminal-session-list">
+          {activeSessions.map((session) => (
+            <SessionCard
+              key={session.id}
+              session={session}
+              isExpanded={expandedSessionId === session.id}
+              onToggleExpand={() => handleToggleExpand(session.id)}
+              onOpenFullScreen={() => handleOpenFullScreen(session.id)}
+              onTerminate={() => handleTerminate(session.id)}
+              onSendInput={(input) => handleSendInput(session.id, input)}
+            />
+          ))}
+        </div>
+      </aside>
+    </>
   )
 }

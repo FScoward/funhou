@@ -37,6 +37,7 @@ interface ClaudeTerminalSessionContextValue {
   // セッション操作
   createSession: (cwd: string, claudeSessionId?: string) => Promise<string>
   getSession: (sessionId: string) => TerminalSession | undefined
+  getActiveSessions: () => TerminalSession[]
   terminateSession: (sessionId: string, graceful?: boolean) => Promise<void>
   resizeSession: (sessionId: string, cols: number, rows: number) => void
 
@@ -62,6 +63,10 @@ export function ClaudeTerminalSessionProvider({ children }: { children: ReactNod
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [widgetExpanded, setWidgetExpanded] = useState(false)
+
+  // sessionsの最新値を参照するためのref（useCallbackのクロージャ問題を回避）
+  const sessionsRef = useRef<Map<string, TerminalSession>>(sessions)
+  sessionsRef.current = sessions
 
   // 出力購読者を管理
   const outputSubscribersRef = useRef<Map<string, Set<(data: string) => void>>>(new Map())
@@ -212,6 +217,13 @@ export function ClaudeTerminalSessionProvider({ children }: { children: ReactNod
     return sessions.get(sessionId)
   }, [sessions])
 
+  // アクティブセッション（stopped以外）を取得
+  const getActiveSessions = useCallback((): TerminalSession[] => {
+    return Array.from(sessions.values()).filter(
+      (session) => session.status !== 'stopped'
+    )
+  }, [sessions])
+
   // セッションの終了
   const terminateSession = useCallback(async (sessionId: string, graceful = true): Promise<void> => {
     const session = sessions.get(sessionId)
@@ -280,22 +292,22 @@ export function ClaudeTerminalSessionProvider({ children }: { children: ReactNod
     }
   }, [sessions, activeSessionId])
 
-  // セッションへの書き込み
+  // セッションへの書き込み（refを使って常に最新のsessionsを参照）
   const writeToSession = useCallback((sessionId: string, data: string) => {
-    const session = sessions.get(sessionId)
+    const session = sessionsRef.current.get(sessionId)
     if (session?.pty) {
       session.pty.write(data)
     }
-  }, [sessions])
+  }, [])
 
-  // セッションのリサイズ
+  // セッションのリサイズ（refを使って常に最新のsessionsを参照）
   const resizeSession = useCallback((sessionId: string, cols: number, rows: number) => {
-    const session = sessions.get(sessionId)
+    const session = sessionsRef.current.get(sessionId)
     if (session?.pty) {
       console.log('[ClaudeTerminalSessionContext] Resizing session:', sessionId, cols, rows)
       session.pty.resize(cols, rows)
     }
-  }, [sessions])
+  }, [])
 
   // セッション出力の取得
   const getSessionOutput = useCallback((sessionId: string): string[] => {
@@ -327,6 +339,7 @@ export function ClaudeTerminalSessionProvider({ children }: { children: ReactNod
     activeSessionId,
     createSession,
     getSession,
+    getActiveSessions,
     terminateSession,
     resizeSession,
     writeToSession,
