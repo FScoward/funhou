@@ -88,7 +88,10 @@ export function useClaudeTerminal(options?: UseClaudeTerminalOptions) {
     console.log('[useClaudeTerminal] Attaching to session:', options.sessionId)
     hasAttachedRef.current = true
 
-    // まずバッファから過去の出力を復元
+    // ターミナルをクリアしてからバッファを復元（再アタッチ時の重複防止）
+    terminal.clear()
+
+    // バッファから過去の出力を復元
     if (options.getSessionOutput) {
       const buffer = options.getSessionOutput(options.sessionId)
       if (buffer.length > 0) {

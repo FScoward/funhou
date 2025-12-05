@@ -171,7 +171,9 @@ export function ClaudeTerminalWidget({ isOpen, onToggle }: ClaudeTerminalWidgetP
 
   // 入力送信
   const handleSendInput = useCallback((sessionId: string, input: string) => {
-    writeToSession(sessionId, input + '\n')
+    // テキストを送信してからEnterキー（\r）を別途送信
+    writeToSession(sessionId, input)
+    writeToSession(sessionId, '\r')
   }, [writeToSession])
 
   // アクティブセッションがない、またはダイアログが開いている場合は表示しない
