@@ -6,6 +6,8 @@ import { Circle, Slash, CheckCircle, XCircle, ListTodo } from 'lucide-react';
 import {
   CHECKBOX_PATTERN_ALL,
   getNextCheckboxStatus,
+  createClosedLine,
+  isClosedLine,
   type CheckboxStatus
 } from '@/utils/checkboxUtils';
 import { convertLineToTask, isTaskLine } from '@/utils/taskConversionUtils';
@@ -112,8 +114,27 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({ content, className, o
         const newLine = `${prefix}[${newStatus}]${suffix}`;
 
         lines[index] = newLine;
-        const newContent = lines.join('\n');
 
+        // CLOSED行の追加/削除処理（org-mode形式）
+        const nextLineIndex = index + 1;
+        const hasClosedLine = nextLineIndex < lines.length && isClosedLine(lines[nextLineIndex]);
+
+        if (newStatus === 'x' || newStatus === 'X') {
+          // 完了時: CLOSED行を追加または更新
+          const closedLine = createClosedLine();
+          if (hasClosedLine) {
+            lines[nextLineIndex] = closedLine;
+          } else {
+            lines.splice(nextLineIndex, 0, closedLine);
+          }
+        } else {
+          // 完了以外の状態: CLOSED行を削除
+          if (hasClosedLine) {
+            lines.splice(nextLineIndex, 1);
+          }
+        }
+
+        const newContent = lines.join('\n');
         onContentUpdate(newContent);
       }
     }
@@ -136,8 +157,27 @@ const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({ content, className, o
         const newLine = `${prefix}[${newStatus}]${suffix}`;
 
         lines[index] = newLine;
-        const newContent = lines.join('\n');
 
+        // CLOSED行の追加/削除処理（org-mode形式）
+        const nextLineIndex = index + 1;
+        const hasClosedLine = nextLineIndex < lines.length && isClosedLine(lines[nextLineIndex]);
+
+        if (newStatus === 'x' || newStatus === 'X') {
+          // 完了時: CLOSED行を追加または更新
+          const closedLine = createClosedLine();
+          if (hasClosedLine) {
+            lines[nextLineIndex] = closedLine;
+          } else {
+            lines.splice(nextLineIndex, 0, closedLine);
+          }
+        } else {
+          // 完了以外の状態: CLOSED行を削除
+          if (hasClosedLine) {
+            lines.splice(nextLineIndex, 1);
+          }
+        }
+
+        const newContent = lines.join('\n');
         onContentUpdate(newContent);
       }
     }

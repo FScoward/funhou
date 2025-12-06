@@ -4,6 +4,8 @@ import { TodoItem, Entry, Reply, Tag, getTodoUniqueId } from '@/types'
 import {
   CHECKBOX_PATTERN_INCOMPLETE,
   CHECKBOX_PATTERN_ALL,
+  createClosedLine,
+  isClosedLine,
   type CheckboxStatus
 } from '@/utils/checkboxUtils'
 import { arrayMove } from '@dnd-kit/sortable'
@@ -164,7 +166,30 @@ export function useTodos({ database }: UseTodosProps) {
           const match = lines[index].match(CHECKBOX_PATTERN_ALL)
 
           if (match) {
+            // チェックボックス行を更新
             lines[index] = `${match[1]}[${newStatus}]${match[3]}`
+
+            // 次の行がCLOSED行かどうかをチェック
+            const nextLineIndex = index + 1
+            const hasClosedLine = nextLineIndex < lines.length && isClosedLine(lines[nextLineIndex])
+
+            if (newStatus === 'x' || newStatus === 'X') {
+              // 完了時: CLOSED行を追加または更新
+              const closedLine = createClosedLine()
+              if (hasClosedLine) {
+                // 既存のCLOSED行を更新
+                lines[nextLineIndex] = closedLine
+              } else {
+                // 新しいCLOSED行を追加
+                lines.splice(nextLineIndex, 0, closedLine)
+              }
+            } else {
+              // 完了以外の状態: CLOSED行を削除
+              if (hasClosedLine) {
+                lines.splice(nextLineIndex, 1)
+              }
+            }
+
             const newContent = lines.join('\n')
 
             await database.execute(
@@ -204,7 +229,30 @@ export function useTodos({ database }: UseTodosProps) {
           const match = lines[index].match(CHECKBOX_PATTERN_ALL)
 
           if (match) {
+            // チェックボックス行を更新
             lines[index] = `${match[1]}[${newStatus}]${match[3]}`
+
+            // 次の行がCLOSED行かどうかをチェック
+            const nextLineIndex = index + 1
+            const hasClosedLine = nextLineIndex < lines.length && isClosedLine(lines[nextLineIndex])
+
+            if (newStatus === 'x' || newStatus === 'X') {
+              // 完了時: CLOSED行を追加または更新
+              const closedLine = createClosedLine()
+              if (hasClosedLine) {
+                // 既存のCLOSED行を更新
+                lines[nextLineIndex] = closedLine
+              } else {
+                // 新しいCLOSED行を追加
+                lines.splice(nextLineIndex, 0, closedLine)
+              }
+            } else {
+              // 完了以外の状態: CLOSED行を削除
+              if (hasClosedLine) {
+                lines.splice(nextLineIndex, 1)
+              }
+            }
+
             const newContent = lines.join('\n')
 
             await database.execute(

@@ -194,6 +194,22 @@ export async function getDb() {
       CREATE INDEX IF NOT EXISTS idx_doing_order_sort ON doing_order(sort_order)
     `)
 
+    // 未完了タスクの並び順テーブルを作成
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS incomplete_order (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        entry_id INTEGER NOT NULL,
+        reply_id INTEGER,
+        line_index INTEGER NOT NULL,
+        sort_order INTEGER NOT NULL,
+        UNIQUE(entry_id, reply_id, line_index)
+      )
+    `)
+
+    await db.execute(`
+      CREATE INDEX IF NOT EXISTS idx_incomplete_order_sort ON incomplete_order(sort_order)
+    `)
+
     // Claude Codeセッション紐付け用カラムを追加
     try {
       await db.execute(`
