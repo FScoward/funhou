@@ -32,8 +32,6 @@ export async function spawnClaudeTerminal(
   const cols = options.cols ?? 80
   const rows = options.rows ?? 24
 
-  console.log('[claudeTerminal] spawning PTY with options:', { cols, rows, cwd: options.cwd })
-
   // ログインシェル経由でclaudeを起動（PATHを継承するため）
   const pty = spawn('/bin/zsh', ['-l'], {
     cols,
@@ -42,11 +40,8 @@ export async function spawnClaudeTerminal(
     env: PTY_ENV,
   })
 
-  console.log('[claudeTerminal] PTY spawned, pid:', pty.pid)
-
   // cdで指定ディレクトリに移動してからclaudeコマンドを送信
   // ログインシェルはcwdオプションを無視することがあるため
-  console.log('[claudeTerminal] changing directory and starting claude...')
   const escapedCwd = options.cwd.replace(/'/g, "'\\''")
   pty.write(`cd '${escapedCwd}' && claude\n`)
 
@@ -78,8 +73,6 @@ export async function resumeClaudeTerminal(
 
   const escapedCwd = options.cwd.replace(/'/g, "'\\''")
   const escapedSessionId = sessionId.replace(/'/g, "'\\''")
-
-  console.log('[claudeTerminal] Resuming session:', sessionId)
   pty.write(`cd '${escapedCwd}' && claude --resume '${escapedSessionId}'\n`)
 
   return {
