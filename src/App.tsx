@@ -195,6 +195,8 @@ function App() {
     loadSessionsForTasks,
     linkSession: linkTaskSession,
     unlinkSession: unlinkTaskSession,
+    updateSessionName: updateTaskSessionName,
+    updateSessionId: updateTaskSessionId,
   } = useTaskClaudeSessions({ database })
 
   // タスクClaude起動ダイアログの状態（アプリ内ターミナル）
@@ -297,6 +299,28 @@ function App() {
       await unlinkTaskSession(sessionsDialogTask, sessionId)
       // ダイアログ内のセッション一覧も更新
       setSessionsDialogSessions(prev => prev.filter(s => s.sessionId !== sessionId))
+    }
+  }
+
+  // セッション名変更
+  const handleSessionNameChanged = async (sessionId: string, name: string | null) => {
+    if (sessionsDialogTask) {
+      await updateTaskSessionName(sessionsDialogTask, sessionId, name)
+      // ダイアログ内のセッション一覧も更新
+      setSessionsDialogSessions(prev =>
+        prev.map(s => s.sessionId === sessionId ? { ...s, name: name ?? undefined } : s)
+      )
+    }
+  }
+
+  // セッションID更新（Claude Codeログとの紐付け用）
+  const handleSessionIdUpdated = async (oldSessionId: string, newSessionId: string) => {
+    if (sessionsDialogTask) {
+      await updateTaskSessionId(sessionsDialogTask, oldSessionId, newSessionId)
+      // ダイアログ内のセッション一覧も更新
+      setSessionsDialogSessions(prev =>
+        prev.map(s => s.sessionId === oldSessionId ? { ...s, sessionId: newSessionId } : s)
+      )
     }
   }
 
@@ -750,6 +774,8 @@ function App() {
           onOpenChange={setSessionsDialogOpen}
           onSessionResumed={() => {}}
           onSessionUnlinked={handleSessionUnlinked}
+          onSessionNameChanged={handleSessionNameChanged}
+          onSessionIdUpdated={handleSessionIdUpdated}
           onLaunchNew={() => {
             setSessionsDialogOpen(false)
             handleLaunchClaude(sessionsDialogTask, sessionsDialogTaskText)

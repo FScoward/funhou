@@ -114,6 +114,7 @@ export interface TaskClaudeSession {
   cwd: string
   projectPath: string
   createdAt: string
+  name?: string
 }
 
 // タスク識別子

@@ -10,6 +10,7 @@ interface DbTaskClaudeSession {
   cwd: string
   project_path: string
   created_at: string
+  name: string | null
 }
 
 function mapDbToTaskClaudeSession(row: DbTaskClaudeSession): TaskClaudeSession {
@@ -22,6 +23,7 @@ function mapDbToTaskClaudeSession(row: DbTaskClaudeSession): TaskClaudeSession {
     cwd: row.cwd,
     projectPath: row.project_path,
     createdAt: row.created_at,
+    name: row.name ?? undefined,
   }
 }
 
@@ -65,6 +67,36 @@ export async function unlinkTaskClaudeSession(
     `DELETE FROM task_claude_sessions
      WHERE entry_id = ? AND (reply_id = ? OR (reply_id IS NULL AND ? IS NULL)) AND line_index = ? AND session_id = ?`,
     [task.entryId, task.replyId ?? null, task.replyId ?? null, task.lineIndex, sessionId]
+  )
+}
+
+// セッション名を更新
+export async function updateTaskClaudeSessionName(
+  db: Database,
+  task: TaskIdentifier,
+  sessionId: string,
+  name: string | null
+): Promise<void> {
+  await db.execute(
+    `UPDATE task_claude_sessions
+     SET name = ?
+     WHERE entry_id = ? AND (reply_id = ? OR (reply_id IS NULL AND ? IS NULL)) AND line_index = ? AND session_id = ?`,
+    [name, task.entryId, task.replyId ?? null, task.replyId ?? null, task.lineIndex, sessionId]
+  )
+}
+
+// セッションIDを更新（Claude Codeログとの紐付け用）
+export async function updateTaskClaudeSessionId(
+  db: Database,
+  task: TaskIdentifier,
+  oldSessionId: string,
+  newSessionId: string
+): Promise<void> {
+  await db.execute(
+    `UPDATE task_claude_sessions
+     SET session_id = ?
+     WHERE entry_id = ? AND (reply_id = ? OR (reply_id IS NULL AND ? IS NULL)) AND line_index = ? AND session_id = ?`,
+    [newSessionId, task.entryId, task.replyId ?? null, task.replyId ?? null, task.lineIndex, oldSessionId]
   )
 }
 

@@ -259,6 +259,15 @@ export async function getDb() {
       CREATE INDEX IF NOT EXISTS idx_task_claude_sessions_session
         ON task_claude_sessions(session_id)
     `)
+
+    // task_claude_sessionsにnameカラムを追加（セッション名）
+    try {
+      await db.execute(`
+        ALTER TABLE task_claude_sessions ADD COLUMN name TEXT DEFAULT NULL
+      `)
+    } catch (error) {
+      console.log('task_claude_sessions.name column already exists or migration error:', error)
+    }
   }
   return db
 }

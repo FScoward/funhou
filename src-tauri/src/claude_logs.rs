@@ -139,11 +139,8 @@ pub fn list_claude_projects() -> Result<Vec<ProjectInfo>, String> {
 /// List sessions for a specific project
 #[tauri::command]
 pub fn list_claude_sessions(project_path: String) -> Result<Vec<SessionSummary>, String> {
-    let project_dir = PathBuf::from(&project_path);
-
-    if !project_dir.exists() {
-        return Err("Project directory not found".to_string());
-    }
+    // Convert project_path (which might be actual cwd) to Claude's project directory
+    let project_dir = get_claude_project_dir(&project_path)?;
 
     let mut sessions = Vec::new();
 
@@ -213,13 +210,39 @@ pub fn list_claude_sessions(project_path: String) -> Result<Vec<SessionSummary>,
     Ok(sessions)
 }
 
+/// Convert a project path (cwd) to Claude's project directory path
+fn get_claude_project_dir(cwd: &str) -> Result<PathBuf, String> {
+    let home = dirs::home_dir().ok_or("Could not find home directory")?;
+    let claude_projects = home.join(".claude").join("projects");
+
+    // Check if the path is already a Claude projects path
+    if cwd.starts_with(&claude_projects.to_string_lossy().to_string()) {
+        return Ok(PathBuf::from(cwd));
+    }
+
+    // Convert cwd to Claude's directory name format:
+    // - Replace / with -
+    // - Replace . with -
+    // Result: /Users/foo/github.com/bar -> -Users-foo-github-com-bar
+    let encoded_name = cwd.replace("/", "-").replace(".", "-");
+    let project_dir = claude_projects.join(&encoded_name);
+
+    if project_dir.exists() {
+        return Ok(project_dir);
+    }
+
+    Err(format!("Claude project directory not found for: {} (tried: {:?})", cwd, project_dir))
+}
+
 /// Read a specific session's conversation
 #[tauri::command]
 pub fn read_claude_session(project_path: String, session_id: String) -> Result<Vec<ConversationMessage>, String> {
-    let session_file = PathBuf::from(&project_path).join(format!("{}.jsonl", session_id));
+    // Convert project_path (which might be actual cwd) to Claude's project directory
+    let claude_project_dir = get_claude_project_dir(&project_path)?;
+    let session_file = claude_project_dir.join(format!("{}.jsonl", session_id));
 
     if !session_file.exists() {
-        return Err("Session file not found".to_string());
+        return Err(format!("Session file not found: {:?}", session_file));
     }
 
     let content = fs::read_to_string(&session_file).map_err(|e| e.to_string())?;

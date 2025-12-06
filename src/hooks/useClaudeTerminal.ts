@@ -171,8 +171,27 @@ export function useClaudeTerminal(options?: UseClaudeTerminalOptions) {
         terminalDataDisposerRef.current.dispose()
       }
 
-      // inputイベントを使用（keydownより確実に全ての入力を捕捉）
+      // IME入力中フラグ
+      let isComposing = false
+
+      // compositionイベントでIME入力状態を追跡
+      const handleCompositionStart = () => {
+        isComposing = true
+      }
+
+      const handleCompositionEnd = (e: CompositionEvent) => {
+        isComposing = false
+        // compositionend時に確定したテキストを送信
+        if (e.data) {
+          writeToSession(sessionId, e.data)
+        }
+      }
+
+      // inputイベントを使用（IME入力中は無視）
       const handleInput = (e: Event) => {
+        // IME入力中はcompositionendで処理するのでスキップ
+        if (isComposing) return
+
         const inputEvent = e as InputEvent
         if (inputEvent.data) {
           writeToSession(sessionId, inputEvent.data)
@@ -181,6 +200,21 @@ export function useClaudeTerminal(options?: UseClaudeTerminalOptions) {
 
       // keydownイベントも監視（特殊キー用）
       const handleKeyDown = (e: KeyboardEvent) => {
+        // IME入力中はEscape以外を無視（Enter含む）
+        // e.isComposingも併用（ブラウザのネイティブプロパティ）
+        if (isComposing || e.isComposing) {
+          if (e.key === 'Escape') {
+            // Escapeのみ処理（IMEキャンセル用）
+            writeToSession(sessionId, '\x1b')
+            e.preventDefault()
+          }
+          return
+        }
+
+        // keyCode 229はIME処理中を示す
+        if (e.keyCode === 229) {
+          return
+        }
 
         let data = ''
         let preventDefault = false
@@ -235,12 +269,16 @@ export function useClaudeTerminal(options?: UseClaudeTerminalOptions) {
         }
       }
 
+      xtermTextarea.addEventListener('compositionstart', handleCompositionStart)
+      xtermTextarea.addEventListener('compositionend', handleCompositionEnd)
       xtermTextarea.addEventListener('input', handleInput)
       // keydownはキャプチャフェーズで捕捉（他のハンドラより先に処理）
       xtermTextarea.addEventListener('keydown', handleKeyDown, true)
 
       terminalDataDisposerRef.current = {
         dispose: () => {
+          xtermTextarea.removeEventListener('compositionstart', handleCompositionStart)
+          xtermTextarea.removeEventListener('compositionend', handleCompositionEnd)
           xtermTextarea.removeEventListener('input', handleInput)
           xtermTextarea.removeEventListener('keydown', handleKeyDown, true)
         }

@@ -5,6 +5,8 @@ import {
   getTaskClaudeSessionsBatch,
   linkTaskClaudeSession,
   unlinkTaskClaudeSession,
+  updateTaskClaudeSessionName,
+  updateTaskClaudeSessionId,
 } from '@/lib/taskClaudeSessions'
 
 interface UseTaskClaudeSessionsProps {
@@ -105,6 +107,60 @@ export function useTaskClaudeSessions({ database }: UseTaskClaudeSessionsProps) 
     return sessionsMap.get(getTaskIdentifierKey(task)) ?? []
   }, [sessionsMap])
 
+  // セッション名を更新
+  const updateSessionName = useCallback(async (
+    task: TaskIdentifier,
+    sessionId: string,
+    name: string | null
+  ) => {
+    if (!database) return
+
+    try {
+      await updateTaskClaudeSessionName(database, task, sessionId, name)
+
+      // ローカル状態を更新
+      setSessionsMap(prev => {
+        const newMap = new Map(prev)
+        const key = getTaskIdentifierKey(task)
+        const sessions = newMap.get(key) ?? []
+        newMap.set(key, sessions.map(s =>
+          s.sessionId === sessionId ? { ...s, name: name ?? undefined } : s
+        ))
+        return newMap
+      })
+    } catch (error) {
+      console.error('セッション名の更新に失敗しました:', error)
+      throw error
+    }
+  }, [database])
+
+  // セッションIDを更新（Claude Codeログとの紐付け用）
+  const updateSessionId = useCallback(async (
+    task: TaskIdentifier,
+    oldSessionId: string,
+    newSessionId: string
+  ) => {
+    if (!database) return
+
+    try {
+      await updateTaskClaudeSessionId(database, task, oldSessionId, newSessionId)
+
+      // ローカル状態を更新
+      setSessionsMap(prev => {
+        const newMap = new Map(prev)
+        const key = getTaskIdentifierKey(task)
+        const sessions = newMap.get(key) ?? []
+        newMap.set(key, sessions.map(s =>
+          s.sessionId === oldSessionId ? { ...s, sessionId: newSessionId } : s
+        ))
+        return newMap
+      })
+    } catch (error) {
+      console.error('セッションIDの更新に失敗しました:', error)
+      throw error
+    }
+  }, [database])
+
   return {
     sessionsMap,
     isLoading,
@@ -112,5 +168,7 @@ export function useTaskClaudeSessions({ database }: UseTaskClaudeSessionsProps) 
     linkSession,
     unlinkSession,
     getSessionsForTask,
+    updateSessionName,
+    updateSessionId,
   }
 }

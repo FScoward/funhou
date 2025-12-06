@@ -50,12 +50,10 @@ export async function spawnClaudeTerminal(
 }
 
 /**
- * Claude Codeをセッション選択画面で再開する
- * 注意: アプリが生成するセッションIDはClaude Codeの実際のセッションIDとは異なるため、
- * セッション選択画面を表示してユーザーに選択させる
+ * Claude Codeを指定されたセッションIDで再開する
  */
 export async function resumeClaudeTerminal(
-  _sessionId: string,
+  sessionId: string,
   options: TerminalOptions
 ): Promise<ClaudeTerminalSession> {
   const cols = options.cols ?? 80
@@ -68,10 +66,10 @@ export async function resumeClaudeTerminal(
   })
 
   const escapedCwd = options.cwd.replace(/'/g, "'\\''")
+  const escapedSessionId = sessionId.replace(/'/g, "'\\''")
 
-  // セッション選択画面を表示（ユーザーが選択）
-  console.log('[claudeTerminal] Opening session picker for resume')
-  pty.write(`cd '${escapedCwd}' && claude --resume\n`)
+  console.log('[claudeTerminal] Resuming session:', sessionId)
+  pty.write(`cd '${escapedCwd}' && claude --resume '${escapedSessionId}'\n`)
 
   return {
     pty,
