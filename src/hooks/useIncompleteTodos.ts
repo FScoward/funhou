@@ -1,7 +1,15 @@
 import { useState, useCallback } from 'react'
 import Database from '@tauri-apps/plugin-sql'
-import { IncompleteTodoItem, Entry, Reply } from '@/types'
+import { IncompleteTodoItem, Entry, Reply, getIncompleteTodoUniqueId } from '@/types'
 import { CHECKBOX_PATTERN_ALL } from '@/utils/checkboxUtils'
+import { arrayMove } from '@dnd-kit/sortable'
+
+interface IncompleteOrderRow {
+  entry_id: number
+  reply_id: number | null
+  line_index: number
+  sort_order: number
+}
 
 interface UseIncompleteTodosProps {
   database: Database | null
@@ -68,12 +76,50 @@ export function useIncompleteTodos({ database }: UseIncompleteTodosProps) {
         })
       }
 
-      // タイムスタンプの新しい順にソート
-      todos.sort((a, b) =>
-        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+      // 保存されたソート順序を取得
+      const orderData = await database.select<IncompleteOrderRow[]>(
+        'SELECT entry_id, reply_id, line_index, sort_order FROM incomplete_order ORDER BY sort_order'
       )
 
-      setIncompleteTodos(todos)
+      // ソート順序マップを作成
+      const orderMap = new Map<string, number>()
+      orderData.forEach(row => {
+        const key = `${row.reply_id ?? row.entry_id}-${row.line_index}`
+        orderMap.set(key, row.sort_order)
+      })
+
+      // カスタム順序がある場合はそれを使用、なければタイムスタンプ順
+      todos.sort((a, b) => {
+        const orderA = orderMap.get(getIncompleteTodoUniqueId(a))
+        const orderB = orderMap.get(getIncompleteTodoUniqueId(b))
+
+        // 両方にカスタム順序がある場合
+        if (orderA !== undefined && orderB !== undefined) {
+          return orderA - orderB
+        }
+        // どちらかにしかない場合、カスタム順序がある方を先に
+        if (orderA !== undefined) return -1
+        if (orderB !== undefined) return 1
+        // どちらもない場合はタイムスタンプの新しい順
+        return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+      })
+
+      // 親子関係の情報を付与
+      // entryIdごとに子タスク（replyIdを持つタスク）の数をカウント
+      const childCountByEntry = new Map<number, number>()
+      todos.forEach(todo => {
+        if (todo.replyId) {
+          childCountByEntry.set(todo.entryId, (childCountByEntry.get(todo.entryId) || 0) + 1)
+        }
+      })
+
+      // 親タスクにchildCount情報を付与
+      const todosWithChildCount = todos.map(todo => ({
+        ...todo,
+        childCount: !todo.replyId ? childCountByEntry.get(todo.entryId) : undefined
+      }))
+
+      setIncompleteTodos(todosWithChildCount)
     } catch (error) {
       console.error('未完了タスクの読み込みに失敗しました:', error)
     } finally {
@@ -145,10 +191,46 @@ export function useIncompleteTodos({ database }: UseIncompleteTodosProps) {
     return false
   }, [database])
 
+  // 未完了タスクの順序を保存する
+  const saveIncompleteOrder = useCallback(async (todos: IncompleteTodoItem[]) => {
+    if (!database) return
+
+    try {
+      // 既存のソート順序をクリア
+      await database.execute('DELETE FROM incomplete_order')
+
+      // 新しいソート順序を保存
+      for (let i = 0; i < todos.length; i++) {
+        const todo = todos[i]
+        await database.execute(
+          'INSERT INTO incomplete_order (entry_id, reply_id, line_index, sort_order) VALUES (?, ?, ?, ?)',
+          [todo.entryId, todo.replyId ?? null, todo.lineIndex, i]
+        )
+      }
+    } catch (error) {
+      console.error('未完了タスクの順序保存に失敗しました:', error)
+    }
+  }, [database])
+
+  // 未完了タスクを並び替える
+  const reorderIncompleteTodos = useCallback((activeId: string, overId: string) => {
+    const oldIndex = incompleteTodos.findIndex(t => getIncompleteTodoUniqueId(t) === activeId)
+    const newIndex = incompleteTodos.findIndex(t => getIncompleteTodoUniqueId(t) === overId)
+
+    if (oldIndex !== -1 && newIndex !== -1) {
+      const reordered = arrayMove(incompleteTodos, oldIndex, newIndex)
+      setIncompleteTodos(reordered)
+      return reordered
+    }
+    return null
+  }, [incompleteTodos])
+
   return {
     incompleteTodos,
     isLoading,
     loadIncompleteTodos,
-    updateToDoingStatus
+    updateToDoingStatus,
+    saveIncompleteOrder,
+    reorderIncompleteTodos
   }
 }

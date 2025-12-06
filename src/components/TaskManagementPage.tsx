@@ -1,8 +1,8 @@
 import { useMemo, useRef, useState, useEffect, useCallback } from 'react'
-import { CheckCircle, ListTodo, Circle, ExternalLink, Sparkles } from 'lucide-react'
-import { TodoItem, CompletedTodoItem, IncompleteTodoItem, getTodoUniqueId } from '@/types'
+import { CheckCircle, ListTodo, ExternalLink, Sparkles } from 'lucide-react'
+import { TodoItem, CompletedTodoItem, IncompleteTodoItem, getTodoUniqueId, getIncompleteTodoUniqueId } from '@/types'
 import { CheckboxStatus } from '@/utils/checkboxUtils'
-import { formatTimestamp, formatDateToLocalYYYYMMDD } from '@/utils/dateUtils'
+import { formatTimestamp } from '@/utils/dateUtils'
 import {
   DndContext,
   closestCenter,
@@ -18,51 +18,13 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
 import { SortableDoingItem } from './SortableDoingItem'
+import { SortableIncompleteItem } from './SortableIncompleteItem'
 
 // 親エントリIDから色相を生成
 function getHueFromEntryId(entryId: number): number {
   return (entryId * 137.5) % 360
 }
 
-// タスクを日付別にグルーピング
-function groupByDate(todos: IncompleteTodoItem[]): Map<string, IncompleteTodoItem[]> {
-  const grouped = new Map<string, IncompleteTodoItem[]>()
-
-  for (const todo of todos) {
-    const date = new Date(todo.timestamp)
-    const dateKey = formatDateToLocalYYYYMMDD(date)
-
-    if (!grouped.has(dateKey)) {
-      grouped.set(dateKey, [])
-    }
-    grouped.get(dateKey)!.push(todo)
-  }
-
-  return grouped
-}
-
-// 日付を日本語でフォーマット
-function formatDateLabel(dateStr: string): string {
-  const date = new Date(dateStr + 'T00:00:00')
-  const today = new Date()
-  const yesterday = new Date(today)
-  yesterday.setDate(yesterday.getDate() - 1)
-
-  const todayStr = formatDateToLocalYYYYMMDD(today)
-  const yesterdayStr = formatDateToLocalYYYYMMDD(yesterday)
-
-  if (dateStr === todayStr) {
-    return '今日'
-  } else if (dateStr === yesterdayStr) {
-    return '昨日'
-  } else {
-    const month = date.getMonth() + 1
-    const day = date.getDate()
-    const weekdays = ['日', '月', '火', '水', '木', '金', '土']
-    const weekday = weekdays[date.getDay()]
-    return `${month}月${day}日（${weekday}）`
-  }
-}
 
 interface TaskManagementPageProps {
   // DOING tasks
@@ -79,6 +41,7 @@ interface TaskManagementPageProps {
   incompleteTodos: IncompleteTodoItem[]
   isIncompleteLoading: boolean
   onIncompleteStatusChange: (todo: IncompleteTodoItem) => Promise<void>
+  onIncompleteReorder: (activeId: string, overId: string) => Promise<void>
 }
 
 export function TaskManagementPage({
@@ -93,9 +56,12 @@ export function TaskManagementPage({
   incompleteTodos,
   isIncompleteLoading,
   onIncompleteStatusChange,
+  onIncompleteReorder,
 }: TaskManagementPageProps) {
   const listRef = useRef<HTMLDivElement>(null)
+  const incompleteListRef = useRef<HTMLDivElement>(null)
   const [curves, setCurves] = useState<Array<{ path: string; color: string }>>([])
+  const [incompleteCurves, setIncompleteCurves] = useState<Array<{ path: string; color: string }>>([])
 
   // DOINGのみフィルタリング
   const doingTodos = useMemo(() => {
@@ -115,8 +81,6 @@ export function TaskManagementPage({
       childCount: !todo.replyId ? childCountByEntry.get(todo.entryId) : undefined,
     }))
   }, [todoItems])
-
-  const groupedIncompleteTodos = useMemo(() => groupByDate(incompleteTodos), [incompleteTodos])
 
   // 線の位置を計算（左側レーンを通る）
   const updateLines = useCallback(() => {
@@ -199,6 +163,84 @@ export function TaskManagementPage({
     setCurves(newCurves)
   }, [])
 
+  // 未完了タスク用の線の位置を計算
+  const updateIncompleteLines = useCallback(() => {
+    if (!incompleteListRef.current) return
+
+    const container = incompleteListRef.current
+    const containerRect = container.getBoundingClientRect()
+    const items = container.querySelectorAll('.incomplete-item')
+
+    // 親タスクの位置を記録
+    const parentPositions = new Map<number, { x: number; y: number; color: string }>()
+    // 子タスクの位置を記録
+    const childPositions: Array<{ entryId: number; x: number; y: number }> = []
+
+    // 最初のパス: 位置を収集
+    items.forEach((item) => {
+      const entryId = parseInt(item.getAttribute('data-entry-id') || '0')
+      const isChild = item.getAttribute('data-is-child') === 'true'
+      const checkbox = item.querySelector('.task-item-checkbox')
+      const checkboxRect = checkbox?.getBoundingClientRect()
+
+      if (!checkboxRect) return
+
+      const y = checkboxRect.top - containerRect.top + checkboxRect.height / 2
+      const x = checkboxRect.left - containerRect.left + checkboxRect.width / 2
+
+      if (!isChild) {
+        const hue = getHueFromEntryId(entryId)
+        parentPositions.set(entryId, { x, y, color: `hsl(${hue}, 75%, 40%)` })
+      } else {
+        childPositions.push({ entryId, x, y })
+      }
+    })
+
+    // 線を生成
+    const newCurves: Array<{ path: string; color: string }> = []
+
+    // 子を持つ親のリストを作成（レーン位置を決めるため）
+    const parentsWithChildren: number[] = []
+    parentPositions.forEach((_, entryId) => {
+      const hasChildren = childPositions.some(c => c.entryId === entryId)
+      if (hasChildren) {
+        parentsWithChildren.push(entryId)
+      }
+    })
+
+    // 各親について、子タスクへの線を描画
+    parentPositions.forEach((parent, entryId) => {
+      const children = childPositions.filter(c => c.entryId === entryId)
+      if (children.length === 0) return
+
+      // このエントリのレーンインデックス
+      const laneIndex = parentsWithChildren.indexOf(entryId)
+      const laneOffset = laneIndex * 10
+
+      // 各子へのL字型の線
+      children.forEach(child => {
+        const checkboxRadius = 7
+
+        const startX = parent.x - checkboxRadius
+        const startY = parent.y
+
+        const endX = child.x - checkboxRadius
+        const endY = child.y
+
+        const laneX = Math.min(startX, endX) - 10 - laneOffset
+
+        const path = `M ${startX} ${startY} L ${laneX} ${startY} L ${laneX} ${endY} L ${endX} ${endY}`
+
+        newCurves.push({
+          path,
+          color: parent.color,
+        })
+      })
+    })
+
+    setIncompleteCurves(newCurves)
+  }, [])
+
   useEffect(() => {
     updateLines()
     // ResizeObserverで監視
@@ -208,6 +250,15 @@ export function TaskManagementPage({
     }
     return () => observer.disconnect()
   }, [doingTodos, updateLines])
+
+  useEffect(() => {
+    updateIncompleteLines()
+    const observer = new ResizeObserver(updateIncompleteLines)
+    if (incompleteListRef.current) {
+      observer.observe(incompleteListRef.current)
+    }
+    return () => observer.disconnect()
+  }, [incompleteTodos, updateIncompleteLines])
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -228,6 +279,16 @@ export function TaskManagementPage({
     }
     // 並び替え後に線を更新
     setTimeout(updateLines, 50)
+  }
+
+  const handleIncompleteDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event
+
+    if (over && active.id !== over.id) {
+      await onIncompleteReorder(active.id as string, over.id as string)
+    }
+    // 並び替え後に線を更新
+    setTimeout(updateIncompleteLines, 50)
   }
 
   return (
@@ -302,45 +363,40 @@ export function TaskManagementPage({
           ) : incompleteTodos.length === 0 ? (
             <div className="task-section-empty">未完了のタスクはありません</div>
           ) : (
-            <div className="task-list incomplete-list">
-              {Array.from(groupedIncompleteTodos.entries()).map(([dateKey, todos]) => (
-                <div key={dateKey} className="task-date-group">
-                  <div className="task-date-header">
-                    {formatDateLabel(dateKey)}
-                    <span className="task-date-count">({todos.length})</span>
-                  </div>
-                  {todos.map((item) => (
-                    <div
-                      key={`${item.replyId ?? item.entryId}-${item.lineIndex}`}
-                      className="task-item incomplete-item"
-                      onClick={() => onScrollToEntry(item.entryId)}
-                    >
-                      <button
-                        className="task-item-checkbox"
-                        onClick={async (e) => {
-                          e.stopPropagation()
-                          await onIncompleteStatusChange(item)
-                        }}
-                        title="DOINGに変更"
-                      >
-                        <Circle size={14} />
-                      </button>
-                      <span className="task-item-text">{item.text}</span>
-                      <button
-                        className="task-item-jump"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          onScrollToEntry(item.entryId)
-                        }}
-                        title="エントリーに移動"
-                      >
-                        <ExternalLink size={14} />
-                      </button>
-                    </div>
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleIncompleteDragEnd}
+            >
+              <SortableContext
+                items={incompleteTodos.map(getIncompleteTodoUniqueId)}
+                strategy={verticalListSortingStrategy}
+              >
+                <div className="task-list incomplete-list" ref={incompleteListRef}>
+                  {/* SVG接続曲線 */}
+                  <svg className="incomplete-list-lines">
+                    {incompleteCurves.map((curve, i) => (
+                      <path
+                        key={i}
+                        d={curve.path}
+                        stroke={curve.color}
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        fill="none"
+                      />
+                    ))}
+                  </svg>
+                  {incompleteTodos.map((item) => (
+                    <SortableIncompleteItem
+                      key={getIncompleteTodoUniqueId(item)}
+                      todo={item}
+                      onStatusChange={onIncompleteStatusChange}
+                      onScrollToEntry={onScrollToEntry}
+                    />
                   ))}
                 </div>
-              ))}
-            </div>
+              </SortableContext>
+            </DndContext>
           )}
         </section>
 

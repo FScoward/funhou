@@ -180,6 +180,8 @@ function App() {
     isLoading: isIncompleteLoading,
     loadIncompleteTodos,
     updateToDoingStatus,
+    saveIncompleteOrder,
+    reorderIncompleteTodos,
   } = useIncompleteTodos({ database })
 
   // TODO項目の読み込み
@@ -544,6 +546,12 @@ function App() {
               if (success) {
                 await loadIncompleteTodos()
                 await loadTodos()
+              }
+            }}
+            onIncompleteReorder={async (activeId, overId) => {
+              const reordered = reorderIncompleteTodos(activeId, overId)
+              if (reordered) {
+                await saveIncompleteOrder(reordered)
               }
             }}
           />

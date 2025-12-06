@@ -67,6 +67,12 @@ export interface IncompleteTodoItem {
   lineIndex: number      // エントリー/返信内の行番号（1始まり）
   text: string           // タスクのテキスト部分
   timestamp: string      // エントリー/返信のタイムスタンプ（日付別グルーピング用）
+  childCount?: number    // 子タスクの数（親タスクの場合のみ）
+}
+
+// IncompleteTodoItemのユニークIDを生成（ドラッグ&ドロップ用）
+export function getIncompleteTodoUniqueId(todo: IncompleteTodoItem): string {
+  return `${todo.replyId ?? todo.entryId}-${todo.lineIndex}`
 }
 
 export interface TimelineItem {
