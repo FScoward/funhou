@@ -103,3 +103,27 @@ export interface TimelineItem {
   }
   replyArchived?: boolean
 }
+
+// タスクとClaude Codeセッションの紐付け情報
+export interface TaskClaudeSession {
+  id: number
+  entryId: number
+  replyId?: number
+  lineIndex: number
+  sessionId: string
+  cwd: string
+  projectPath: string
+  createdAt: string
+}
+
+// タスク識別子
+export interface TaskIdentifier {
+  entryId: number
+  replyId?: number
+  lineIndex: number
+}
+
+// タスク識別子を文字列に変換（キャッシュキー用）
+export function getTaskIdentifierKey(task: TaskIdentifier): string {
+  return `${task.entryId}-${task.replyId ?? 'null'}-${task.lineIndex}`
+}

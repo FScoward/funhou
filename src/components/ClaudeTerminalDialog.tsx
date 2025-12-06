@@ -25,6 +25,8 @@ interface ClaudeTerminalDialogProps {
   linkedCwd?: string | null
   /** Widgetから開いた場合はtrue（自動再接続を許可） */
   fromWidget?: boolean
+  /** セッション作成時に呼ばれるコールバック（セッションID、作業ディレクトリ） */
+  onSessionCreated?: (sessionId: string, cwd: string) => void
 }
 
 export function ClaudeTerminalDialog({
@@ -34,6 +36,7 @@ export function ClaudeTerminalDialog({
   linkedSessionId,
   linkedCwd,
   fromWidget = false,
+  onSessionCreated,
 }: ClaudeTerminalDialogProps) {
   const [internalOpen, setInternalOpen] = useState(false)
 
@@ -84,49 +87,69 @@ export function ClaudeTerminalDialog({
     loadDefaultCwd()
   }, [])
 
-  // エントリから新規で開いた時は状態をリセット
+  // ダイアログが開いた時の初期化処理
   useEffect(() => {
-    if (open && !fromWidget && !hasLinkedSession) {
-      setCwd('')
-      setSessionName('')
-      setShowTerminal(false)
-      setContextSessionId(null)
-      setError(null)
-    }
-  }, [open, fromWidget, hasLinkedSession])
+    if (!open || fromWidget) return
 
-  // 紐付けセッションがある場合は既存セッションを再利用、なければ新規作成
-  useEffect(() => {
-    if (open && hasLinkedSession && !contextSessionId && !isCreatingSession) {
-      setCwd(linkedCwd)
+    if (hasLinkedSession) {
+      // セッション再開の場合
+      console.log('[ClaudeTerminalDialog] Opening for session resume:', {
+        linkedSessionId,
+        linkedCwd,
+      })
+
+      setShowTerminal(false)
+      setError(null)
+      setCwd(linkedCwd!)
 
       // 既存のアクティブセッションを探す（同じclaudeSessionIdを持つもの）
-      const existingSession = getActiveSessions().find(
+      const activeSessions = getActiveSessions()
+      console.log('[ClaudeTerminalDialog] Active sessions:', activeSessions.map(s => ({
+        id: s.id,
+        claudeSessionId: s.claudeSessionId,
+        status: s.status,
+      })))
+
+      const existingSession = activeSessions.find(
         (s) => s.claudeSessionId === linkedSessionId
       )
+      console.log('[ClaudeTerminalDialog] Looking for claudeSessionId:', linkedSessionId)
+      console.log('[ClaudeTerminalDialog] Found existing session:', existingSession)
 
       if (existingSession) {
-        // 既存セッションを再利用
+        // 既存セッションを再利用（同じClaudeセッションIDで既に起動中の場合）
+        console.log('[ClaudeTerminalDialog] Reusing existing session:', existingSession.id)
         setContextSessionId(existingSession.id)
         setShowTerminal(true)
       } else {
-        // 新規作成
+        // 新規作成（resumeモード）
+        console.log('[ClaudeTerminalDialog] Creating new session with resume')
         setIsCreatingSession(true)
-        createSession(linkedCwd, linkedSessionId)
+        createSession(linkedCwd!, linkedSessionId!)
           .then((sessionId) => {
+            console.log('[ClaudeTerminalDialog] Session created:', sessionId)
             setContextSessionId(sessionId)
             setShowTerminal(true)
           })
           .catch((err) => {
             const message = err instanceof Error ? err.message : String(err)
+            console.error('[ClaudeTerminalDialog] Session creation failed:', message)
             setError(`セッションの作成に失敗しました: ${message}`)
           })
           .finally(() => {
             setIsCreatingSession(false)
           })
       }
+    } else {
+      // 新規起動の場合は全てリセット
+      setCwd('')
+      setSessionName('')
+      setShowTerminal(false)
+      setContextSessionId(null)
+      setError(null)
     }
-  }, [open, hasLinkedSession, linkedCwd, linkedSessionId, contextSessionId, isCreatingSession, createSession, getActiveSessions])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, fromWidget, linkedSessionId, linkedCwd])  // createSession, getActiveSessions, hasLinkedSessionは意図的に除外
 
   // ダイアログの開閉状態を Context に同期（非制御モードの場合のみ）
   // 制御モードでは Context が既にソースなので同期不要
@@ -166,6 +189,9 @@ export function ClaudeTerminalDialog({
       )
       setContextSessionId(sessionId)
       setShowTerminal(true)
+
+      // セッション作成を通知
+      onSessionCreated?.(sessionId, cwd.trim())
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
       setError(`セッションの作成に失敗しました: ${message}`)
@@ -229,9 +255,14 @@ export function ClaudeTerminalDialog({
   const sessionStatus = currentSession?.status
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange} modal={false}>
       {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
-      <DialogContent className="sm:max-w-4xl h-[80vh] flex flex-col overflow-hidden">
+      <DialogContent
+        className="sm:max-w-4xl h-[80vh] flex flex-col overflow-hidden"
+        onOpenAutoFocus={(e) => e.preventDefault()}
+        onPointerDownOutside={(e) => e.preventDefault()}
+        onInteractOutside={(e) => e.preventDefault()}
+      >
         <DialogHeader>
           <DialogTitle>{dialogTitle}</DialogTitle>
         </DialogHeader>

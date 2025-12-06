@@ -15,18 +15,14 @@ import type { IDisposable } from 'tauri-pty'
 
 // DA応答パターン（PTY出力からフィルタリング）
 // Primary DA response: ESC[?Ps;Ps;...c (例: ESC[?1;2c)
-// 分割されて届く場合もあるので、?で始まるパターンも追加
-const DA_RESPONSE_PATTERNS = [
-  /\x1b\[\?[\d;]*c/g,     // 完全なDA応答 (ESC[?1;2c)
-  /\?\d+(?:;\d+)*c/g,     // ESC[が欠けた場合 (?1;2c)
-]
-
 function filterDAResponses(data: string): string {
-  let filtered = data
-  for (const pattern of DA_RESPONSE_PATTERNS) {
-    filtered = filtered.replace(pattern, '')
+  // ESCで始まらない通常の出力はそのまま返す（高速パス）
+  if (!data.includes('\x1b') && !data.includes('?')) {
+    return data
   }
-  return filtered
+  return data
+    .replace(/\x1b\[\?[\d;]*c/g, '')     // 完全なDA応答 (ESC[?1;2c)
+    .replace(/\?\d+(?:;\d+)*c/g, '')     // ESC[が欠けた場合 (?1;2c)
 }
 
 // 選択肢表示パターン（Claude Codeが選択肢を出している時に表示されるテキスト）
@@ -56,6 +52,12 @@ export interface TerminalSession {
   error?: string
   /** セッションの表示名（オプション） */
   name?: string
+}
+
+// バッファをRefで管理するための型
+interface SessionBuffer {
+  chunks: string[]
+  lastActivityAt: Date
 }
 
 // Context の値の型定義
@@ -103,10 +105,12 @@ export function ClaudeTerminalSessionProvider({ children }: { children: ReactNod
   const outputSubscribersRef = useRef<Map<string, Set<(data: string) => void>>>(new Map())
   // PTYのonDataのdisposerを管理
   const ptyDisposersRef = useRef<Map<string, IDisposable>>(new Map())
+  // バッファをRefで管理（React state更新を避けてパフォーマンス向上）
+  const sessionBuffersRef = useRef<Map<string, SessionBuffer>>(new Map())
 
-  // セッションIDの生成
+  // セッションIDの生成（UUID v4形式）
   const generateSessionId = useCallback(() => {
-    return `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+    return crypto.randomUUID()
   }, [])
 
   // 入力待ち検知用のタイマー管理
@@ -116,7 +120,11 @@ export function ClaudeTerminalSessionProvider({ children }: { children: ReactNod
   // 選択肢検出フラグの管理
   const questionDetectedRef = useRef<Map<string, boolean>>(new Map())
 
-  // 出力データの処理
+  // ステータス更新のスロットリング用（最後のステータス更新時刻）
+  const lastStatusUpdateRef = useRef<Map<string, number>>(new Map())
+  const STATUS_UPDATE_THROTTLE_MS = 100 // 100msごとに1回だけstateを更新
+
+  // 出力データの処理（パフォーマンス最適化版）
   const handlePtyData = useCallback((sessionId: string, data: string) => {
     // DA応答をフィルタリング
     const filteredData = filterDAResponses(data)
@@ -127,34 +135,54 @@ export function ClaudeTerminalSessionProvider({ children }: { children: ReactNod
       questionDetectedRef.current.set(sessionId, true)
     }
 
-    // 既存のタイマーをクリア
+    // バッファをRefに追加（React state更新なし = 高速）
+    let buffer = sessionBuffersRef.current.get(sessionId)
+    if (!buffer) {
+      buffer = { chunks: [], lastActivityAt: new Date() }
+      sessionBuffersRef.current.set(sessionId, buffer)
+    }
+    buffer.chunks.push(filteredData)
+    buffer.lastActivityAt = new Date()
+
+    // バッファサイズ制限（Refに対して直接操作）
+    if (buffer.chunks.length > MAX_BUFFER_SIZE) {
+      buffer.chunks = buffer.chunks.slice(-MAX_BUFFER_SIZE / 2)
+    }
+
+    // 購読者に通知（フィルタリング済みデータ）- これが最優先
+    const subscribers = outputSubscribersRef.current.get(sessionId)
+    if (subscribers) {
+      subscribers.forEach((callback) => callback(filteredData))
+    }
+
+    // 既存のアイドルタイマーをクリア
     const existingTimer = idleTimersRef.current.get(sessionId)
     if (existingTimer) {
       clearTimeout(existingTimer)
     }
 
-    // セッションを「実行中」に更新
-    setSessions((prev) => {
-      const session = prev.get(sessionId)
-      if (!session) return prev
+    // ステータス更新のスロットリング（頻繁なReact state更新を回避）
+    const now = Date.now()
+    const lastUpdate = lastStatusUpdateRef.current.get(sessionId) || 0
+    if (now - lastUpdate >= STATUS_UPDATE_THROTTLE_MS) {
+      lastStatusUpdateRef.current.set(sessionId, now)
 
-      const newBuffer = [...session.outputBuffer, filteredData]
-      // バッファサイズ制限
-      const trimmedBuffer = newBuffer.length > MAX_BUFFER_SIZE
-        ? newBuffer.slice(-MAX_BUFFER_SIZE / 2)
-        : newBuffer
+      // セッションを「実行中」に更新
+      setSessions((prev) => {
+        const session = prev.get(sessionId)
+        if (!session || session.status === 'running') return prev // 既にrunningなら更新不要
 
-      const newSession: TerminalSession = {
-        ...session,
-        outputBuffer: trimmedBuffer,
-        lastActivityAt: new Date(),
-        status: 'running',
-      }
+        const newSession: TerminalSession = {
+          ...session,
+          lastActivityAt: new Date(),
+          status: 'running',
+        }
 
-      const newMap = new Map(prev)
-      newMap.set(sessionId, newSession)
-      return newMap
-    })
+        const newMap = new Map(prev)
+        newMap.set(sessionId, newSession)
+        return newMap
+      })
+    }
 
     // 新しいタイマーを設定（一定時間後にステータス変更）
     const timer = setTimeout(() => {
@@ -183,12 +211,6 @@ export function ClaudeTerminalSessionProvider({ children }: { children: ReactNod
     }, IDLE_TIMEOUT_MS)
 
     idleTimersRef.current.set(sessionId, timer)
-
-    // 購読者に通知（フィルタリング済みデータ）
-    const subscribers = outputSubscribersRef.current.get(sessionId)
-    if (subscribers) {
-      subscribers.forEach((callback) => callback(filteredData))
-    }
   }, [])
 
   // セッションの作成
@@ -323,6 +345,12 @@ export function ClaudeTerminalSessionProvider({ children }: { children: ReactNod
     // 購読者をクリア
     outputSubscribersRef.current.delete(sessionId)
 
+    // バッファをクリア
+    sessionBuffersRef.current.delete(sessionId)
+
+    // ステータス更新追跡もクリア
+    lastStatusUpdateRef.current.delete(sessionId)
+
     // セッションを更新
     setSessions((prev) => {
       const session = prev.get(sessionId)
@@ -344,10 +372,11 @@ export function ClaudeTerminalSessionProvider({ children }: { children: ReactNod
     }
   }, [activeSessionId])
 
-  // セッションへの書き込み（refを使って常に最新のsessionsを参照）
+  // セッションへの書き込み（同期的に直接PTYに書き込む）
   const writeToSession = useCallback((sessionId: string, data: string) => {
     const session = sessionsRef.current.get(sessionId)
     if (session?.pty) {
+      // 直接PTYに書き込む（tauri-ptyは同期的に処理される）
       session.pty.write(data)
     }
   }, [])
@@ -361,10 +390,11 @@ export function ClaudeTerminalSessionProvider({ children }: { children: ReactNod
     }
   }, [])
 
-  // セッション出力の取得（refを使って安定した関数参照を維持）
+  // セッション出力の取得（Refからバッファを取得 - パフォーマンス最適化）
   const getSessionOutput = useCallback((sessionId: string): string[] => {
-    const session = sessionsRef.current.get(sessionId)
-    return session?.outputBuffer ?? []
+    // Refから取得（stateよりも高速）
+    const buffer = sessionBuffersRef.current.get(sessionId)
+    return buffer?.chunks ?? []
   }, [])
 
   // 出力の購読

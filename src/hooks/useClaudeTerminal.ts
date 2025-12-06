@@ -10,37 +10,31 @@ import {
 
 // xterm.jsが送信するDevice Attributes (DA)クエリをフィルタリング
 // これらはClaude Codeで処理されずエコーバックされてしまう
-const DA_QUERY_PATTERNS = [
-  /\x1b\[c/g,        // Primary DA query
-  /\x1b\[0c/g,       // Primary DA query (explicit)
-  /\x1b\[>c/g,       // Secondary DA query
-  /\x1b\[>0c/g,      // Secondary DA query (explicit)
-  /\x1b\[=c/g,       // Tertiary DA query
-  /\x1b\[=0c/g,      // Tertiary DA query (explicit)
-]
+// 注意: ESCシーケンスは \x1b で始まる。通常のアルファベットにはマッチしない
+function filterDAQueries(data: string): string {
+  // ESCで始まらない通常の入力はそのまま返す（高速パス）
+  if (!data.includes('\x1b')) {
+    return data
+  }
+  return data
+    .replace(/\x1b\[c/g, '')        // Primary DA query
+    .replace(/\x1b\[0c/g, '')       // Primary DA query (explicit)
+    .replace(/\x1b\[>c/g, '')       // Secondary DA query
+    .replace(/\x1b\[>0c/g, '')      // Secondary DA query (explicit)
+    .replace(/\x1b\[=c/g, '')       // Tertiary DA query
+    .replace(/\x1b\[=0c/g, '')      // Tertiary DA query (explicit)
+}
 
 // DA応答パターン（PTY出力からフィルタリング）
 // Primary DA response: ESC[?Ps;Ps;...c (例: ESC[?1;2c)
-// 分割されて届く場合もあるので、?で始まるパターンも追加
-const DA_RESPONSE_PATTERNS = [
-  /\x1b\[\?[\d;]*c/g,     // 完全なDA応答 (ESC[?1;2c)
-  /\?\d+(?:;\d+)*c/g,     // ESC[が欠けた場合 (?1;2c)
-]
-
-function filterDAQueries(data: string): string {
-  let filtered = data
-  for (const pattern of DA_QUERY_PATTERNS) {
-    filtered = filtered.replace(pattern, '')
-  }
-  return filtered
-}
-
 function filterDAResponses(data: string): string {
-  let filtered = data
-  for (const pattern of DA_RESPONSE_PATTERNS) {
-    filtered = filtered.replace(pattern, '')
+  // ESCで始まらない通常の出力はそのまま返す（高速パス）
+  if (!data.includes('\x1b') && !data.includes('?')) {
+    return data
   }
-  return filtered
+  return data
+    .replace(/\x1b\[\?[\d;]*c/g, '')     // 完全なDA応答 (ESC[?1;2c)
+    .replace(/\?\d+(?:;\d+)*c/g, '')     // ESC[が欠けた場合 (?1;2c)
 }
 
 interface UseClaudeTerminalOptions {
@@ -66,7 +60,6 @@ export function useClaudeTerminal(options?: UseClaudeTerminalOptions) {
   const containerRef = useRef<HTMLElement | null>(null)
   const unsubscribeRef = useRef<(() => void) | null>(null)
   const terminalDataDisposerRef = useRef<IDisposable | null>(null)
-  const hasAttachedRef = useRef(false)
 
   // Context モードかどうか
   const isContextMode = options?.sessionId && options?.subscribeToOutput && options?.writeToSession
@@ -110,36 +103,53 @@ export function useClaudeTerminal(options?: UseClaudeTerminalOptions) {
     }
   }, [])
 
-  // Context モード: セッションにアタッチ
-  const attachToSession = useCallback(() => {
-    if (!terminal || !isContextMode || !options?.sessionId) return
+  // アタッチ済みのセッションIDを保持（同じセッションに対する重複アタッチを防止）
+  const attachedSessionIdRef = useRef<string | null>(null)
 
-    // 既にアタッチ済みの場合はスキップ
-    if (hasAttachedRef.current) {
-      console.log('[useClaudeTerminal] Already attached, skipping')
+  // optionsをrefに保持（useCallback内で最新の値を参照するため）
+  const optionsRef = useRef(options)
+  optionsRef.current = options
+
+  // terminalをrefに保持
+  const terminalRef = useRef(terminal)
+  terminalRef.current = terminal
+
+  // Context モード: セッションにアタッチ（依存配列を空にして安定した参照を維持）
+  const attachToSession = useCallback(() => {
+    const currentTerminal = terminalRef.current
+    const currentOptions = optionsRef.current
+    const currentIsContextMode = currentOptions?.sessionId && currentOptions?.subscribeToOutput && currentOptions?.writeToSession
+
+    if (!currentTerminal || !currentIsContextMode || !currentOptions?.sessionId) return
+
+    // 同じセッションに既にアタッチ済みの場合はスキップ
+    if (attachedSessionIdRef.current === currentOptions.sessionId) {
       return
     }
 
-    console.log('[useClaudeTerminal] Attaching to session:', options.sessionId)
-    hasAttachedRef.current = true
+    console.log('[useClaudeTerminal] Attaching to session:', currentOptions.sessionId)
+    attachedSessionIdRef.current = currentOptions.sessionId
 
     // ターミナルをクリアしてからバッファを復元（再アタッチ時の重複防止）
-    terminal.clear()
+    currentTerminal.clear()
 
     // バッファから過去の出力を復元
-    if (options.getSessionOutput) {
-      const buffer = options.getSessionOutput(options.sessionId)
+    if (currentOptions.getSessionOutput) {
+      const buffer = currentOptions.getSessionOutput(currentOptions.sessionId)
       if (buffer.length > 0) {
         console.log('[useClaudeTerminal] Restoring buffer:', buffer.length, 'chunks')
         // DA応答をフィルタリングして復元
-        buffer.forEach((chunk) => terminal.write(filterDAResponses(chunk)))
+        buffer.forEach((chunk) => currentTerminal.write(filterDAResponses(chunk)))
       }
     }
 
-    // 新しい出力を購読
-    const unsubscribe = options.subscribeToOutput!(options.sessionId, (data) => {
+    // 新しい出力を購読（既存のがあればクリア）
+    if (unsubscribeRef.current) {
+      unsubscribeRef.current()
+    }
+    const unsubscribe = currentOptions.subscribeToOutput!(currentOptions.sessionId, (data) => {
       // DA応答をフィルタリング
-      terminal.write(filterDAResponses(data))
+      terminalRef.current?.write(filterDAResponses(data))
     })
     unsubscribeRef.current = unsubscribe
 
@@ -147,26 +157,111 @@ export function useClaudeTerminal(options?: UseClaudeTerminalOptions) {
     if (terminalDataDisposerRef.current) {
       terminalDataDisposerRef.current.dispose()
     }
-    const sessionId = options.sessionId
-    const writeToSession = options.writeToSession!
-    terminalDataDisposerRef.current = terminal.onData((data) => {
-      // DAクエリをフィルタリング（Claude Codeで処理されないため）
-      const filtered = filterDAQueries(data)
-      if (filtered) {
-        writeToSession(sessionId, filtered)
+    const sessionId = currentOptions.sessionId
+    const writeToSession = currentOptions.writeToSession!
+
+    // xterm.jsの内部textareaを取得してkeydownイベントを直接監視
+    // xterm.jsのonDataはTauriのWebViewで取りこぼしが発生するため
+    const xtermTextarea = currentTerminal.element?.querySelector('textarea.xterm-helper-textarea') as HTMLTextAreaElement | null
+
+    if (xtermTextarea) {
+
+      // 既存のリスナーをクリア
+      if (terminalDataDisposerRef.current) {
+        terminalDataDisposerRef.current.dispose()
       }
-    })
+
+      // inputイベントを使用（keydownより確実に全ての入力を捕捉）
+      const handleInput = (e: Event) => {
+        const inputEvent = e as InputEvent
+        if (inputEvent.data) {
+          writeToSession(sessionId, inputEvent.data)
+        }
+      }
+
+      // keydownイベントも監視（特殊キー用）
+      const handleKeyDown = (e: KeyboardEvent) => {
+
+        let data = ''
+        let preventDefault = false
+
+        if (e.key === 'Enter') {
+          data = '\r'
+          preventDefault = true
+        } else if (e.key === 'Backspace') {
+          data = '\x7f'
+          preventDefault = true
+        } else if (e.key === 'Delete') {
+          data = '\x1b[3~'
+          preventDefault = true
+        } else if (e.key === 'Tab') {
+          data = '\t'
+          preventDefault = true
+        } else if (e.key === 'Escape') {
+          data = '\x1b'
+          preventDefault = true
+        } else if (e.key === 'ArrowUp') {
+          data = '\x1b[A'
+          preventDefault = true
+        } else if (e.key === 'ArrowDown') {
+          data = '\x1b[B'
+          preventDefault = true
+        } else if (e.key === 'ArrowRight') {
+          data = '\x1b[C'
+          preventDefault = true
+        } else if (e.key === 'ArrowLeft') {
+          data = '\x1b[D'
+          preventDefault = true
+        } else if (e.key === 'Home') {
+          data = '\x1b[H'
+          preventDefault = true
+        } else if (e.key === 'End') {
+          data = '\x1b[F'
+          preventDefault = true
+        } else if (e.ctrlKey && e.key.length === 1) {
+          // Ctrl+文字
+          const code = e.key.toLowerCase().charCodeAt(0) - 96
+          if (code > 0 && code < 27) {
+            data = String.fromCharCode(code)
+            preventDefault = true
+          }
+        }
+
+        if (data) {
+          writeToSession(sessionId, data)
+        }
+        if (preventDefault) {
+          e.preventDefault()
+        }
+      }
+
+      xtermTextarea.addEventListener('input', handleInput)
+      // keydownはキャプチャフェーズで捕捉（他のハンドラより先に処理）
+      xtermTextarea.addEventListener('keydown', handleKeyDown, true)
+
+      terminalDataDisposerRef.current = {
+        dispose: () => {
+          xtermTextarea.removeEventListener('input', handleInput)
+          xtermTextarea.removeEventListener('keydown', handleKeyDown, true)
+        }
+      }
+    } else {
+      // フォールバック: xterm.jsのonDataを使用
+      terminalDataDisposerRef.current = currentTerminal.onData((data) => {
+        writeToSession(sessionId, data)
+      })
+    }
 
     // PTY のサイズをターミナルに同期
-    if (options.resizeSession) {
-      console.log('[useClaudeTerminal] Resizing PTY to match terminal:', terminal.cols, terminal.rows)
-      options.resizeSession(sessionId, terminal.cols, terminal.rows)
+    if (currentOptions.resizeSession) {
+      console.log('[useClaudeTerminal] Resizing PTY to match terminal:', currentTerminal.cols, currentTerminal.rows)
+      currentOptions.resizeSession(sessionId, currentTerminal.cols, currentTerminal.rows)
     }
 
     console.log('[useClaudeTerminal] Attached to session')
-  }, [terminal, isContextMode, options?.sessionId, options?.subscribeToOutput, options?.writeToSession, options?.resizeSession, options?.getSessionOutput])
+  }, []) // 依存配列を空にして安定した参照を維持
 
-  // Context モード: セッションからデタッチ
+  // Context モード: セッションからデタッチ（コンポーネントアンマウント時のみ呼ばれる）
   const detachFromSession = useCallback(() => {
     if (unsubscribeRef.current) {
       unsubscribeRef.current()
@@ -176,19 +271,29 @@ export function useClaudeTerminal(options?: UseClaudeTerminalOptions) {
       terminalDataDisposerRef.current.dispose()
       terminalDataDisposerRef.current = null
     }
-    hasAttachedRef.current = false
+    attachedSessionIdRef.current = null
     console.log('[useClaudeTerminal] Detached from session')
   }, [])
 
+  // detachFromSessionをrefに保持（cleanup用）
+  const detachFromSessionRef = useRef(detachFromSession)
+  detachFromSessionRef.current = detachFromSession
+
   // isReady になったら自動的にアタッチ（Context モードの場合）
+  // 依存配列を最小限にしてcleanupの誤発火を防ぐ
+  const sessionIdRef = useRef(options?.sessionId)
+  sessionIdRef.current = options?.sessionId
+
   useEffect(() => {
     if (isReady && isContextMode) {
       attachToSession()
     }
+    // cleanup は コンポーネントがアンマウントされる時のみ呼ばれる
     return () => {
-      detachFromSession()
+      detachFromSessionRef.current()
     }
-  }, [isReady, isContextMode, attachToSession, detachFromSession])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isReady]) // isContextModeも除外して、isReadyの変化時のみ実行
 
   // Claude Codeを起動（非Context モード用）
   const spawnClaude = useCallback(

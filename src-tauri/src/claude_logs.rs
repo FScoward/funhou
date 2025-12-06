@@ -2,7 +2,6 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
-use tauri::Emitter;
 
 /// Claude Code session log entry
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -274,113 +273,73 @@ fn extract_text_content(content: &Option<serde_json::Value>) -> Option<String> {
     }
 }
 
-/// Launch Claude Code with specified working directory and optional prompt
+/// Launch Claude Code in interactive mode in a new terminal window
 #[tauri::command]
 pub fn launch_claude_code(
-    app: tauri::AppHandle,
+    _app: tauri::AppHandle,
     cwd: String,
     prompt: Option<String>,
 ) -> Result<String, String> {
     // Generate a unique session ID for tracking
     let session_id = uuid::Uuid::new_v4().to_string();
 
-    // Build the claude command with arguments
-    let escaped_cwd = cwd.replace("'", "'\\''");
+    // Build the claude command for interactive mode
+    let escaped_cwd = cwd.replace("\"", "\\\"").replace("\\", "\\\\");
     let claude_cmd = if let Some(p) = prompt {
-        // Escape single quotes in the prompt for shell
-        let escaped_prompt = p.replace("'", "'\\''");
-        format!("cd '{}' && claude -p '{}'", escaped_cwd, escaped_prompt)
+        // Escape for AppleScript string
+        let escaped_prompt = p.replace("\\", "\\\\").replace("\"", "\\\"");
+        format!("cd \"{}\" && claude \"{}\"", escaped_cwd, escaped_prompt)
     } else {
-        format!("cd '{}' && claude", escaped_cwd)
+        format!("cd \"{}\" && claude", escaped_cwd)
     };
 
-    // Use login shell to inherit user's PATH (including claude command)
-    let mut cmd = Command::new("/bin/zsh");
-    cmd.arg("-l").arg("-c").arg(&claude_cmd);
+    // Use AppleScript to open a new Terminal window with claude in interactive mode
+    let apple_script = format!(
+        r#"tell application "Terminal"
+            activate
+            do script "source ~/.zshrc; {}"
+        end tell"#,
+        claude_cmd.replace("\"", "\\\"")
+    );
+
+    let mut cmd = Command::new("osascript");
+    cmd.arg("-e").arg(&apple_script);
 
     // Spawn the process
-    let mut child = cmd.spawn().map_err(|e| format!("Failed to launch Claude Code: {}", e))?;
-
-    // Clone session_id for the thread
-    let session_id_clone = session_id.clone();
-
-    // Monitor process in a separate thread
-    std::thread::spawn(move || {
-        match child.wait() {
-            Ok(status) => {
-                let payload = ClaudeSessionFinishedPayload {
-                    session_id: session_id_clone,
-                    success: status.success(),
-                    exit_code: status.code(),
-                };
-                let _ = app.emit("claude-session-finished", payload);
-            }
-            Err(e) => {
-                eprintln!("Failed to wait for Claude Code process: {}", e);
-                let payload = ClaudeSessionFinishedPayload {
-                    session_id: session_id_clone,
-                    success: false,
-                    exit_code: None,
-                };
-                let _ = app.emit("claude-session-finished", payload);
-            }
-        }
-    });
+    cmd.spawn().map_err(|e| format!("Failed to launch Claude Code: {}", e))?;
 
     Ok(session_id)
 }
 
-/// Resume a Claude Code session with optional prompt
+/// Resume a Claude Code session in interactive mode in a new terminal window
 #[tauri::command]
 pub fn resume_claude_code(
-    app: tauri::AppHandle,
+    _app: tauri::AppHandle,
     session_id: String,
     cwd: String,
-    prompt: Option<String>,
+    _prompt: Option<String>,
 ) -> Result<(), String> {
-    // Build the claude command with arguments
-    let escaped_cwd = cwd.replace("'", "'\\''");
-    let escaped_session_id = session_id.replace("'", "'\\''");
+    // Build the claude command for interactive mode with resume
+    let escaped_cwd = cwd.replace("\"", "\\\"").replace("\\", "\\\\");
+    let escaped_session_id = session_id.replace("\"", "\\\"").replace("\\", "\\\\");
 
-    let claude_cmd = if let Some(p) = prompt {
-        let escaped_prompt = p.replace("'", "'\\''");
-        format!("cd '{}' && claude --resume '{}' -p '{}'", escaped_cwd, escaped_session_id, escaped_prompt)
-    } else {
-        format!("cd '{}' && claude --resume '{}'", escaped_cwd, escaped_session_id)
-    };
+    // For resume, we use --resume flag (prompt is ignored in interactive mode)
+    let claude_cmd = format!("cd \"{}\" && claude --resume \"{}\"", escaped_cwd, escaped_session_id);
 
-    // Use login shell to inherit user's PATH (including claude command)
-    let mut cmd = Command::new("/bin/zsh");
-    cmd.arg("-l").arg("-c").arg(&claude_cmd);
+    // Use AppleScript to open a new Terminal window with claude in interactive mode
+    let apple_script = format!(
+        r#"tell application "Terminal"
+            activate
+            do script "source ~/.zshrc; {}"
+        end tell"#,
+        claude_cmd.replace("\"", "\\\"")
+    );
+
+    let mut cmd = Command::new("osascript");
+    cmd.arg("-e").arg(&apple_script);
 
     // Spawn the process
-    let mut child = cmd.spawn().map_err(|e| format!("Failed to resume Claude Code session: {}", e))?;
-
-    // Clone session_id for the thread
-    let session_id_clone = session_id.clone();
-
-    // Monitor process in a separate thread
-    std::thread::spawn(move || {
-        match child.wait() {
-            Ok(status) => {
-                let payload = ClaudeSessionFinishedPayload {
-                    session_id: session_id_clone,
-                    success: status.success(),
-                    exit_code: status.code(),
-                };
-                let _ = app.emit("claude-session-finished", payload);
-            }
-            Err(e) => {
-                eprintln!("Failed to wait for Claude Code process: {}", e);
-                let payload = ClaudeSessionFinishedPayload {
-                    session_id: session_id_clone,
-                    success: false,
-                    exit_code: None,
-                };
-                let _ = app.emit("claude-session-finished", payload);
-            }
-        }
-    });
+    cmd.spawn().map_err(|e| format!("Failed to resume Claude Code session: {}", e))?;
 
     Ok(())
 }
