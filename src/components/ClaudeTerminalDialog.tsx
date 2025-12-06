@@ -563,7 +563,7 @@ export function ClaudeTerminalDialog({
                 エラー: {currentSession.error}
               </div>
             )}
-            <div className="flex-1 min-h-0 overflow-hidden relative">
+            <div className="flex-1 min-h-0 overflow-hidden relative bg-[#1e1e1e] rounded terminal-container-opaque">
               <ClaudeTerminal
                 ref={terminalRef}
                 cwd={cwd}

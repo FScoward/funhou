@@ -1,6 +1,8 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
+import { WebglAddon } from '@xterm/addon-webgl'
+import { CanvasAddon } from '@xterm/addon-canvas'
 import type { IDisposable } from '@xterm/xterm'
 import {
   spawnClaudeTerminal,
@@ -68,25 +70,78 @@ export function useClaudeTerminal(options?: UseClaudeTerminalOptions) {
   const initTerminal = useCallback((element: HTMLElement) => {
     containerRef.current = element
 
+    const terminalTheme = {
+      background: '#1e1e1e',
+      foreground: '#d4d4d4',
+      cursor: '#d4d4d4',
+      cursorAccent: '#1e1e1e',
+      selectionBackground: 'rgba(255, 255, 255, 0.3)',
+      // ANSIカラーを明示的に設定
+      black: '#000000',
+      red: '#cd3131',
+      green: '#0dbc79',
+      yellow: '#e5e510',
+      blue: '#2472c8',
+      magenta: '#bc3fbc',
+      cyan: '#11a8cd',
+      white: '#e5e5e5',
+      brightBlack: '#666666',
+      brightRed: '#f14c4c',
+      brightGreen: '#23d18b',
+      brightYellow: '#f5f543',
+      brightBlue: '#3b8eea',
+      brightMagenta: '#d670d6',
+      brightCyan: '#29b8db',
+      brightWhite: '#ffffff',
+    }
+
     const term = new Terminal({
       cursorBlink: true,
       fontSize: 14,
       fontFamily: 'Menlo, Monaco, "Courier New", monospace',
-      theme: {
-        background: '#1e1e1e',
-        foreground: '#d4d4d4',
-        cursor: '#d4d4d4',
-        cursorAccent: '#1e1e1e',
-        selectionBackground: 'rgba(255, 255, 255, 0.3)',
-      },
       allowProposedApi: true,
     })
+
+    // テーマを明示的に設定（コンストラクタで設定すると一部環境で無視される問題の対策）
+    term.options.theme = terminalTheme
 
     const fitAddon = new FitAddon()
     term.loadAddon(fitAddon)
     fitAddonRef.current = fitAddon
 
     term.open(element)
+
+    // open後にテーマを再設定（DOMに接続された後に設定する必要がある場合がある）
+    term.options.theme = terminalTheme
+
+    // レンダラーを試行: WebGL -> Canvas -> デフォルト
+    let rendererLoaded = false
+
+    // 1. WebGL レンダラーを試行
+    try {
+      const webglAddon = new WebglAddon()
+      webglAddon.onContextLoss(() => {
+        webglAddon.dispose()
+      })
+      term.loadAddon(webglAddon)
+      // WebGLロード後にテーマを再適用（ビルド版での色問題対策）
+      term.options.theme = terminalTheme
+      rendererLoaded = true
+    } catch {
+      // WebGL not supported, will try Canvas
+    }
+
+    // 2. WebGL が失敗した場合、Canvas レンダラーを試行
+    if (!rendererLoaded) {
+      try {
+        const canvasAddon = new CanvasAddon()
+        term.loadAddon(canvasAddon)
+        // Canvasロード後にテーマを再適用
+        term.options.theme = terminalTheme
+      } catch {
+        // Canvas not supported, use default DOM renderer
+      }
+    }
 
     // 少し遅延を入れてからfitを呼ぶ（DOMの準備完了を待つ）
     requestAnimationFrame(() => {
@@ -127,7 +182,6 @@ export function useClaudeTerminal(options?: UseClaudeTerminalOptions) {
       return
     }
 
-    console.log('[useClaudeTerminal] Attaching to session:', currentOptions.sessionId)
     attachedSessionIdRef.current = currentOptions.sessionId
 
     // ターミナルをクリアしてからバッファを復元（再アタッチ時の重複防止）
@@ -137,7 +191,6 @@ export function useClaudeTerminal(options?: UseClaudeTerminalOptions) {
     if (currentOptions.getSessionOutput) {
       const buffer = currentOptions.getSessionOutput(currentOptions.sessionId)
       if (buffer.length > 0) {
-        console.log('[useClaudeTerminal] Restoring buffer:', buffer.length, 'chunks')
         // DA応答をフィルタリングして復元
         buffer.forEach((chunk) => currentTerminal.write(filterDAResponses(chunk)))
       }
@@ -291,11 +344,8 @@ export function useClaudeTerminal(options?: UseClaudeTerminalOptions) {
 
     // PTY のサイズをターミナルに同期
     if (currentOptions.resizeSession) {
-      console.log('[useClaudeTerminal] Resizing PTY to match terminal:', currentTerminal.cols, currentTerminal.rows)
       currentOptions.resizeSession(sessionId, currentTerminal.cols, currentTerminal.rows)
     }
-
-    console.log('[useClaudeTerminal] Attached to session')
   }, []) // 依存配列を空にして安定した参照を維持
 
   // Context モード: セッションからデタッチ（コンポーネントアンマウント時のみ呼ばれる）
@@ -309,7 +359,6 @@ export function useClaudeTerminal(options?: UseClaudeTerminalOptions) {
       terminalDataDisposerRef.current = null
     }
     attachedSessionIdRef.current = null
-    console.log('[useClaudeTerminal] Detached from session')
   }, [])
 
   // detachFromSessionをrefに保持（cleanup用）
@@ -345,8 +394,6 @@ export function useClaudeTerminal(options?: UseClaudeTerminalOptions) {
       }
 
       setError(null)
-      console.log('[useClaudeTerminal] spawnClaude called with cwd:', cwd)
-      console.log('[useClaudeTerminal] terminal cols:', terminal.cols, 'rows:', terminal.rows)
 
       try {
         const ptySession = await spawnClaudeTerminal({
@@ -354,7 +401,6 @@ export function useClaudeTerminal(options?: UseClaudeTerminalOptions) {
           cols: terminal.cols,
           rows: terminal.rows,
         })
-        console.log('[useClaudeTerminal] PTY session created:', ptySession)
 
         // PTY -> Terminal
         ptySession.onData((data) => {
@@ -431,18 +477,11 @@ export function useClaudeTerminal(options?: UseClaudeTerminalOptions) {
 
   // Claude を正常終了させる（非Context モード用）
   const gracefulShutdown = useCallback(async (): Promise<void> => {
-    if (!session) {
-      console.log('[useClaudeTerminal] No session to shutdown')
-      return
-    }
-
-    if (isShuttingDown) {
-      console.log('[useClaudeTerminal] Already shutting down')
+    if (!session || isShuttingDown) {
       return
     }
 
     setIsShuttingDown(true)
-    console.log('[useClaudeTerminal] Starting graceful shutdown...')
 
     try {
       // Escape キーを送信してモードをリセット
@@ -456,35 +495,27 @@ export function useClaudeTerminal(options?: UseClaudeTerminalOptions) {
       await new Promise(resolve => setTimeout(resolve, 200))
 
       // /exit コマンドを送信
-      console.log('[useClaudeTerminal] Sending /exit command...')
       session.write('/exit\n')
 
       // Claude がセッションを保存するのを待つ（十分な時間を確保）
       await new Promise(resolve => setTimeout(resolve, 3000))
 
       // シェルを終了
-      console.log('[useClaudeTerminal] Sending exit command...')
       session.write('exit\n')
 
       // 少し待つ
       await new Promise(resolve => setTimeout(resolve, 300))
-
-      console.log('[useClaudeTerminal] Graceful shutdown complete, killing PTY')
-    } catch (err) {
-      console.error('[useClaudeTerminal] Error during graceful shutdown:', err)
+    } catch {
+      // Ignore shutdown errors
     } finally {
       // PTY を終了
       try {
         session.kill()
-      } catch (e) {
-        // "No such process" エラーは無視（既に終了している）
-        if (!String(e).includes('No such process')) {
-          console.error('[useClaudeTerminal] Error killing PTY:', e)
-        }
+      } catch {
+        // Ignore "No such process" errors
       }
       setIsShuttingDown(false)
       setSession(null)
-      console.log('[useClaudeTerminal] Shutdown complete')
     }
   }, [session, isShuttingDown])
 

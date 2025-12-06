@@ -6,6 +6,15 @@ export interface TerminalOptions {
   rows?: number
 }
 
+// PTY用の環境変数を設定（Finderからダブルクリックで起動した場合でも色が出るようにする）
+// 注意: ブラウザ環境なのでprocess.envは使用できない。最低限必要な環境変数のみ設定。
+const PTY_ENV: Record<string, string> = {
+  TERM: 'xterm-256color',
+  COLORTERM: 'truecolor',
+  LANG: 'ja_JP.UTF-8',
+  SHELL: '/bin/zsh',
+}
+
 export interface ClaudeTerminalSession {
   pty: IPty
   write: (data: string) => void
@@ -23,20 +32,16 @@ export async function spawnClaudeTerminal(
   const cols = options.cols ?? 80
   const rows = options.rows ?? 24
 
-  console.log('[claudeTerminal] spawning PTY with options:', { cols, rows, cwd: options.cwd })
-
   // ログインシェル経由でclaudeを起動（PATHを継承するため）
   const pty = spawn('/bin/zsh', ['-l'], {
     cols,
     rows,
     cwd: options.cwd,
+    env: PTY_ENV,
   })
-
-  console.log('[claudeTerminal] PTY spawned, pid:', pty.pid)
 
   // cdで指定ディレクトリに移動してからclaudeコマンドを送信
   // ログインシェルはcwdオプションを無視することがあるため
-  console.log('[claudeTerminal] changing directory and starting claude...')
   const escapedCwd = options.cwd.replace(/'/g, "'\\''")
   pty.write(`cd '${escapedCwd}' && claude\n`)
 
@@ -63,12 +68,11 @@ export async function resumeClaudeTerminal(
     cols,
     rows,
     cwd: options.cwd,
+    env: PTY_ENV,
   })
 
   const escapedCwd = options.cwd.replace(/'/g, "'\\''")
   const escapedSessionId = sessionId.replace(/'/g, "'\\''")
-
-  console.log('[claudeTerminal] Resuming session:', sessionId)
   pty.write(`cd '${escapedCwd}' && claude --resume '${escapedSessionId}'\n`)
 
   return {

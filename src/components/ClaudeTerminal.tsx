@@ -1,7 +1,7 @@
 import { useEffect, useRef, forwardRef, useImperativeHandle, useMemo } from 'react'
 import { useClaudeTerminal } from '../hooks/useClaudeTerminal'
 import { useClaudeTerminalSession } from '../contexts/ClaudeTerminalSessionContext'
-import '@xterm/xterm/css/xterm.css'
+// xterm.css は main.tsx でインポート済み
 
 interface ClaudeTerminalProps {
   cwd: string
