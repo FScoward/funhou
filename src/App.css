@@ -2096,6 +2096,59 @@ textarea::placeholder {
   color: var(--doing-checkbox-color, #f59e0b);
 }
 
+/* Claude Code ボタン */
+.doing-list-item-claude,
+.incomplete-item-claude {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0.2rem 0.4rem;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  opacity: 0;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.doing-list-item:hover .doing-list-item-claude,
+.incomplete-item:hover .incomplete-item-claude {
+  opacity: 1;
+}
+
+.doing-list-item-claude:hover,
+.incomplete-item-claude:hover {
+  background: var(--accent);
+  color: var(--accent-foreground);
+}
+
+/* Claude セッション数バッジ */
+.claude-badge {
+  font-size: 10px;
+  font-weight: 600;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  padding: 1px 5px;
+  border-radius: 8px;
+  min-width: 14px;
+  text-align: center;
+}
+
+/* セッションがある場合は常に表示 */
+.doing-list-item-claude:has(.claude-badge),
+.incomplete-item-claude:has(.claude-badge) {
+  opacity: 1;
+}
+
+/* 右クリックメニューのセパレーター */
+.checkbox-status-separator {
+  height: 1px;
+  background: var(--border);
+  margin: 0.25rem 0;
+}
+
 /* ドラッグハンドル */
 .doing-list-item-drag-handle {
   display: flex;
@@ -3675,6 +3728,7 @@ textarea::placeholder {
 .claude-terminal-session-header {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   width: 100%;
   padding: 0.5rem 0.75rem;
   background: transparent;

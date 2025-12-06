@@ -2,8 +2,8 @@ import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { GripVertical, ExternalLink, Circle, Slash, CheckCircle, XCircle } from 'lucide-react'
-import { TodoItem, getTodoUniqueId } from '@/types'
+import { GripVertical, ExternalLink, Circle, Slash, CheckCircle, XCircle, Terminal } from 'lucide-react'
+import { TodoItem, getTodoUniqueId, TaskClaudeSession, TaskIdentifier } from '@/types'
 import { CheckboxStatus } from '@/utils/checkboxUtils'
 import { formatDateToLocalYYYYMMDD } from '@/utils/dateUtils'
 
@@ -45,20 +45,36 @@ const STATUS_OPTIONS: { status: CheckboxStatus; label: string; icon: React.React
 
 interface SortableDoingItemProps {
   todo: TodoItem
+  claudeSessions?: TaskClaudeSession[]
   onStatusChange?: (todo: TodoItem, newStatus: CheckboxStatus) => Promise<void>
   onScrollToEntry?: (entryId: number) => void
   onScrollToReply?: (replyId: number) => void
+  onLaunchClaude?: (task: TaskIdentifier, taskText: string) => void
+  onLaunchClaudeExternal?: (task: TaskIdentifier, taskText: string) => void
+  onManageSessions?: (task: TaskIdentifier, taskText: string, sessions: TaskClaudeSession[]) => void
 }
 
 export function SortableDoingItem({
   todo,
+  claudeSessions = [],
   onStatusChange,
   onScrollToEntry,
   onScrollToReply,
+  onLaunchClaude,
+  onLaunchClaudeExternal,
+  onManageSessions,
 }: SortableDoingItemProps) {
   const uniqueId = getTodoUniqueId(todo)
   const isReplyTask = !!todo.replyId
   const hasChildren = (todo.childCount ?? 0) > 0
+  const hasClaudeSessions = claudeSessions.length > 0
+
+  // タスク識別子
+  const taskIdentifier: TaskIdentifier = {
+    entryId: todo.entryId,
+    replyId: todo.replyId,
+    lineIndex: todo.lineIndex,
+  }
 
   // 右クリックメニューの状態
   const [menuOpen, setMenuOpen] = useState(false)
@@ -169,6 +185,26 @@ export function SortableDoingItem({
             <ExternalLink size={14} />
           </button>
         )}
+
+        {/* Claude Code ボタン */}
+        {(onLaunchClaude || onManageSessions) && (
+          <button
+            className="doing-list-item-claude"
+            onClick={() => {
+              if (hasClaudeSessions && onManageSessions) {
+                onManageSessions(taskIdentifier, todo.text, claudeSessions)
+              } else if (onLaunchClaude) {
+                onLaunchClaude(taskIdentifier, todo.text)
+              }
+            }}
+            title={hasClaudeSessions ? `${claudeSessions.length}個のセッション` : 'Claude Codeを起動'}
+          >
+            <Terminal size={14} />
+            {hasClaudeSessions && (
+              <span className="claude-badge">{claudeSessions.length}</span>
+            )}
+          </button>
+        )}
       </div>
 
       {/* 右クリックメニュー（React Portal） */}
@@ -199,6 +235,55 @@ export function SortableDoingItem({
               <span>{option.label}</span>
             </button>
           ))}
+
+          {/* Claude Code 関連メニュー */}
+          {(onLaunchClaude || onLaunchClaudeExternal || onManageSessions) && (
+            <>
+              <div className="checkbox-status-separator" />
+              {onLaunchClaude && (
+                <button
+                  className="checkbox-status-option"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    onLaunchClaude(taskIdentifier, todo.text)
+                    setMenuOpen(false)
+                  }}
+                >
+                  <Terminal size={14} />
+                  <span>アプリ内で起動</span>
+                </button>
+              )}
+              {onLaunchClaudeExternal && (
+                <button
+                  className="checkbox-status-option"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    onLaunchClaudeExternal(taskIdentifier, todo.text)
+                    setMenuOpen(false)
+                  }}
+                >
+                  <Terminal size={14} />
+                  <span>外部ターミナルで起動</span>
+                </button>
+              )}
+              {hasClaudeSessions && onManageSessions && (
+                <button
+                  className="checkbox-status-option"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    onManageSessions(taskIdentifier, todo.text, claudeSessions)
+                    setMenuOpen(false)
+                  }}
+                >
+                  <Terminal size={14} />
+                  <span>セッション管理 ({claudeSessions.length})</span>
+                </button>
+              )}
+            </>
+          )}
         </div>,
         document.body
       )}

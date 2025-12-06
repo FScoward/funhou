@@ -117,9 +117,17 @@ function SessionCard({
             </Button>
           </div>
         ) : (
-          <button
-            className="flex items-center gap-2 flex-1 min-w-0"
+          <div
+            role="button"
+            tabIndex={0}
+            className="flex items-center gap-2 flex-1 min-w-0 cursor-pointer"
             onClick={onToggleExpand}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                onToggleExpand()
+              }
+            }}
           >
             <div className={`w-2 h-2 rounded-full flex-shrink-0 ${statusColor} ${isActive ? 'animate-pulse' : ''}`} />
             <span className="truncate text-sm font-medium">{displayName}</span>
@@ -132,10 +140,10 @@ function SessionCard({
             >
               <Pencil size={10} className="text-muted-foreground" />
             </button>
-          </button>
+          </div>
         )}
         <button
-          className="flex items-center gap-2"
+          className="flex items-center gap-2 flex-shrink-0"
           onClick={onToggleExpand}
         >
           <span className="text-xs text-muted-foreground">{statusLabel}</span>

@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState, useEffect, useCallback } from 'react'
 import { CheckCircle, ListTodo, ExternalLink, Sparkles } from 'lucide-react'
-import { TodoItem, CompletedTodoItem, IncompleteTodoItem, getTodoUniqueId, getIncompleteTodoUniqueId } from '@/types'
+import { TodoItem, CompletedTodoItem, IncompleteTodoItem, getTodoUniqueId, getIncompleteTodoUniqueId, TaskClaudeSession, TaskIdentifier, getTaskIdentifierKey } from '@/types'
 import { CheckboxStatus } from '@/utils/checkboxUtils'
 import { formatTimestamp } from '@/utils/dateUtils'
 import {
@@ -42,6 +42,11 @@ interface TaskManagementPageProps {
   isIncompleteLoading: boolean
   onIncompleteStatusChange: (todo: IncompleteTodoItem) => Promise<void>
   onIncompleteReorder: (activeId: string, overId: string) => Promise<void>
+  // Claude Code sessions
+  taskSessionsMap?: Map<string, TaskClaudeSession[]>
+  onLaunchClaude?: (task: TaskIdentifier, taskText: string) => void
+  onLaunchClaudeExternal?: (task: TaskIdentifier, taskText: string) => void
+  onManageSessions?: (task: TaskIdentifier, taskText: string, sessions: TaskClaudeSession[]) => void
 }
 
 export function TaskManagementPage({
@@ -57,6 +62,10 @@ export function TaskManagementPage({
   isIncompleteLoading,
   onIncompleteStatusChange,
   onIncompleteReorder,
+  taskSessionsMap,
+  onLaunchClaude,
+  onLaunchClaudeExternal,
+  onManageSessions,
 }: TaskManagementPageProps) {
   const listRef = useRef<HTMLDivElement>(null)
   const incompleteListRef = useRef<HTMLDivElement>(null)
@@ -331,15 +340,26 @@ export function TaskManagementPage({
                     />
                   ))}
                 </svg>
-                {doingTodos.map((todo) => (
-                  <SortableDoingItem
-                    key={getTodoUniqueId(todo)}
-                    todo={todo}
-                    onStatusChange={onStatusChange}
-                    onScrollToEntry={onScrollToEntry}
-                    onScrollToReply={onScrollToReply}
-                  />
-                ))}
+                {doingTodos.map((todo) => {
+                  const taskKey = getTaskIdentifierKey({
+                    entryId: todo.entryId,
+                    replyId: todo.replyId,
+                    lineIndex: todo.lineIndex,
+                  })
+                  return (
+                    <SortableDoingItem
+                      key={getTodoUniqueId(todo)}
+                      todo={todo}
+                      claudeSessions={taskSessionsMap?.get(taskKey)}
+                      onStatusChange={onStatusChange}
+                      onScrollToEntry={onScrollToEntry}
+                      onScrollToReply={onScrollToReply}
+                      onLaunchClaude={onLaunchClaude}
+                      onLaunchClaudeExternal={onLaunchClaudeExternal}
+                      onManageSessions={onManageSessions}
+                    />
+                  )
+                })}
               </div>
             </SortableContext>
           </DndContext>
@@ -386,14 +406,25 @@ export function TaskManagementPage({
                       />
                     ))}
                   </svg>
-                  {incompleteTodos.map((item) => (
-                    <SortableIncompleteItem
-                      key={getIncompleteTodoUniqueId(item)}
-                      todo={item}
-                      onStatusChange={onIncompleteStatusChange}
-                      onScrollToEntry={onScrollToEntry}
-                    />
-                  ))}
+                  {incompleteTodos.map((item) => {
+                    const taskKey = getTaskIdentifierKey({
+                      entryId: item.entryId,
+                      replyId: item.replyId,
+                      lineIndex: item.lineIndex,
+                    })
+                    return (
+                      <SortableIncompleteItem
+                        key={getIncompleteTodoUniqueId(item)}
+                        todo={item}
+                        claudeSessions={taskSessionsMap?.get(taskKey)}
+                        onStatusChange={onIncompleteStatusChange}
+                        onScrollToEntry={onScrollToEntry}
+                        onLaunchClaude={onLaunchClaude}
+                        onLaunchClaudeExternal={onLaunchClaudeExternal}
+                        onManageSessions={onManageSessions}
+                      />
+                    )
+                  })}
                 </div>
               </SortableContext>
             </DndContext>

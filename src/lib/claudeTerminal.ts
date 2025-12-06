@@ -50,7 +50,7 @@ export async function spawnClaudeTerminal(
 }
 
 /**
- * Claude Codeを既存のセッションで再開する
+ * Claude Codeを指定されたセッションIDで再開する
  */
 export async function resumeClaudeTerminal(
   sessionId: string,
@@ -65,9 +65,10 @@ export async function resumeClaudeTerminal(
     cwd: options.cwd,
   })
 
-  // cdで指定ディレクトリに移動してから--resumeオプション付きでclaudeを起動
   const escapedCwd = options.cwd.replace(/'/g, "'\\''")
   const escapedSessionId = sessionId.replace(/'/g, "'\\''")
+
+  console.log('[claudeTerminal] Resuming session:', sessionId)
   pty.write(`cd '${escapedCwd}' && claude --resume '${escapedSessionId}'\n`)
 
   return {

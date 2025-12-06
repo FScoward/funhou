@@ -234,6 +234,40 @@ export async function getDb() {
     } catch (error) {
       console.log('claude_project_path column already exists or migration error:', error)
     }
+
+    // タスクとClaude Codeセッションの紐付けテーブルを作成
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS task_claude_sessions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        entry_id INTEGER NOT NULL,
+        reply_id INTEGER,
+        line_index INTEGER NOT NULL,
+        session_id TEXT NOT NULL,
+        cwd TEXT NOT NULL,
+        project_path TEXT NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(entry_id, reply_id, line_index, session_id)
+      )
+    `)
+
+    await db.execute(`
+      CREATE INDEX IF NOT EXISTS idx_task_claude_sessions_task
+        ON task_claude_sessions(entry_id, reply_id, line_index)
+    `)
+
+    await db.execute(`
+      CREATE INDEX IF NOT EXISTS idx_task_claude_sessions_session
+        ON task_claude_sessions(session_id)
+    `)
+
+    // task_claude_sessionsにnameカラムを追加（セッション名）
+    try {
+      await db.execute(`
+        ALTER TABLE task_claude_sessions ADD COLUMN name TEXT DEFAULT NULL
+      `)
+    } catch (error) {
+      console.log('task_claude_sessions.name column already exists or migration error:', error)
+    }
   }
   return db
 }

@@ -66,3 +66,30 @@ export function onClaudeSessionFinished(
     callback(event.payload)
   })
 }
+
+// セッションログを文字列として取得
+export async function getClaudeSessionLog(
+  sessionId: string,
+  projectPath: string
+): Promise<string> {
+  const messages = await readClaudeSession(projectPath, sessionId)
+
+  if (messages.length === 0) {
+    return ''
+  }
+
+  return messages
+    .map((msg) => {
+      const timestamp = new Date(msg.timestamp).toLocaleString('ja-JP')
+      const roleLabel = msg.role === 'user' ? '👤 User' : '🤖 Claude'
+      return `[${timestamp}] ${roleLabel}\n${msg.content}`
+    })
+    .join('\n\n---\n\n')
+}
+
+// プロジェクト内のClaude Codeセッション一覧を取得（ログ紐付け用）
+export async function getClaudeSessionsForProject(
+  projectPath: string
+): Promise<SessionSummary[]> {
+  return listClaudeSessions(projectPath)
+}

@@ -39,7 +39,7 @@ export const ClaudeTerminal = forwardRef<ClaudeTerminalHandle, ClaudeTerminalPro
       }
     }, [useContext, contextSessionId, subscribeToOutput, writeToSession, resizeSession, getSessionOutput])
 
-    const { initTerminal, spawnClaude, resumeClaude, gracefulShutdown, isReady, isShuttingDown, error } =
+    const { initTerminal, spawnClaude, resumeClaude, gracefulShutdown, isReady, isShuttingDown, error, terminal } =
       useClaudeTerminal(contextOptions)
 
     // 親コンポーネントに gracefulShutdown を公開
@@ -78,8 +78,28 @@ export const ClaudeTerminal = forwardRef<ClaudeTerminalHandle, ClaudeTerminalPro
       }
     }, [error, onError])
 
+    // ターミナルにフォーカスを当てる
+    useEffect(() => {
+      if (terminal && isReady) {
+        // 少し遅延させてからフォーカス（DOMの準備完了を待つ）
+        const timer = setTimeout(() => {
+          terminal.focus()
+        }, 100)
+        return () => clearTimeout(timer)
+      }
+    }, [terminal, isReady])
+
+    // クリック時にターミナルにフォーカス
+    const handleContainerClick = () => {
+      terminal?.focus()
+    }
+
     return (
-      <div className="absolute inset-0 bg-[#1e1e1e] rounded overflow-hidden">
+      <div
+        className="absolute inset-0 bg-[#1e1e1e] rounded overflow-hidden"
+        onClick={handleContainerClick}
+        onFocus={() => terminal?.focus()}
+      >
         <div ref={terminalRef} className="absolute inset-0" />
       </div>
     )

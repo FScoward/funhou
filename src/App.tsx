@@ -25,7 +25,12 @@ import { useReplies } from '@/hooks/useReplies'
 import { useTodos } from '@/hooks/useTodos'
 import { useCompletedTodos } from '@/hooks/useCompletedTodos'
 import { useIncompleteTodos } from '@/hooks/useIncompleteTodos'
+import { useTaskClaudeSessions } from '@/hooks/useTaskClaudeSessions'
 import { useWindowDrag } from '@/hooks/useWindowDrag'
+import { ClaudeTerminalDialog } from '@/components/ClaudeTerminalDialog'
+import { TaskClaudeLaunchDialog } from '@/components/TaskClaudeLaunchDialog'
+import { TaskClaudeSessionsDialog } from '@/components/TaskClaudeSessionsDialog'
+import { TaskIdentifier, TaskClaudeSession as TaskClaudeSessionType } from '@/types'
 import { DailySummarySidebar } from '@/components/DailySummarySidebar'
 import { getSettings, applyFont, applyFontSize } from '@/lib/settings'
 import { applyTheme, ThemeVariant } from '@/lib/themes'
@@ -184,6 +189,37 @@ function App() {
     reorderIncompleteTodos,
   } = useIncompleteTodos({ database })
 
+  // タスクとClaude Codeセッションの紐付け
+  const {
+    sessionsMap: taskSessionsMap,
+    loadSessionsForTasks,
+    linkSession: linkTaskSession,
+    unlinkSession: unlinkTaskSession,
+    updateSessionName: updateTaskSessionName,
+    updateSessionId: updateTaskSessionId,
+  } = useTaskClaudeSessions({ database })
+
+  // タスクClaude起動ダイアログの状態（アプリ内ターミナル）
+  const [terminalDialogOpen, setTerminalDialogOpen] = useState(false)
+  const [terminalDialogTask, setTerminalDialogTask] = useState<TaskIdentifier | null>(null)
+  // 既存セッション再開用
+  const [terminalDialogLinkedSessionId, setTerminalDialogLinkedSessionId] = useState<string | null>(null)
+  const [terminalDialogLinkedCwd, setTerminalDialogLinkedCwd] = useState<string | null>(null)
+  const [terminalDialogLinkedProjectPath, setTerminalDialogLinkedProjectPath] = useState<string | null>(null)
+  // 新規起動時はセッション選択をスキップ
+  const [terminalDialogSkipSelector, setTerminalDialogSkipSelector] = useState(false)
+
+  // 外部ターミナル起動ダイアログの状態
+  const [externalDialogOpen, setExternalDialogOpen] = useState(false)
+  const [externalDialogTask, setExternalDialogTask] = useState<TaskIdentifier | null>(null)
+  const [externalDialogTaskText, setExternalDialogTaskText] = useState('')
+
+  // タスクセッション管理ダイアログの状態
+  const [sessionsDialogOpen, setSessionsDialogOpen] = useState(false)
+  const [sessionsDialogTask, setSessionsDialogTask] = useState<TaskIdentifier | null>(null)
+  const [sessionsDialogTaskText, setSessionsDialogTaskText] = useState('')
+  const [sessionsDialogSessions, setSessionsDialogSessions] = useState<TaskClaudeSessionType[]>([])
+
   // TODO項目の読み込み
   useEffect(() => {
     if (database) {
@@ -204,6 +240,95 @@ function App() {
       loadIncompleteTodos()
     }
   }, [database, loadIncompleteTodos])
+
+  // タスクのセッション情報を読み込み
+  useEffect(() => {
+    if (database && todoItems.length > 0) {
+      const allTasks = [
+        ...todoItems.map(t => ({ entryId: t.entryId, replyId: t.replyId, lineIndex: t.lineIndex })),
+        ...incompleteTodos.map(t => ({ entryId: t.entryId, replyId: t.replyId, lineIndex: t.lineIndex })),
+      ]
+      loadSessionsForTasks(allTasks)
+    }
+  }, [database, todoItems, incompleteTodos, loadSessionsForTasks])
+
+  // Claude Code起動ダイアログを開く（アプリ内ターミナル）
+  const handleLaunchClaude = (task: TaskIdentifier, _taskText: string) => {
+    setTerminalDialogTask(task)
+    setTerminalDialogOpen(true)
+  }
+
+  // 外部ターミナルでClaude Codeを起動
+  const handleLaunchClaudeExternal = (task: TaskIdentifier, taskText: string) => {
+    setExternalDialogTask(task)
+    setExternalDialogTaskText(taskText)
+    setExternalDialogOpen(true)
+  }
+
+  // セッション管理ダイアログを開く
+  const handleManageSessions = (task: TaskIdentifier, taskText: string, sessions: TaskClaudeSessionType[]) => {
+    setSessionsDialogTask(task)
+    setSessionsDialogTaskText(taskText)
+    setSessionsDialogSessions(sessions)
+    setSessionsDialogOpen(true)
+  }
+
+  // アプリ内ターミナルでセッションを再開
+  const handleResumeInApp = (session: TaskClaudeSessionType) => {
+    console.log('[App] handleResumeInApp called:', session)
+    setTerminalDialogLinkedSessionId(session.sessionId)
+    setTerminalDialogLinkedCwd(session.cwd)
+    setTerminalDialogLinkedProjectPath(session.projectPath)
+    setTerminalDialogOpen(true)
+  }
+
+  // セッション作成後の紐付け（アプリ内ターミナル用）
+  // claudeSessionId: Claude CodeのセッションID（--resumeで使うもの）
+  // cwd: 作業ディレクトリ
+  // projectPath: Claude Codeのプロジェクトパス（ログ確認に使う）
+  const handleSessionCreated = async (claudeSessionId: string, cwd: string, projectPath: string) => {
+    if (terminalDialogTask) {
+      await linkTaskSession(terminalDialogTask, claudeSessionId, cwd, projectPath)
+    }
+  }
+
+  // 外部ターミナルでセッション起動後の紐付け
+  const handleExternalSessionLaunched = async (sessionId: string, cwd: string) => {
+    if (externalDialogTask) {
+      await linkTaskSession(externalDialogTask, sessionId, cwd, cwd)
+    }
+  }
+
+  // セッション紐付け解除
+  const handleSessionUnlinked = async (sessionId: string) => {
+    if (sessionsDialogTask) {
+      await unlinkTaskSession(sessionsDialogTask, sessionId)
+      // ダイアログ内のセッション一覧も更新
+      setSessionsDialogSessions(prev => prev.filter(s => s.sessionId !== sessionId))
+    }
+  }
+
+  // セッション名変更
+  const handleSessionNameChanged = async (sessionId: string, name: string | null) => {
+    if (sessionsDialogTask) {
+      await updateTaskSessionName(sessionsDialogTask, sessionId, name)
+      // ダイアログ内のセッション一覧も更新
+      setSessionsDialogSessions(prev =>
+        prev.map(s => s.sessionId === sessionId ? { ...s, name: name ?? undefined } : s)
+      )
+    }
+  }
+
+  // セッションID更新（Claude Codeログとの紐付け用）
+  const handleSessionIdUpdated = async (oldSessionId: string, newSessionId: string) => {
+    if (sessionsDialogTask) {
+      await updateTaskSessionId(sessionsDialogTask, oldSessionId, newSessionId)
+      // ダイアログ内のセッション一覧も更新
+      setSessionsDialogSessions(prev =>
+        prev.map(s => s.sessionId === oldSessionId ? { ...s, sessionId: newSessionId } : s)
+      )
+    }
+  }
 
   // エントリー
   const {
@@ -554,6 +679,10 @@ function App() {
                 await saveIncompleteOrder(reordered)
               }
             }}
+            taskSessionsMap={taskSessionsMap}
+            onLaunchClaude={handleLaunchClaude}
+            onLaunchClaudeExternal={handleLaunchClaudeExternal}
+            onManageSessions={handleManageSessions}
           />
         </TabsContent>
       </Tabs>
@@ -611,6 +740,60 @@ function App() {
 
       {/* ウィジェットから開かれるダイアログ */}
       <WidgetTerminalDialog />
+
+      {/* タスクからClaude Code起動ダイアログ（アプリ内ターミナル） */}
+      <ClaudeTerminalDialog
+        open={terminalDialogOpen}
+        onOpenChange={(open) => {
+          setTerminalDialogOpen(open)
+          if (!open) {
+            setTerminalDialogTask(null)
+            setTerminalDialogLinkedSessionId(null)
+            setTerminalDialogLinkedCwd(null)
+            setTerminalDialogLinkedProjectPath(null)
+            setTerminalDialogSkipSelector(false)
+          }
+        }}
+        linkedSessionId={terminalDialogLinkedSessionId}
+        linkedCwd={terminalDialogLinkedCwd}
+        linkedProjectPath={terminalDialogLinkedProjectPath}
+        onSessionCreated={handleSessionCreated}
+        skipSessionSelector={terminalDialogSkipSelector}
+      />
+
+      {/* タスクからClaude Code起動ダイアログ（外部ターミナル） */}
+      <TaskClaudeLaunchDialog
+        taskText={externalDialogTaskText}
+        open={externalDialogOpen}
+        onOpenChange={(open) => {
+          setExternalDialogOpen(open)
+          if (!open) {
+            setExternalDialogTask(null)
+            setExternalDialogTaskText('')
+          }
+        }}
+        onSessionLaunched={handleExternalSessionLaunched}
+      />
+
+      {/* タスクのセッション管理ダイアログ */}
+      {sessionsDialogTask && (
+        <TaskClaudeSessionsDialog
+          taskText={sessionsDialogTaskText}
+          sessions={sessionsDialogSessions}
+          open={sessionsDialogOpen}
+          onOpenChange={setSessionsDialogOpen}
+          onSessionResumed={() => {}}
+          onSessionUnlinked={handleSessionUnlinked}
+          onSessionNameChanged={handleSessionNameChanged}
+          onSessionIdUpdated={handleSessionIdUpdated}
+          onLaunchNew={() => {
+            setSessionsDialogOpen(false)
+            setTerminalDialogSkipSelector(true)
+            handleLaunchClaude(sessionsDialogTask, sessionsDialogTaskText)
+          }}
+          onResumeInApp={handleResumeInApp}
+        />
+      )}
     </div>
     </ClaudeTerminalSessionProvider>
   )
