@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react'
 import Database from '@tauri-apps/plugin-sql'
-import { CompletedTodoItem, Entry } from '@/types'
-import { CHECKBOX_PATTERN_ALL } from '@/utils/checkboxUtils'
+import { CompletedTodoItem, Entry, Reply } from '@/types'
+import { CHECKBOX_PATTERN_ALL, parseClosedTimestamp } from '@/utils/checkboxUtils'
 import { formatDateToLocalYYYYMMDD } from '@/utils/dateUtils'
 
 interface UseCompletedTodosProps {
@@ -30,26 +30,77 @@ export function useCompletedTodos({ database, selectedDate }: UseCompletedTodosP
 
       const completed: CompletedTodoItem[] = []
 
+      // エントリーから完了タスクを抽出
       for (const entry of entries) {
         const lines = entry.content.split('\n')
-        lines.forEach((line, index) => {
+        for (let index = 0; index < lines.length; index++) {
+          const line = lines[index]
           const match = line.match(CHECKBOX_PATTERN_ALL)
           if (match && (match[2] === 'x' || match[2] === 'X')) {
+            // 次の行からCLOSED時刻を抽出
+            let completedAt: string | undefined
+            if (index + 1 < lines.length) {
+              const closedDate = parseClosedTimestamp(lines[index + 1])
+              if (closedDate) {
+                completedAt = closedDate.toISOString()
+              }
+            }
+
             completed.push({
               entryId: entry.id,
               lineIndex: index + 1,
               text: match[3].trim(),
               status: match[2] as 'x' | 'X',
-              entryTimestamp: entry.timestamp
+              entryTimestamp: entry.timestamp,
+              completedAt
             })
           }
-        })
+        }
       }
 
-      // タイムスタンプの新しい順にソート
-      completed.sort((a, b) =>
-        new Date(b.entryTimestamp).getTime() - new Date(a.entryTimestamp).getTime()
+      // 返信からも完了タスクを取得
+      const replies = await database.select<(Reply & { entry_id: number })[]>(
+        `SELECT r.id, r.entry_id, r.content, r.timestamp FROM replies r
+         JOIN entries e ON r.entry_id = e.id
+         WHERE DATE(r.timestamp, 'localtime') = DATE(?)
+         AND (r.content LIKE '%[x]%' OR r.content LIKE '%[X]%')`,
+        [dateStr]
       )
+
+      for (const reply of replies) {
+        const lines = reply.content.split('\n')
+        for (let index = 0; index < lines.length; index++) {
+          const line = lines[index]
+          const match = line.match(CHECKBOX_PATTERN_ALL)
+          if (match && (match[2] === 'x' || match[2] === 'X')) {
+            // 次の行からCLOSED時刻を抽出
+            let completedAt: string | undefined
+            if (index + 1 < lines.length) {
+              const closedDate = parseClosedTimestamp(lines[index + 1])
+              if (closedDate) {
+                completedAt = closedDate.toISOString()
+              }
+            }
+
+            completed.push({
+              entryId: reply.entry_id,
+              replyId: reply.id,
+              lineIndex: index + 1,
+              text: match[3].trim(),
+              status: match[2] as 'x' | 'X',
+              entryTimestamp: reply.timestamp,
+              completedAt
+            })
+          }
+        }
+      }
+
+      // completedAtがあればそれを、なければentryTimestampで新しい順にソート
+      completed.sort((a, b) => {
+        const timeA = a.completedAt || a.entryTimestamp
+        const timeB = b.completedAt || b.entryTimestamp
+        return new Date(timeB).getTime() - new Date(timeA).getTime()
+      })
 
       setCompletedItems(completed)
     } catch (error) {

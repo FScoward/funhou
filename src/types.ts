@@ -52,11 +52,13 @@ export function getTodoUniqueId(todo: TodoItem): string {
 }
 
 export interface CompletedTodoItem {
-  entryId: number        // 元のエントリーID
-  lineIndex: number      // エントリー内の行番号（1始まり）
-  text: string           // タスクのテキスト部分
-  status: 'x' | 'X'      // 完了状態
-  entryTimestamp: string // エントリーのタイムスタンプ（表示用）
+  entryId: number         // 元のエントリーID
+  replyId?: number        // 返信のID（返信の場合のみ）
+  lineIndex: number       // エントリー/返信内の行番号（1始まり）
+  text: string            // タスクのテキスト部分
+  status: 'x' | 'X'       // 完了状態
+  entryTimestamp: string  // エントリーのタイムスタンプ（フォールバック用）
+  completedAt?: string    // タスク完了時刻（存在する場合）
 }
 
 export interface IncompleteTodoItem {

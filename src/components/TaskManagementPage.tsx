@@ -367,7 +367,7 @@ export function TaskManagementPage({
                   onClick={() => onScrollToEntry(item.entryId)}
                 >
                   <div className="task-item-timestamp">
-                    {formatTimestamp(item.entryTimestamp)}
+                    {formatTimestamp(item.completedAt || item.entryTimestamp)}
                   </div>
                   <div className="task-item-content">
                     <CheckCircle size={14} className="task-item-check" />

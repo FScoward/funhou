@@ -78,7 +78,7 @@ export function CompletedTasksSidebar({
                 }}
               >
                 <div className="done-item-timestamp">
-                  {formatTimestamp(item.entryTimestamp)}
+                  {formatTimestamp(item.completedAt || item.entryTimestamp)}
                 </div>
                 <div className="done-item-content">
                   <CheckCircle size={14} className="done-item-check" />
