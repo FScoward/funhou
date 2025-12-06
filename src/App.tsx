@@ -205,6 +205,9 @@ function App() {
   // 既存セッション再開用
   const [terminalDialogLinkedSessionId, setTerminalDialogLinkedSessionId] = useState<string | null>(null)
   const [terminalDialogLinkedCwd, setTerminalDialogLinkedCwd] = useState<string | null>(null)
+  const [terminalDialogLinkedProjectPath, setTerminalDialogLinkedProjectPath] = useState<string | null>(null)
+  // 新規起動時はセッション選択をスキップ
+  const [terminalDialogSkipSelector, setTerminalDialogSkipSelector] = useState(false)
 
   // 外部ターミナル起動ダイアログの状態
   const [externalDialogOpen, setExternalDialogOpen] = useState(false)
@@ -275,14 +278,17 @@ function App() {
     console.log('[App] handleResumeInApp called:', session)
     setTerminalDialogLinkedSessionId(session.sessionId)
     setTerminalDialogLinkedCwd(session.cwd)
+    setTerminalDialogLinkedProjectPath(session.projectPath)
     setTerminalDialogOpen(true)
   }
 
   // セッション作成後の紐付け（アプリ内ターミナル用）
-  const handleSessionCreated = async (sessionId: string, cwd: string) => {
+  // claudeSessionId: Claude CodeのセッションID（--resumeで使うもの）
+  // cwd: 作業ディレクトリ
+  // projectPath: Claude Codeのプロジェクトパス（ログ確認に使う）
+  const handleSessionCreated = async (claudeSessionId: string, cwd: string, projectPath: string) => {
     if (terminalDialogTask) {
-      // projectPathはcwdと同じにする
-      await linkTaskSession(terminalDialogTask, sessionId, cwd, cwd)
+      await linkTaskSession(terminalDialogTask, claudeSessionId, cwd, projectPath)
     }
   }
 
@@ -744,11 +750,15 @@ function App() {
             setTerminalDialogTask(null)
             setTerminalDialogLinkedSessionId(null)
             setTerminalDialogLinkedCwd(null)
+            setTerminalDialogLinkedProjectPath(null)
+            setTerminalDialogSkipSelector(false)
           }
         }}
         linkedSessionId={terminalDialogLinkedSessionId}
         linkedCwd={terminalDialogLinkedCwd}
+        linkedProjectPath={terminalDialogLinkedProjectPath}
         onSessionCreated={handleSessionCreated}
+        skipSessionSelector={terminalDialogSkipSelector}
       />
 
       {/* タスクからClaude Code起動ダイアログ（外部ターミナル） */}
@@ -778,6 +788,7 @@ function App() {
           onSessionIdUpdated={handleSessionIdUpdated}
           onLaunchNew={() => {
             setSessionsDialogOpen(false)
+            setTerminalDialogSkipSelector(true)
             handleLaunchClaude(sessionsDialogTask, sessionsDialogTaskText)
           }}
           onResumeInApp={handleResumeInApp}

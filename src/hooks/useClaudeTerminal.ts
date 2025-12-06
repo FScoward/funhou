@@ -165,7 +165,6 @@ export function useClaudeTerminal(options?: UseClaudeTerminalOptions) {
     const xtermTextarea = currentTerminal.element?.querySelector('textarea.xterm-helper-textarea') as HTMLTextAreaElement | null
 
     if (xtermTextarea) {
-
       // 既存のリスナーをクリア
       if (terminalDataDisposerRef.current) {
         terminalDataDisposerRef.current.dispose()
@@ -324,6 +323,10 @@ export function useClaudeTerminal(options?: UseClaudeTerminalOptions) {
 
   useEffect(() => {
     if (isReady && isContextMode) {
+      // セッションIDが変わった場合は一度デタッチしてから再アタッチ
+      if (attachedSessionIdRef.current && attachedSessionIdRef.current !== options?.sessionId) {
+        detachFromSessionRef.current()
+      }
       attachToSession()
     }
     // cleanup は コンポーネントがアンマウントされる時のみ呼ばれる
@@ -331,7 +334,7 @@ export function useClaudeTerminal(options?: UseClaudeTerminalOptions) {
       detachFromSessionRef.current()
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isReady]) // isContextModeも除外して、isReadyの変化時のみ実行
+  }, [isReady, options?.sessionId]) // sessionIdの変化時にも再アタッチ
 
   // Claude Codeを起動（非Context モード用）
   const spawnClaude = useCallback(

@@ -16,6 +16,9 @@ pub struct ClaudeLogEntry {
     #[serde(rename = "gitBranch")]
     pub git_branch: Option<String>,
     pub uuid: Option<String>,
+    /// Sidechain sessions are created by subagents and cannot be resumed
+    #[serde(rename = "isSidechain")]
+    pub is_sidechain: Option<bool>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -160,6 +163,15 @@ pub fn list_claude_sessions(project_path: String) -> Result<Vec<SessionSummary>,
             let content = fs::read_to_string(&path).map_err(|e| e.to_string())?;
             let lines: Vec<&str> = content.lines().take(10).collect();
 
+            // Skip sidechain sessions (created by subagents, not resumable)
+            if let Some(first_line) = lines.first() {
+                if let Ok(first_entry) = serde_json::from_str::<ClaudeLogEntry>(first_line) {
+                    if first_entry.is_sidechain == Some(true) {
+                        continue;
+                    }
+                }
+            }
+
             let mut first_message = None;
             let mut timestamp = None;
             let mut git_branch = None;
@@ -246,6 +258,16 @@ pub fn read_claude_session(project_path: String, session_id: String) -> Result<V
     }
 
     let content = fs::read_to_string(&session_file).map_err(|e| e.to_string())?;
+
+    // Check if this is a sidechain session (not resumable)
+    // Sidechain sessions are created by subagents and cannot be resumed with --resume
+    if let Some(first_line) = content.lines().next() {
+        if let Ok(entry) = serde_json::from_str::<ClaudeLogEntry>(first_line) {
+            if entry.is_sidechain == Some(true) {
+                return Err(format!("Session {} is a sidechain session and cannot be resumed", session_id));
+            }
+        }
+    }
 
     let mut messages = Vec::new();
 
