@@ -12,11 +12,19 @@ export default defineConfig({
     },
   },
   build: {
+    // minifyを元に戻す
+    minify: true,
     rollupOptions: {
       input: {
         main: path.resolve(__dirname, 'index.html'),
       },
     },
+    // コード分割を無効にして単一バンドルにする（デバッグ用）
+    cssCodeSplit: false,
+  },
+  // xterm.jsの最適化を制御
+  optimizeDeps: {
+    include: ['@xterm/xterm', '@xterm/addon-fit', '@xterm/addon-webgl', '@xterm/addon-canvas'],
   },
   server: {
     port: 1420,

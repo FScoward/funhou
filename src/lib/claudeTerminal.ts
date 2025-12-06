@@ -6,6 +6,15 @@ export interface TerminalOptions {
   rows?: number
 }
 
+// PTY用の環境変数を設定（Finderからダブルクリックで起動した場合でも色が出るようにする）
+// 注意: ブラウザ環境なのでprocess.envは使用できない。最低限必要な環境変数のみ設定。
+const PTY_ENV: Record<string, string> = {
+  TERM: 'xterm-256color',
+  COLORTERM: 'truecolor',
+  LANG: 'ja_JP.UTF-8',
+  SHELL: '/bin/zsh',
+}
+
 export interface ClaudeTerminalSession {
   pty: IPty
   write: (data: string) => void
@@ -30,6 +39,7 @@ export async function spawnClaudeTerminal(
     cols,
     rows,
     cwd: options.cwd,
+    env: PTY_ENV,
   })
 
   console.log('[claudeTerminal] PTY spawned, pid:', pty.pid)
@@ -63,6 +73,7 @@ export async function resumeClaudeTerminal(
     cols,
     rows,
     cwd: options.cwd,
+    env: PTY_ENV,
   })
 
   const escapedCwd = options.cwd.replace(/'/g, "'\\''")

@@ -1,6 +1,8 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
+import { WebglAddon } from '@xterm/addon-webgl'
+import { CanvasAddon } from '@xterm/addon-canvas'
 import type { IDisposable } from '@xterm/xterm'
 import {
   spawnClaudeTerminal,
@@ -68,25 +70,101 @@ export function useClaudeTerminal(options?: UseClaudeTerminalOptions) {
   const initTerminal = useCallback((element: HTMLElement) => {
     containerRef.current = element
 
+    const terminalTheme = {
+      background: '#1e1e1e',
+      foreground: '#d4d4d4',
+      cursor: '#d4d4d4',
+      cursorAccent: '#1e1e1e',
+      selectionBackground: 'rgba(255, 255, 255, 0.3)',
+      // ANSIカラーを明示的に設定
+      black: '#000000',
+      red: '#cd3131',
+      green: '#0dbc79',
+      yellow: '#e5e510',
+      blue: '#2472c8',
+      magenta: '#bc3fbc',
+      cyan: '#11a8cd',
+      white: '#e5e5e5',
+      brightBlack: '#666666',
+      brightRed: '#f14c4c',
+      brightGreen: '#23d18b',
+      brightYellow: '#f5f543',
+      brightBlue: '#3b8eea',
+      brightMagenta: '#d670d6',
+      brightCyan: '#29b8db',
+      brightWhite: '#ffffff',
+    }
+
+    console.log('[useClaudeTerminal] Creating terminal with theme:', terminalTheme)
+
     const term = new Terminal({
       cursorBlink: true,
       fontSize: 14,
       fontFamily: 'Menlo, Monaco, "Courier New", monospace',
-      theme: {
-        background: '#1e1e1e',
-        foreground: '#d4d4d4',
-        cursor: '#d4d4d4',
-        cursorAccent: '#1e1e1e',
-        selectionBackground: 'rgba(255, 255, 255, 0.3)',
-      },
       allowProposedApi: true,
+      // ロガーを追加してxterm.jsのデバッグ情報を出力
+      logger: {
+        trace: (message: string, ...args: unknown[]) => console.log('[xterm:trace]', message, ...args),
+        debug: (message: string, ...args: unknown[]) => console.log('[xterm:debug]', message, ...args),
+        info: (message: string, ...args: unknown[]) => console.log('[xterm:info]', message, ...args),
+        warn: (message: string, ...args: unknown[]) => console.warn('[xterm:warn]', message, ...args),
+        error: (message: string, ...args: unknown[]) => console.error('[xterm:error]', message, ...args),
+      },
     })
+
+    // テーマを明示的に設定（コンストラクタで設定すると一部環境で無視される問題の対策）
+    term.options.theme = terminalTheme
+    console.log('[useClaudeTerminal] Theme set after constructor')
 
     const fitAddon = new FitAddon()
     term.loadAddon(fitAddon)
     fitAddonRef.current = fitAddon
 
     term.open(element)
+
+    // open後にテーマを再設定（DOMに接続された後に設定する必要がある場合がある）
+    term.options.theme = terminalTheme
+    console.log('[useClaudeTerminal] Theme set after open')
+
+    // レンダラーを試行: WebGL -> Canvas -> デフォルト
+    let rendererLoaded = false
+
+    // 1. WebGL レンダラーを試行
+    try {
+      const webglAddon = new WebglAddon()
+      webglAddon.onContextLoss(() => {
+        console.warn('[useClaudeTerminal] WebGL context lost, disposing addon')
+        webglAddon.dispose()
+      })
+      term.loadAddon(webglAddon)
+      console.log('[useClaudeTerminal] WebGL renderer loaded successfully')
+      // WebGLロード後にテーマを再適用（ビルド版での色問題対策）
+      term.options.theme = terminalTheme
+      rendererLoaded = true
+    } catch (e) {
+      console.warn('[useClaudeTerminal] WebGL not supported:', e)
+    }
+
+    // 2. WebGL が失敗した場合、Canvas レンダラーを試行
+    if (!rendererLoaded) {
+      try {
+        const canvasAddon = new CanvasAddon()
+        term.loadAddon(canvasAddon)
+        console.log('[useClaudeTerminal] Canvas renderer loaded successfully')
+        // Canvasロード後にテーマを再適用
+        term.options.theme = terminalTheme
+        rendererLoaded = true
+      } catch (e) {
+        console.warn('[useClaudeTerminal] Canvas renderer not supported:', e)
+      }
+    }
+
+    if (!rendererLoaded) {
+      console.log('[useClaudeTerminal] Using default DOM renderer')
+    }
+
+    // 最終的にテーマが適用されていることを確認
+    console.log('[useClaudeTerminal] Final theme applied:', term.options.theme)
 
     // 少し遅延を入れてからfitを呼ぶ（DOMの準備完了を待つ）
     requestAnimationFrame(() => {
@@ -148,6 +226,10 @@ export function useClaudeTerminal(options?: UseClaudeTerminalOptions) {
       unsubscribeRef.current()
     }
     const unsubscribe = currentOptions.subscribeToOutput!(currentOptions.sessionId, (data) => {
+      // デバッグ: ANSIエスケープコードが含まれているか確認
+      if (data.includes('\x1b[')) {
+        console.log('[useClaudeTerminal] Data contains ANSI codes, sample:', JSON.stringify(data.substring(0, 100)))
+      }
       // DA応答をフィルタリング
       terminalRef.current?.write(filterDAResponses(data))
     })
