@@ -29,8 +29,8 @@ export function useTodos({ database }: UseTodosProps) {
     setIsLoading(true)
     try {
       // アーカイブされていないエントリーを取得（未完了 [ ] またはDOING [/] を含む）
-      const entries = await database.select<Entry[]>(
-        'SELECT id, content FROM entries WHERE (archived = 0 OR archived IS NULL) AND (content LIKE ? OR content LIKE ?)',
+      const entries = await database.select<(Entry & { timestamp: string })[]>(
+        'SELECT id, content, timestamp FROM entries WHERE (archived = 0 OR archived IS NULL) AND (content LIKE ? OR content LIKE ?)',
         ['%[ ]%', '%[/]%']
       )
 
@@ -45,15 +45,16 @@ export function useTodos({ database }: UseTodosProps) {
               entryId: entry.id,
               lineIndex: index + 1, // 1始まり
               text: match[3].trim(),
-              status: match[2] as ' ' | '/'
+              status: match[2] as ' ' | '/',
+              timestamp: entry.timestamp
             })
           }
         })
       }
 
       // 返信からもTODOを取得（親エントリーがアーカイブされていないもの、かつ返信自体もアーカイブされていないもの）
-      const replies = await database.select<(Reply & { entry_id: number; entry_content: string })[]>(
-        `SELECT r.id, r.entry_id, r.content, e.content as entry_content
+      const replies = await database.select<(Reply & { entry_id: number; entry_content: string; reply_timestamp: string })[]>(
+        `SELECT r.id, r.entry_id, r.content, r.timestamp as reply_timestamp, e.content as entry_content
          FROM replies r
          JOIN entries e ON r.entry_id = e.id
          WHERE (e.archived = 0 OR e.archived IS NULL)
@@ -102,6 +103,7 @@ export function useTodos({ database }: UseTodosProps) {
               lineIndex: index + 1, // 1始まり
               text: match[3].trim(),
               status: match[2] as ' ' | '/',
+              timestamp: reply.reply_timestamp,
               parentEntryText,
               parentEntryTags
             })

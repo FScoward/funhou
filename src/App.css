@@ -2138,6 +2138,14 @@ textarea::placeholder {
   margin-left: 1.5rem;
 }
 
+/* 日付ラベル */
+.doing-list-item-date {
+  font-size: 0.65rem;
+  color: var(--muted-foreground);
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+
 /* 子タスクバッジ */
 .doing-list-item-badge {
   font-size: 0.65rem;

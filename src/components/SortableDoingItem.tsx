@@ -5,11 +5,34 @@ import { CSS } from '@dnd-kit/utilities'
 import { GripVertical, ExternalLink, Circle, Slash, CheckCircle, XCircle } from 'lucide-react'
 import { TodoItem, getTodoUniqueId } from '@/types'
 import { CheckboxStatus } from '@/utils/checkboxUtils'
+import { formatDateToLocalYYYYMMDD } from '@/utils/dateUtils'
 
 // 親エントリIDから色相を生成（0-360）
 function getHueFromEntryId(entryId: number): number {
   // ゴールデンアングル（137.5度）を使って色を分散させる
   return (entryId * 137.5) % 360
+}
+
+// 日付を短いラベルでフォーマット
+function formatShortDateLabel(timestamp: string): string {
+  const date = new Date(timestamp)
+  const today = new Date()
+  const yesterday = new Date(today)
+  yesterday.setDate(yesterday.getDate() - 1)
+
+  const dateStr = formatDateToLocalYYYYMMDD(date)
+  const todayStr = formatDateToLocalYYYYMMDD(today)
+  const yesterdayStr = formatDateToLocalYYYYMMDD(yesterday)
+
+  if (dateStr === todayStr) {
+    return '今日'
+  } else if (dateStr === yesterdayStr) {
+    return '昨日'
+  } else {
+    const month = date.getMonth() + 1
+    const day = date.getDate()
+    return `${month}/${day}`
+  }
 }
 
 // ステータスメニューの定義
@@ -120,6 +143,9 @@ export function SortableDoingItem({
         )}
 
         <span className="doing-list-item-text">{todo.text}</span>
+
+        {/* 日付ラベル */}
+        <span className="doing-list-item-date">{formatShortDateLabel(todo.timestamp)}</span>
 
         {/* 子タスクバッジ（親の場合） */}
         {hasChildren && (
