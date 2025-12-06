@@ -5,7 +5,6 @@ import { Calendar } from '@/components/ui/calendar'
 import { ja } from 'date-fns/locale'
 import { formatDateWithWeekday } from '@/utils/dateUtils'
 import { getCurrentWindow, PhysicalPosition } from '@tauri-apps/api/window'
-import { invoke } from '@tauri-apps/api/core'
 
 interface DateNavigationProps {
   selectedDate: Date
