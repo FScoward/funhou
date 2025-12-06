@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
+import { GripVertical } from 'lucide-react'
 import './App.css'
 import { ClaudeTerminalSessionProvider } from '@/contexts/ClaudeTerminalSessionContext'
 import { ClaudeTerminalWidget } from '@/components/ClaudeTerminalWidget'
@@ -24,12 +25,14 @@ import { useReplies } from '@/hooks/useReplies'
 import { useTodos } from '@/hooks/useTodos'
 import { useCompletedTodos } from '@/hooks/useCompletedTodos'
 import { useIncompleteTodos } from '@/hooks/useIncompleteTodos'
+import { useWindowDrag } from '@/hooks/useWindowDrag'
 import { DailySummarySidebar } from '@/components/DailySummarySidebar'
 import { getSettings, applyFont, applyFontSize } from '@/lib/settings'
 import { applyTheme, ThemeVariant } from '@/lib/themes'
 import { onClaudeSessionFinished } from '@/lib/claudeLogs'
 
 function App() {
+  const { handleMouseDown: handleTabDrag } = useWindowDrag()
   const [activeTab, setActiveTab] = useState<'funhou' | 'tasks'>('funhou')
   const [settingsSidebarOpen, setSettingsSidebarOpen] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
@@ -323,10 +326,19 @@ function App() {
     <ClaudeTerminalSessionProvider>
     <div className="app">
       <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'funhou' | 'tasks')} className="app-tabs">
-        <TabsList className="app-tabs-list">
-          <TabsTrigger value="funhou" className="app-tab-trigger">分報</TabsTrigger>
-          <TabsTrigger value="tasks" className="app-tab-trigger">タスク管理</TabsTrigger>
-        </TabsList>
+        <div className="app-tabs-header">
+          <TabsList className="app-tabs-list">
+            <TabsTrigger value="funhou" className="app-tab-trigger">分報</TabsTrigger>
+            <TabsTrigger value="tasks" className="app-tab-trigger">タスク管理</TabsTrigger>
+          </TabsList>
+          <button
+            className="window-drag-handle"
+            onMouseDown={handleTabDrag}
+            title="ウィンドウを移動"
+          >
+            <GripVertical size={18} />
+          </button>
+        </div>
 
         <TabsContent value="funhou" className="app-tab-content">
           <div className="app-layout">

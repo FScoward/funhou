@@ -61,7 +61,6 @@ h1 {
   margin-bottom: 0.75rem;
   padding: 0.5rem 0.25rem;
   border-bottom: 1px solid #e0e0e0;
-  -webkit-app-region: drag;
 }
 
 .date-navigation-center {
@@ -3787,6 +3786,45 @@ textarea::placeholder {
   overflow: hidden;
 }
 
+/* タブヘッダー */
+.app-tabs-header {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 0.5rem;
+  position: relative;
+}
+
+/* ウィンドウドラッグハンドル */
+.window-drag-handle {
+  position: absolute;
+  right: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: none;
+  background: var(--glass-bg);
+  backdrop-filter: blur(10px);
+  border-radius: 0.5rem;
+  color: var(--muted-foreground);
+  cursor: grab;
+  transition: all 0.2s ease;
+}
+
+.window-drag-handle:hover {
+  background: rgba(0, 0, 0, 0.1);
+  color: var(--foreground);
+}
+
+.window-drag-handle:active {
+  cursor: grabbing;
+  background: rgba(0, 0, 0, 0.15);
+}
+
 .app-tabs-list {
   display: inline-flex;
   height: 2.5rem;
@@ -3796,10 +3834,8 @@ textarea::placeholder {
   background: var(--glass-bg);
   backdrop-filter: blur(10px);
   padding: 0.25rem;
-  margin-bottom: 0.5rem;
   border: 1px solid var(--glass-border);
   width: fit-content;
-  align-self: center;
 }
 
 .app-tab-trigger {
@@ -3831,7 +3867,7 @@ textarea::placeholder {
 
 .app-tab-content {
   flex: 1;
-  overflow: hidden;
+  overflow: auto;
 }
 
 .app-tab-content[data-state="inactive"] {
