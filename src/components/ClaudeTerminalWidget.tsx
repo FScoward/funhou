@@ -143,7 +143,7 @@ function SessionCard({
           </div>
         )}
         <button
-          className="flex items-center gap-2"
+          className="flex items-center gap-2 flex-shrink-0"
           onClick={onToggleExpand}
         >
           <span className="text-xs text-muted-foreground">{statusLabel}</span>

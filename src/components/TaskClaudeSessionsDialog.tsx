@@ -235,7 +235,7 @@ export function TaskClaudeSessionsDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-xl overflow-hidden">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Terminal size={18} />
@@ -243,10 +243,10 @@ export function TaskClaudeSessionsDialog({
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="space-y-4 overflow-hidden">
           <div className="space-y-2">
             <div className="text-sm text-muted-foreground">タスク</div>
-            <div className="p-2 bg-muted rounded text-sm">
+            <div className="p-2 bg-muted rounded text-sm break-words">
               {taskText}
             </div>
           </div>
@@ -274,14 +274,14 @@ export function TaskClaudeSessionsDialog({
                 紐付けられたセッションはありません
               </div>
             ) : (
-              <div className="space-y-2 max-h-60 overflow-y-auto">
+              <div className="space-y-2 max-h-60 overflow-y-auto overflow-x-hidden">
                 {sessions.map((session) => (
                   <div
                     key={session.sessionId}
-                    className="p-3 border rounded hover:bg-muted/50 transition-colors"
+                    className="p-3 border rounded hover:bg-muted/50 transition-colors overflow-hidden"
                   >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1 min-w-0">
+                    <div className="flex items-start gap-2">
+                      <div className="flex-1 min-w-0 overflow-hidden">
                         {/* セッション名の表示・編集 */}
                         {editingSessionId === session.sessionId ? (
                           <div className="flex items-center gap-1 mb-1">
@@ -339,14 +339,14 @@ export function TaskClaudeSessionsDialog({
                         <div className="font-mono text-xs text-muted-foreground">
                           {truncateSessionId(session.sessionId)}
                         </div>
-                        <div className="text-sm truncate mt-1" title={session.cwd}>
+                        <div className="text-sm break-all mt-1">
                           {session.cwd}
                         </div>
                         <div className="text-xs text-muted-foreground mt-1">
                           {formatTimestamp(session.createdAt)}
                         </div>
                       </div>
-                      <div className="flex items-center gap-1 relative">
+                      <div className="flex items-center gap-1 relative flex-shrink-0">
                         <div className="relative">
                           <Button
                             variant="ghost"
@@ -374,7 +374,7 @@ export function TaskClaudeSessionsDialog({
                             >
                               {onResumeInApp && (
                                 <button
-                                  className="checkbox-status-option"
+                                  className="checkbox-status-option whitespace-nowrap"
                                   onClick={(e) => {
                                     e.preventDefault()
                                     e.stopPropagation()
@@ -386,7 +386,7 @@ export function TaskClaudeSessionsDialog({
                                 </button>
                               )}
                               <button
-                                className="checkbox-status-option"
+                                className="checkbox-status-option whitespace-nowrap"
                                 onClick={(e) => {
                                   e.preventDefault()
                                   e.stopPropagation()
