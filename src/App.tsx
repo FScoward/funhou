@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
-import { getCurrentWindow } from '@tauri-apps/api/window'
+import { GripVertical } from 'lucide-react'
 import './App.css'
 import { ClaudeTerminalSessionProvider } from '@/contexts/ClaudeTerminalSessionContext'
 import { ClaudeTerminalWidget } from '@/components/ClaudeTerminalWidget'
@@ -13,6 +13,8 @@ import { Timeline } from '@/components/Timeline'
 import { Pagination } from '@/components/Pagination'
 import { PinnedSidebar } from '@/components/PinnedSidebar'
 import { FilterBar } from '@/components/FilterBar'
+import { TaskManagementPage } from '@/components/TaskManagementPage'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { useDatabase } from '@/hooks/useDatabase'
 import { useDateNavigation } from '@/hooks/useDateNavigation'
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
@@ -23,19 +25,17 @@ import { useReplies } from '@/hooks/useReplies'
 import { useTodos } from '@/hooks/useTodos'
 import { useCompletedTodos } from '@/hooks/useCompletedTodos'
 import { useIncompleteTodos } from '@/hooks/useIncompleteTodos'
-import { CurrentActivitySection } from '@/components/CurrentActivitySection'
-import { CompletedTasksSidebar } from '@/components/CompletedTasksSidebar'
-import { IncompleteTasksSidebar } from '@/components/IncompleteTasksSidebar'
+import { useWindowDrag } from '@/hooks/useWindowDrag'
 import { DailySummarySidebar } from '@/components/DailySummarySidebar'
 import { getSettings, applyFont, applyFontSize } from '@/lib/settings'
 import { applyTheme, ThemeVariant } from '@/lib/themes'
 import { onClaudeSessionFinished } from '@/lib/claudeLogs'
 
 function App() {
+  const { handleMouseDown: handleTabDrag } = useWindowDrag()
+  const [activeTab, setActiveTab] = useState<'funhou' | 'tasks'>('funhou')
   const [settingsSidebarOpen, setSettingsSidebarOpen] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [doneSidebarOpen, setDoneSidebarOpen] = useState(false)
-  const [incompleteSidebarOpen, setIncompleteSidebarOpen] = useState(false)
   const [summarySidebarOpen, setSummarySidebarOpen] = useState(false)
   const [claudeTerminalSidebarOpen, setClaudeTerminalSidebarOpen] = useState(false)
   const [searchText, setSearchText] = useState('')
@@ -285,259 +285,276 @@ function App() {
     )
   }, [filteredTimelineItems])
 
+  // タスクステータス変更ハンドラー（共通化）
+  const handleTaskStatusChange = async (todo: typeof todoItems[0], newStatus: import('@/utils/checkboxUtils').CheckboxStatus) => {
+    if (todo.replyId) {
+      // 返信のタスクを更新
+      const newContent = await updateReplyLine(todo.replyId, todo.lineIndex, newStatus)
+      if (newContent) {
+        // タイムラインの返信も更新
+        setFilteredTimelineItems(filteredTimelineItems.map(item => {
+          if (item.type === 'reply' && item.replyId === todo.replyId) {
+            return { ...item, content: newContent }
+          }
+          // 親エントリーのrepliesリストも更新
+          if (item.type === 'entry' && item.id === todo.entryId && item.replies) {
+            const updatedReplies = item.replies.map(reply =>
+              reply.id === todo.replyId ? { ...reply, content: newContent } : reply
+            )
+            return { ...item, replies: updatedReplies }
+          }
+          return item
+        }))
+      }
+    } else {
+      // エントリーのタスクを更新
+      const newContent = await updateEntryLine(todo.entryId, todo.lineIndex, newStatus)
+      if (newContent) {
+        // タイムラインのエントリーも更新
+        setFilteredTimelineItems(filteredTimelineItems.map(item =>
+          item.type === 'entry' && item.id === todo.entryId
+            ? { ...item, content: newContent }
+            : item
+        ))
+      }
+    }
+    await loadTodos()
+    await loadCompletedTodos()
+  }
+
   return (
     <ClaudeTerminalSessionProvider>
     <div className="app">
-      <div className="app-layout">
-        <DateNavigation
-          selectedDate={selectedDate}
-          calendarOpen={calendarOpen}
-          onCalendarOpenChange={setCalendarOpen}
-          onDateSelect={setSelectedDate}
-          onPreviousDay={goToPreviousDay}
-          onNextDay={goToNextDay}
-          onToday={goToToday}
-        />
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'funhou' | 'tasks')} className="app-tabs">
+        <div className="app-tabs-header">
+          <TabsList className="app-tabs-list">
+            <TabsTrigger value="funhou" className="app-tab-trigger">分報</TabsTrigger>
+            <TabsTrigger value="tasks" className="app-tab-trigger">タスク管理</TabsTrigger>
+          </TabsList>
+          <button
+            className="window-drag-handle"
+            onMouseDown={handleTabDrag}
+            title="ウィンドウを移動"
+          >
+            <GripVertical size={18} />
+          </button>
+        </div>
 
-        <FilterBar
-          availableTags={availableTags}
-          selectedTags={selectedTags}
-          filterMode={filterMode}
-          onTagSelect={(tag) => {
-            if (selectedTags.includes(tag)) {
-              setSelectedTags(selectedTags.filter(t => t !== tag))
-            } else {
-              setSelectedTags([...selectedTags, tag])
-            }
-          }}
-          onTagRemove={(tag) => {
-            setSelectedTags(selectedTags.filter(t => t !== tag))
-          }}
-          onFilterModeChange={(mode) => {
-            setFilterMode(mode)
-          }}
-          onTagsClearAll={() => {
-            setSelectedTags([])
-          }}
-          onTagDelete={openDeleteTagDialog}
-          frequentTags={frequentTags}
-          recentTags={recentTags}
-          onSearch={setSearchText}
-          searchText={searchText}
-        />
+        <TabsContent value="funhou" className="app-tab-content">
+          <div className="app-layout">
+            <DateNavigation
+              selectedDate={selectedDate}
+              calendarOpen={calendarOpen}
+              onCalendarOpenChange={setCalendarOpen}
+              onDateSelect={setSelectedDate}
+              onPreviousDay={goToPreviousDay}
+              onNextDay={goToNextDay}
+              onToday={goToToday}
+            />
 
-        <InputSection
-          ref={inputSectionRef}
-          currentEntry={currentEntry}
-          onEntryChange={setCurrentEntry}
-          onSubmit={async () => {
-            await handleAddEntry()
-            await loadIncompleteTodos()
-          }}
-          onKeyDown={async (e) => {
-            handleKeyDown(e)
-            // Cmd+Enter で送信した場合も未完了タスクを再読み込み
-            if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
-              // handleKeyDown内でhandleAddEntryが呼ばれるので少し待ってから再読み込み
-              setTimeout(() => loadIncompleteTodos(), 100)
-            }
-          }}
-          availableTags={availableTags}
-          selectedTags={manualTags}
-          onTagAdd={(tag) => {
-            if (!manualTags.includes(tag)) {
-              setManualTags([...manualTags, tag])
-            }
-          }}
-          onTagRemove={(tag) => {
-            setManualTags(manualTags.filter(t => t !== tag))
-          }}
-          frequentTags={frequentTags}
-          recentTags={recentTags}
-          ollamaEnabled={ollamaEnabled}
-          ollamaModel={ollamaModel}
-          onImportLog={async (content) => {
-            setCurrentEntry(content)
-          }}
-        />
+            <FilterBar
+              availableTags={availableTags}
+              selectedTags={selectedTags}
+              filterMode={filterMode}
+              onTagSelect={(tag) => {
+                if (selectedTags.includes(tag)) {
+                  setSelectedTags(selectedTags.filter(t => t !== tag))
+                } else {
+                  setSelectedTags([...selectedTags, tag])
+                }
+              }}
+              onTagRemove={(tag) => {
+                setSelectedTags(selectedTags.filter(t => t !== tag))
+              }}
+              onFilterModeChange={(mode) => {
+                setFilterMode(mode)
+              }}
+              onTagsClearAll={() => {
+                setSelectedTags([])
+              }}
+              onTagDelete={openDeleteTagDialog}
+              frequentTags={frequentTags}
+              recentTags={recentTags}
+              onSearch={setSearchText}
+              searchText={searchText}
+            />
 
-        <CurrentActivitySection
-          isLoading={isTodosLoading}
-          todoItems={todoItems}
-          onScrollToEntry={scrollToEntry}
-          onScrollToReply={scrollToReply}
-          onStatusChange={async (todo, newStatus) => {
-            if (todo.replyId) {
-              // 返信のタスクを更新
-              const newContent = await updateReplyLine(todo.replyId, todo.lineIndex, newStatus)
-              if (newContent) {
-                // タイムラインの返信も更新
-                setFilteredTimelineItems(filteredTimelineItems.map(item => {
-                  if (item.type === 'reply' && item.replyId === todo.replyId) {
-                    return { ...item, content: newContent }
-                  }
-                  // 親エントリーのrepliesリストも更新
-                  if (item.type === 'entry' && item.id === todo.entryId && item.replies) {
-                    const updatedReplies = item.replies.map(reply =>
-                      reply.id === todo.replyId ? { ...reply, content: newContent } : reply
-                    )
-                    return { ...item, replies: updatedReplies }
-                  }
-                  return item
-                }))
+            <InputSection
+              ref={inputSectionRef}
+              currentEntry={currentEntry}
+              onEntryChange={setCurrentEntry}
+              onSubmit={async () => {
+                await handleAddEntry()
+                await loadIncompleteTodos()
+              }}
+              onKeyDown={async (e) => {
+                handleKeyDown(e)
+                // Cmd+Enter で送信した場合も未完了タスクを再読み込み
+                if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+                  // handleKeyDown内でhandleAddEntryが呼ばれるので少し待ってから再読み込み
+                  setTimeout(() => loadIncompleteTodos(), 100)
+                }
+              }}
+              availableTags={availableTags}
+              selectedTags={manualTags}
+              onTagAdd={(tag) => {
+                if (!manualTags.includes(tag)) {
+                  setManualTags([...manualTags, tag])
+                }
+              }}
+              onTagRemove={(tag) => {
+                setManualTags(manualTags.filter(t => t !== tag))
+              }}
+              frequentTags={frequentTags}
+              recentTags={recentTags}
+              ollamaEnabled={ollamaEnabled}
+              ollamaModel={ollamaModel}
+              onImportLog={async (content) => {
+                setCurrentEntry(content)
+              }}
+            />
+
+            {(selectedTags.length > 0 || searchText.trim().length > 0) && (
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={totalItems}
+                itemsPerPage={itemsPerPage}
+                onPageChange={setCurrentPage}
+              />
+            )}
+
+            <Timeline
+              timelineItems={filteredTimelineItems}
+              isTagFiltering={selectedTags.length > 0 || searchText.trim().length > 0}
+              editingEntryId={editingEntryId}
+              editContent={editContent}
+              editManualTags={editManualTags}
+              editingReplyId={editingReplyId}
+              editReplyContent={editReplyContent}
+              editReplyManualTags={editReplyManualTags}
+              availableTags={availableTags}
+              selectedTags={selectedTags}
+              replyingToId={replyingToId}
+              replyContent={replyContent}
+              replyManualTags={replyManualTags}
+              expandedEntryReplies={expandedEntryReplies}
+              frequentTags={frequentTags}
+              recentTags={recentTags}
+              onEditEntry={startEditEntry}
+              onCancelEditEntry={cancelEditEntry}
+              onUpdateEntry={handleUpdateEntry}
+              onDeleteEntry={openDeleteDialog}
+              onEditContentChange={setEditContent}
+              onEditTagAdd={(tag) => {
+                if (!editManualTags.includes(tag)) {
+                  setEditManualTags([...editManualTags, tag])
+                }
+              }}
+              onEditTagRemove={(tag) => {
+                setEditManualTags(editManualTags.filter(t => t !== tag))
+              }}
+              onEditReply={startEditReply}
+              onCancelEditReply={cancelEditReply}
+              onUpdateReply={handleUpdateReply}
+              onDeleteReply={openDeleteReplyDialog}
+              onEditReplyContentChange={setEditReplyContent}
+              onEditReplyTagAdd={(tag) => {
+                if (!editReplyManualTags.includes(tag)) {
+                  setEditReplyManualTags([...editReplyManualTags, tag])
+                }
+              }}
+              onEditReplyTagRemove={(tag) => {
+                setEditReplyManualTags(editReplyManualTags.filter(t => t !== tag))
+              }}
+              onTagClick={handleTagClick}
+              onReplyToggle={toggleReplyForm}
+              onReplyContentChange={setReplyContent}
+              onReplyTagAdd={(tag) => {
+                if (!replyManualTags.includes(tag)) {
+                  setReplyManualTags([...replyManualTags, tag])
+                }
+              }}
+              onReplyTagRemove={(tag) => {
+                setReplyManualTags(replyManualTags.filter(t => t !== tag))
+              }}
+              onAddReply={async (entryId) => {
+                await handleAddReply(entryId)
+                await loadIncompleteTodos()
+              }}
+              onToggleReplies={toggleEntryReplies}
+              onScrollToEntry={scrollToEntry}
+              onTogglePin={handleTogglePin}
+              onToggleArchive={handleToggleArchive}
+              onUpdateEntryDirectly={async (entryId, newContent) => {
+                await handleDirectUpdateEntry(entryId, newContent)
+                await loadTodos()
+                await loadCompletedTodos()
+                await loadIncompleteTodos()
+              }}
+              onDirectTagAdd={handleDirectTagAdd}
+              onDirectTagRemove={handleDirectTagRemove}
+              onUpdateReplyDirectly={async (replyId, newContent) => {
+                await handleDirectUpdateReply(replyId, newContent)
+                await loadTodos()
+                await loadCompletedTodos()
+                await loadIncompleteTodos()
+              }}
+              onToggleReplyArchive={async (replyId, entryId) => {
+                await handleToggleReplyArchive(replyId, entryId)
+                await loadTodos()
+                await loadIncompleteTodos()
+              }}
+              onImportAsReply={async (entryId, content) => {
+                await addReplyWithContent(entryId, content)
+                await loadIncompleteTodos()
+              }}
+              onLinkClaudeSession={handleLinkClaudeSession}
+              runningSessionIds={runningSessionIds}
+              onSessionStart={handleSessionStart}
+            />
+          </div>
+        </TabsContent>
+
+        <TabsContent value="tasks" className="app-tab-content">
+          <TaskManagementPage
+            todoItems={todoItems}
+            isTodosLoading={isTodosLoading}
+            onScrollToEntry={(entryId) => {
+              setActiveTab('funhou')
+              setTimeout(() => scrollToEntry(entryId), 100)
+            }}
+            onScrollToReply={(replyId) => {
+              setActiveTab('funhou')
+              setTimeout(() => scrollToReply(replyId), 100)
+            }}
+            onStatusChange={handleTaskStatusChange}
+            onReorder={async (activeId, overId) => {
+              const reorderedDoingTodos = reorderDoingTodos(activeId, overId)
+              if (reorderedDoingTodos) {
+                await saveDoingOrder(reorderedDoingTodos)
               }
-            } else {
-              // エントリーのタスクを更新
-              const newContent = await updateEntryLine(todo.entryId, todo.lineIndex, newStatus)
-              if (newContent) {
-                // タイムラインのエントリーも更新
-                setFilteredTimelineItems(filteredTimelineItems.map(item =>
-                  item.type === 'entry' && item.id === todo.entryId
-                    ? { ...item, content: newContent }
-                    : item
-                ))
+            }}
+            completedItems={completedItems}
+            isCompletedLoading={isCompletedLoading}
+            incompleteTodos={incompleteTodos}
+            isIncompleteLoading={isIncompleteLoading}
+            onIncompleteStatusChange={async (todo) => {
+              const success = await updateToDoingStatus(todo)
+              if (success) {
+                await loadIncompleteTodos()
+                await loadTodos()
               }
-            }
-            await loadTodos()
-            await loadCompletedTodos()
-          }}
-          onReorder={async (activeId, overId) => {
-            const reorderedDoingTodos = reorderDoingTodos(activeId, overId)
-            if (reorderedDoingTodos) {
-              await saveDoingOrder(reorderedDoingTodos)
-            }
-          }}
-        />
-
-        {(selectedTags.length > 0 || searchText.trim().length > 0) && (
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            totalItems={totalItems}
-            itemsPerPage={itemsPerPage}
-            onPageChange={setCurrentPage}
+            }}
           />
-        )}
-
-        <Timeline
-          timelineItems={filteredTimelineItems}
-          isTagFiltering={selectedTags.length > 0 || searchText.trim().length > 0}
-          editingEntryId={editingEntryId}
-          editContent={editContent}
-          editManualTags={editManualTags}
-          editingReplyId={editingReplyId}
-          editReplyContent={editReplyContent}
-          editReplyManualTags={editReplyManualTags}
-          availableTags={availableTags}
-          selectedTags={selectedTags}
-          replyingToId={replyingToId}
-          replyContent={replyContent}
-          replyManualTags={replyManualTags}
-          expandedEntryReplies={expandedEntryReplies}
-          frequentTags={frequentTags}
-          recentTags={recentTags}
-          onEditEntry={startEditEntry}
-          onCancelEditEntry={cancelEditEntry}
-          onUpdateEntry={handleUpdateEntry}
-          onDeleteEntry={openDeleteDialog}
-          onEditContentChange={setEditContent}
-          onEditTagAdd={(tag) => {
-            if (!editManualTags.includes(tag)) {
-              setEditManualTags([...editManualTags, tag])
-            }
-          }}
-          onEditTagRemove={(tag) => {
-            setEditManualTags(editManualTags.filter(t => t !== tag))
-          }}
-          onEditReply={startEditReply}
-          onCancelEditReply={cancelEditReply}
-          onUpdateReply={handleUpdateReply}
-          onDeleteReply={openDeleteReplyDialog}
-          onEditReplyContentChange={setEditReplyContent}
-          onEditReplyTagAdd={(tag) => {
-            if (!editReplyManualTags.includes(tag)) {
-              setEditReplyManualTags([...editReplyManualTags, tag])
-            }
-          }}
-          onEditReplyTagRemove={(tag) => {
-            setEditReplyManualTags(editReplyManualTags.filter(t => t !== tag))
-          }}
-          onTagClick={handleTagClick}
-          onReplyToggle={toggleReplyForm}
-          onReplyContentChange={setReplyContent}
-          onReplyTagAdd={(tag) => {
-            if (!replyManualTags.includes(tag)) {
-              setReplyManualTags([...replyManualTags, tag])
-            }
-          }}
-          onReplyTagRemove={(tag) => {
-            setReplyManualTags(replyManualTags.filter(t => t !== tag))
-          }}
-          onAddReply={async (entryId) => {
-            await handleAddReply(entryId)
-            await loadIncompleteTodos()
-          }}
-          onToggleReplies={toggleEntryReplies}
-          onScrollToEntry={scrollToEntry}
-          onTogglePin={handleTogglePin}
-          onToggleArchive={handleToggleArchive}
-          onUpdateEntryDirectly={async (entryId, newContent) => {
-            await handleDirectUpdateEntry(entryId, newContent)
-            await loadTodos()
-            await loadCompletedTodos()
-            await loadIncompleteTodos()
-          }}
-          onDirectTagAdd={handleDirectTagAdd}
-          onDirectTagRemove={handleDirectTagRemove}
-          onUpdateReplyDirectly={async (replyId, newContent) => {
-            await handleDirectUpdateReply(replyId, newContent)
-            await loadTodos()
-            await loadCompletedTodos()
-            await loadIncompleteTodos()
-          }}
-          onToggleReplyArchive={async (replyId, entryId) => {
-            await handleToggleReplyArchive(replyId, entryId)
-            await loadTodos()
-            await loadIncompleteTodos()
-          }}
-          onImportAsReply={async (entryId, content) => {
-            await addReplyWithContent(entryId, content)
-            await loadIncompleteTodos()
-          }}
-          onLinkClaudeSession={handleLinkClaudeSession}
-          runningSessionIds={runningSessionIds}
-          onSessionStart={handleSessionStart}
-        />
-      </div>
+        </TabsContent>
+      </Tabs>
 
       <PinnedSidebar
         pinnedItems={pinnedEntries}
         onItemClick={scrollToEntry}
         isOpen={sidebarOpen}
         onToggle={() => setSidebarOpen(!sidebarOpen)}
-      />
-
-      <CompletedTasksSidebar
-        completedItems={completedItems}
-        isLoading={isCompletedLoading}
-        onItemClick={scrollToEntry}
-        isOpen={doneSidebarOpen}
-        onToggle={() => setDoneSidebarOpen(!doneSidebarOpen)}
-      />
-
-      <IncompleteTasksSidebar
-        incompleteTodos={incompleteTodos}
-        isLoading={isIncompleteLoading}
-        onItemClick={scrollToEntry}
-        onStatusChange={async (todo) => {
-          const success = await updateToDoingStatus(todo)
-          if (success) {
-            await loadIncompleteTodos()
-            await loadTodos()
-          }
-        }}
-        isOpen={incompleteSidebarOpen}
-        onToggle={() => setIncompleteSidebarOpen(!incompleteSidebarOpen)}
       />
 
       <DailySummarySidebar

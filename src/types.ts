@@ -39,6 +39,7 @@ export interface TodoItem {
   lineIndex: number         // エントリー/返信内の行番号（1始まり）
   text: string              // タスクのテキスト部分
   status: ' ' | '/'         // 未完了 or Doing
+  timestamp: string         // タスクが作成された日時
   parentEntryText?: string  // 親エントリーのテキスト（返信タスクの場合のみ）
   parentEntryTags?: Tag[]   // 親エントリーのタグ（返信タスクの場合のみ）
   childCount?: number       // 子タスクの数（親タスクの場合のみ）
