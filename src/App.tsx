@@ -3,6 +3,7 @@ import { GripVertical } from 'lucide-react'
 import './App.css'
 import { ClaudeTerminalSessionProvider } from '@/contexts/ClaudeTerminalSessionContext'
 import { ClaudeTerminalWidget } from '@/components/ClaudeTerminalWidget'
+import { ClaudeTerminalDock } from '@/components/ClaudeTerminalDock'
 import { WidgetTerminalDialog } from '@/components/WidgetTerminalDialog'
 import { SettingsSidebar } from '@/components/SettingsSidebar'
 import { DateNavigation } from '@/components/DateNavigation'
@@ -208,6 +209,7 @@ function App() {
   const [terminalDialogLinkedCwd, setTerminalDialogLinkedCwd] = useState<string | null>(null)
   const [terminalDialogLinkedProjectPath, setTerminalDialogLinkedProjectPath] = useState<string | null>(null)
   const [terminalDialogLinkedPtySessionId, setTerminalDialogLinkedPtySessionId] = useState<string | null>(null)
+  const [terminalDialogLinkedSessionName, setTerminalDialogLinkedSessionName] = useState<string | null>(null)
   // 新規起動時はセッション選択をスキップ
   const [terminalDialogSkipSelector, setTerminalDialogSkipSelector] = useState(false)
 
@@ -282,6 +284,7 @@ function App() {
     setTerminalDialogLinkedCwd(session.cwd)
     setTerminalDialogLinkedProjectPath(session.projectPath)
     setTerminalDialogLinkedPtySessionId(session.ptySessionId ?? null)
+    setTerminalDialogLinkedSessionName(session.name ?? null)
     setTerminalDialogOpen(true)
   }
 
@@ -741,6 +744,9 @@ function App() {
         onToggle={() => setClaudeTerminalSidebarOpen(!claudeTerminalSidebarOpen)}
       />
 
+      {/* Claude Code セッションのドック（別ウィンドウ起動用） */}
+      <ClaudeTerminalDock />
+
       {/* ウィジェットから開かれるダイアログ */}
       <WidgetTerminalDialog />
 
@@ -755,6 +761,7 @@ function App() {
             setTerminalDialogLinkedCwd(null)
             setTerminalDialogLinkedProjectPath(null)
             setTerminalDialogLinkedPtySessionId(null)
+            setTerminalDialogLinkedSessionName(null)
             setTerminalDialogSkipSelector(false)
           }
         }}
@@ -762,6 +769,7 @@ function App() {
         linkedCwd={terminalDialogLinkedCwd}
         linkedProjectPath={terminalDialogLinkedProjectPath}
         linkedPtySessionId={terminalDialogLinkedPtySessionId}
+        linkedSessionName={terminalDialogLinkedSessionName}
         onSessionCreated={handleSessionCreated}
         onPtySessionCreated={async (claudeSessionId, ptySessionId) => {
           // PTYセッションIDをDBに保存
