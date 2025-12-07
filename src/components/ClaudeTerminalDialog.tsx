@@ -107,13 +107,10 @@ export function ClaudeTerminalDialog({
 
   // セッションがClaude Code側に存在するか確認
   const checkSessionExists = async (sessionId: string, projectPath: string): Promise<boolean> => {
-    console.log('[ClaudeTerminalDialog] checkSessionExists:', { sessionId, projectPath })
     try {
       const messages = await readClaudeSession(projectPath, sessionId)
-      console.log('[ClaudeTerminalDialog] Session found, messages:', messages.length)
       return messages.length > 0
-    } catch (err) {
-      console.log('[ClaudeTerminalDialog] Session not found:', err)
+    } catch {
       return false
     }
   }
@@ -129,20 +126,13 @@ export function ClaudeTerminalDialog({
     const initializeDialog = async () => {
       if (hasLinkedSession) {
         // セッション再開の場合
-        console.log('[ClaudeTerminalDialog] Opening for session resume:', {
-          linkedSessionId,
-          linkedCwd,
-        })
-
         setCwd(linkedCwd!)
 
         // Claude Code側にセッションが存在するか確認
-        console.log('[ClaudeTerminalDialog] Checking if session exists in Claude Code...', { linkedSessionId, linkedProjectPath })
         const sessionExists = await checkSessionExists(linkedSessionId!, linkedProjectPath!)
 
         if (!sessionExists) {
           // セッションが存在しない場合、セッション選択画面を表示
-          console.log('[ClaudeTerminalDialog] Session not found in Claude Code, showing selector')
           setError('セッションが見つかりません。別のセッションを選択してください。')
           setShowSessionSelector(true)
           setSelectorView('projects')
@@ -152,19 +142,14 @@ export function ClaudeTerminalDialog({
           return
         }
 
-        // セッションが存在する場合
-        console.log('[ClaudeTerminalDialog] Session exists in Claude Code')
-
         // linkedPtySessionIdが指定されている場合、そのPTYセッションがアクティブか確認
         if (linkedPtySessionId) {
           const existingPtySession = getSession(linkedPtySessionId)
           if (existingPtySession && existingPtySession.status !== 'stopped') {
-            console.log('[ClaudeTerminalDialog] Reusing existing PTY session, opening in window:', linkedPtySessionId)
             await openInWindow(linkedPtySessionId)
             setOpen(false)
             return
           }
-          console.log('[ClaudeTerminalDialog] Linked PTY session not active:', linkedPtySessionId)
         }
 
         // 既存のアクティブセッションを探す（同じclaudeSessionIdを持つもの）
@@ -175,20 +160,17 @@ export function ClaudeTerminalDialog({
 
         if (existingSession) {
           // 既存セッションを再利用し、別ウィンドウで開く
-          console.log('[ClaudeTerminalDialog] Reusing existing session, opening in window:', existingSession.id)
           await openInWindow(existingSession.id)
           setOpen(false)
           return
         }
 
         // 新しいセッションを作成してresumeモードで起動し、別ウィンドウで開く
-        console.log('[ClaudeTerminalDialog] Creating new session with resume')
         // linkedSessionNameがあればそれを使用、なければディレクトリ名を使用
         const sessionNameToUse = linkedSessionName || linkedCwd!.split('/').pop() || linkedCwd!
         setIsCreatingSession(true)
         try {
           const ptySessionId = await createSession(linkedCwd!, linkedSessionId!, sessionNameToUse)
-          console.log('[ClaudeTerminalDialog] Session created, opening in window:', ptySessionId)
           // PTYセッション作成をDBに通知
           onPtySessionCreated?.(linkedSessionId!, ptySessionId)
           // 別ウィンドウで開く
@@ -196,7 +178,6 @@ export function ClaudeTerminalDialog({
           setOpen(false)
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err)
-          console.error('[ClaudeTerminalDialog] Session creation failed:', message)
           setError(`セッションの作成に失敗しました: ${message}`)
         } finally {
           setIsCreatingSession(false)

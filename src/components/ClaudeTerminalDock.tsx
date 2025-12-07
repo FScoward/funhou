@@ -73,7 +73,6 @@ export function ClaudeTerminalDock() {
       <div className="flex items-center gap-1 px-2 py-1.5 bg-black/60 backdrop-blur-md rounded-lg border border-white/10 shadow-lg">
         {activeSessions.map((session) => {
           const windowOpen = isWindowOpen(session.id)
-          console.log('[Dock] session:', session.id, 'name:', session.name, 'cwd:', session.cwd)
           const title = session.name || `Session ${session.id.slice(0, 6)}`
 
           return (

@@ -240,7 +240,6 @@ export function ClaudeTerminalSessionProvider({ children }: { children: ReactNod
   // セッションの作成
   const createSession = useCallback(async (cwd: string, claudeSessionId?: string, name?: string): Promise<string> => {
     const sessionId = generateSessionId()
-    console.log('[createSession] Creating session with name:', name)
 
     const newSession: TerminalSession = {
       id: sessionId,
@@ -253,7 +252,6 @@ export function ClaudeTerminalSessionProvider({ children }: { children: ReactNod
       lastActivityAt: new Date(),
       name,
     }
-    console.log('[createSession] newSession.name:', newSession.name)
 
     // まずセッションを追加（initializingステータス）
     // sessionsRefも即座に更新（setSessonsは非同期なのでrefを先に更新）
@@ -409,7 +407,6 @@ export function ClaudeTerminalSessionProvider({ children }: { children: ReactNod
   const resizeSession = useCallback((sessionId: string, cols: number, rows: number) => {
     const session = sessionsRef.current.get(sessionId)
     if (session?.pty) {
-      console.log('[ClaudeTerminalSessionContext] Resizing session:', sessionId, cols, rows)
       session.pty.resize(cols, rows)
     }
   }, [])

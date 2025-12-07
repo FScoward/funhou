@@ -279,7 +279,6 @@ function App() {
 
   // アプリ内ターミナルでセッションを再開
   const handleResumeInApp = (session: TaskClaudeSessionType) => {
-    console.log('[App] handleResumeInApp called:', session)
     setTerminalDialogLinkedSessionId(session.sessionId)
     setTerminalDialogLinkedCwd(session.cwd)
     setTerminalDialogLinkedProjectPath(session.projectPath)
