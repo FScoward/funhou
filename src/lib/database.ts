@@ -364,6 +364,20 @@ export async function getDb() {
           WHERE tcs.entry_id = e.id AND tcs.session_id = e.claude_session_id
         )
     `)
+
+    // 作業ディレクトリ履歴テーブルを作成
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS cwd_history (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        cwd TEXT NOT NULL UNIQUE,
+        usage_count INTEGER DEFAULT 1,
+        last_used DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `)
+
+    await db.execute(`
+      CREATE INDEX IF NOT EXISTS idx_cwd_history_usage ON cwd_history(usage_count DESC, last_used DESC)
+    `)
   }
   return db
 }

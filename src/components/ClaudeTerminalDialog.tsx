@@ -14,6 +14,7 @@ import { Label } from './ui/label'
 import { useClaudeTerminalSession } from '../contexts/ClaudeTerminalSessionContext'
 import { getSettings } from '../lib/settings'
 import { listClaudeProjects, listClaudeSessions, readClaudeSession, type ProjectInfo, type SessionSummary } from '../lib/claudeLogs'
+import { recordCwdUsage } from '../lib/cwdHistory'
 
 interface ClaudeTerminalDialogProps {
   trigger?: React.ReactNode
@@ -250,6 +251,9 @@ export function ClaudeTerminalDialog({
     try {
       const ptySessionId = await createSession(session.cwd, session.session_id, dirName)
       await openInWindow(ptySessionId)
+      // cwd履歴を記録
+      const db = await Database.load('sqlite:funhou.db')
+      await recordCwdUsage(db, session.cwd)
       setOpen(false)
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
@@ -273,6 +277,9 @@ export function ClaudeTerminalDialog({
       try {
         const sessionId = await createSession(targetCwd, undefined, dirName)
         await openInWindow(sessionId)
+        // cwd履歴を記録
+        const db = await Database.load('sqlite:funhou.db')
+        await recordCwdUsage(db, targetCwd)
         setOpen(false)
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err)
@@ -325,6 +332,9 @@ export function ClaudeTerminalDialog({
       )
       // 別ウィンドウで開く
       await openInWindow(sessionId)
+      // cwd履歴を記録
+      const db = await Database.load('sqlite:funhou.db')
+      await recordCwdUsage(db, trimmedCwd)
       setOpen(false)
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err)
