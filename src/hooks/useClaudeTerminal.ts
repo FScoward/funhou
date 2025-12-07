@@ -328,6 +328,7 @@ export function useClaudeTerminal(options?: UseClaudeTerminalOptions) {
     // PTY のサイズをターミナルに同期
     if (currentOptions.resizeSession) {
       currentOptions.resizeSession(sessionId, currentTerminal.cols, currentTerminal.rows)
+
     }
   }, []) // 依存配列を空にして安定した参照を維持
 
