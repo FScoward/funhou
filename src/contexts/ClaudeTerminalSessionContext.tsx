@@ -4,6 +4,7 @@ import {
   useState,
   useCallback,
   useRef,
+  useEffect,
   type ReactNode,
 } from 'react'
 import {
@@ -11,7 +12,16 @@ import {
   resumeClaudeTerminal,
   type ClaudeTerminalSession,
 } from '../lib/claudeTerminal'
+import {
+  createTerminalWindow,
+  closeTerminalWindow,
+  sendToTerminalWindow,
+  listenFromTerminalWindow,
+  type WindowState,
+  type SessionSyncPayload,
+} from '../lib/windowBridge'
 import type { IDisposable } from 'tauri-pty'
+import type { UnlistenFn } from '@tauri-apps/api/event'
 
 // DA応答パターン（PTY出力からフィルタリング）
 // Primary DA response: ESC[?Ps;Ps;...c (例: ESC[?1;2c)
@@ -86,6 +96,12 @@ interface ClaudeTerminalSessionContextValue {
   setDialogOpen: (open: boolean) => void
   widgetExpanded: boolean
   setWidgetExpanded: (expanded: boolean) => void
+
+  // ウィンドウ管理
+  windowStates: Map<string, WindowState>
+  openInWindow: (sessionId: string) => Promise<void>
+  minimizeToDoc: (sessionId: string) => Promise<void>
+  isWindowOpen: (sessionId: string) => boolean
 }
 
 const ClaudeTerminalSessionContext = createContext<ClaudeTerminalSessionContextValue | null>(null)
@@ -97,10 +113,15 @@ export function ClaudeTerminalSessionProvider({ children }: { children: ReactNod
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [widgetExpanded, setWidgetExpanded] = useState(false)
+  const [windowStates, setWindowStates] = useState<Map<string, WindowState>>(new Map())
 
   // sessionsの最新値を参照するためのref（useCallbackのクロージャ問題を回避）
   const sessionsRef = useRef<Map<string, TerminalSession>>(sessions)
   sessionsRef.current = sessions
+
+  // windowStatesの最新値を参照するためのref
+  const windowStatesRef = useRef<Map<string, WindowState>>(windowStates)
+  windowStatesRef.current = windowStates
 
   // 出力購読者を管理
   const outputSubscribersRef = useRef<Map<string, Set<(data: string) => void>>>(new Map())
@@ -108,6 +129,8 @@ export function ClaudeTerminalSessionProvider({ children }: { children: ReactNod
   const ptyDisposersRef = useRef<Map<string, IDisposable>>(new Map())
   // バッファをRefで管理（React state更新を避けてパフォーマンス向上）
   const sessionBuffersRef = useRef<Map<string, SessionBuffer>>(new Map())
+  // ウィンドウイベントリスナーを管理
+  const windowListenersRef = useRef<Map<string, UnlistenFn>>(new Map())
 
   // セッションIDの生成（UUID v4形式）
   const generateSessionId = useCallback(() => {
@@ -231,11 +254,11 @@ export function ClaudeTerminalSessionProvider({ children }: { children: ReactNod
     }
 
     // まずセッションを追加（initializingステータス）
-    setSessions((prev) => {
-      const newMap = new Map(prev)
-      newMap.set(sessionId, newSession)
-      return newMap
-    })
+    // sessionsRefも即座に更新（setSessonsは非同期なのでrefを先に更新）
+    const newSessionsMap = new Map(sessionsRef.current)
+    newSessionsMap.set(sessionId, newSession)
+    sessionsRef.current = newSessionsMap
+    setSessions(newSessionsMap)
 
     try {
       // PTYを起動
@@ -249,21 +272,19 @@ export function ClaudeTerminalSessionProvider({ children }: { children: ReactNod
       })
       ptyDisposersRef.current.set(sessionId, disposer)
 
-      // セッションを更新
-      setSessions((prev) => {
-        const session = prev.get(sessionId)
-        if (!session) return prev
-
+      // セッションを更新（refも同時に更新）
+      const currentSession = sessionsRef.current.get(sessionId)
+      if (currentSession) {
         const updatedSession: TerminalSession = {
-          ...session,
+          ...currentSession,
           pty: ptySession,
           status: 'running',
         }
-
-        const newMap = new Map(prev)
-        newMap.set(sessionId, updatedSession)
-        return newMap
-      })
+        const updatedMap = new Map(sessionsRef.current)
+        updatedMap.set(sessionId, updatedSession)
+        sessionsRef.current = updatedMap
+        setSessions(updatedMap)
+      }
 
       setActiveSessionId(sessionId)
       return sessionId
@@ -386,7 +407,6 @@ export function ClaudeTerminalSessionProvider({ children }: { children: ReactNod
   const resizeSession = useCallback((sessionId: string, cols: number, rows: number) => {
     const session = sessionsRef.current.get(sessionId)
     if (session?.pty) {
-      console.log('[ClaudeTerminalSessionContext] Resizing session:', sessionId, cols, rows)
       session.pty.resize(cols, rows)
     }
   }, [])
@@ -451,6 +471,164 @@ export function ClaudeTerminalSessionProvider({ children }: { children: ReactNod
     })
   }, [])
 
+  // セッションを別ウィンドウで開く
+  const openInWindow = useCallback(async (sessionId: string): Promise<void> => {
+    const session = sessionsRef.current.get(sessionId)
+    if (!session) return
+
+    const title = session.name || `Claude Code - ${sessionId.slice(0, 8)}`
+
+    // 既存のリスナーがあればクリーンアップ
+    const existingListener = windowListenersRef.current.get(sessionId)
+    if (existingListener) {
+      existingListener()
+      windowListenersRef.current.delete(sessionId)
+    }
+
+    // ウィンドウを作成
+    await createTerminalWindow(sessionId, title)
+
+    // ウィンドウ状態を更新
+    setWindowStates((prev) => {
+      const newMap = new Map(prev)
+      newMap.set(sessionId, { isOpen: true, isMinimized: false, title })
+      return newMap
+    })
+
+    // 別ウィンドウからの入力を受け取るリスナーを設定
+    const unlisten = await listenFromTerminalWindow(sessionId, (payload: SessionSyncPayload) => {
+      if (payload.type === 'input') {
+        // 別ウィンドウからの入力をPTYに送信
+        const session = sessionsRef.current.get(sessionId)
+        if (session?.pty) {
+          session.pty.write(payload.data as string)
+        }
+      } else if (payload.type === 'resize') {
+        // リサイズ処理
+        const { cols, rows } = payload.data as { cols: number; rows: number }
+        const session = sessionsRef.current.get(sessionId)
+        if (session?.pty) {
+          session.pty.resize(cols, rows)
+        }
+      } else if (payload.type === 'terminate' && payload.data === 'window_closed') {
+        // ウィンドウが閉じられた通知を受け取った
+        // ウィンドウ状態を更新（ドックに戻す）
+        setWindowStates((prev) => {
+          const newMap = new Map(prev)
+          const state = prev.get(sessionId)
+          if (state) {
+            newMap.set(sessionId, { ...state, isOpen: false, isMinimized: true })
+          }
+          return newMap
+        })
+        // forwarderを削除
+        const forwarder = windowForwardersRef.current.get(sessionId)
+        if (forwarder) {
+          const subscribers = outputSubscribersRef.current.get(sessionId)
+          if (subscribers) {
+            subscribers.delete(forwarder)
+          }
+          windowForwardersRef.current.delete(sessionId)
+        }
+        // リスナーを削除（再度開く時に新しいリスナーを設定するため）
+        const existingUnlisten = windowListenersRef.current.get(sessionId)
+        if (existingUnlisten) {
+          existingUnlisten()
+          windowListenersRef.current.delete(sessionId)
+        }
+      }
+    })
+    windowListenersRef.current.set(sessionId, unlisten)
+
+    // ダイアログを閉じる（別ウィンドウに移行）
+    setIsDialogOpen(false)
+  }, [])
+
+  // ウィンドウをドックに最小化（ウィンドウを閉じてドックに戻す）
+  const minimizeToDoc = useCallback(async (sessionId: string): Promise<void> => {
+    // ウィンドウを閉じる
+    await closeTerminalWindow(sessionId)
+
+    // リスナーをクリーンアップ
+    const unlisten = windowListenersRef.current.get(sessionId)
+    if (unlisten) {
+      unlisten()
+      windowListenersRef.current.delete(sessionId)
+    }
+
+    // ウィンドウ状態を更新
+    setWindowStates((prev) => {
+      const newMap = new Map(prev)
+      const state = prev.get(sessionId)
+      if (state) {
+        newMap.set(sessionId, { ...state, isOpen: false, isMinimized: true })
+      }
+      return newMap
+    })
+  }, [])
+
+  // ウィンドウが開いているか確認
+  const isWindowOpen = useCallback((sessionId: string): boolean => {
+    const state = windowStatesRef.current.get(sessionId)
+    return state?.isOpen ?? false
+  }, [])
+
+  // ウィンドウ転送用のforwarder関数を管理するref
+  const windowForwardersRef = useRef<Map<string, (data: string) => void>>(new Map())
+
+  // PTY出力を別ウィンドウに転送するためのフック
+  useEffect(() => {
+    // 現在開いているウィンドウのセッションIDを取得
+    const openWindowSessionIds = new Set<string>()
+    windowStates.forEach((state, sessionId) => {
+      if (state.isOpen) {
+        openWindowSessionIds.add(sessionId)
+      }
+    })
+
+    // 閉じられたウィンドウのforwarderを削除
+    windowForwardersRef.current.forEach((forwarder, sessionId) => {
+      if (!openWindowSessionIds.has(sessionId)) {
+        const subscribers = outputSubscribersRef.current.get(sessionId)
+        if (subscribers) {
+          subscribers.delete(forwarder)
+        }
+        windowForwardersRef.current.delete(sessionId)
+      }
+    })
+
+    // 新しく開かれたウィンドウにforwarderを追加
+    openWindowSessionIds.forEach((sessionId) => {
+      // 既にforwarderが登録されている場合はスキップ
+      if (windowForwardersRef.current.has(sessionId)) {
+        return
+      }
+
+      // 新しいforwarderを作成
+      const forwarder = (data: string) => {
+        sendToTerminalWindow(sessionId, { type: 'output', data })
+      }
+      windowForwardersRef.current.set(sessionId, forwarder)
+
+      // 購読者として登録
+      if (!outputSubscribersRef.current.has(sessionId)) {
+        outputSubscribersRef.current.set(sessionId, new Set())
+      }
+      outputSubscribersRef.current.get(sessionId)!.add(forwarder)
+    })
+
+    // クリーンアップ：全てのforwarderを削除
+    return () => {
+      windowForwardersRef.current.forEach((forwarder, sessionId) => {
+        const subscribers = outputSubscribersRef.current.get(sessionId)
+        if (subscribers) {
+          subscribers.delete(forwarder)
+        }
+      })
+      windowForwardersRef.current.clear()
+    }
+  }, [windowStates])
+
   const value: ClaudeTerminalSessionContextValue = {
     sessions,
     activeSessionId,
@@ -469,6 +647,11 @@ export function ClaudeTerminalSessionProvider({ children }: { children: ReactNod
     setDialogOpen,
     widgetExpanded,
     setWidgetExpanded,
+    // ウィンドウ管理
+    windowStates,
+    openInWindow,
+    minimizeToDoc,
+    isWindowOpen,
   }
 
   return (

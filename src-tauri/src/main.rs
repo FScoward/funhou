@@ -10,7 +10,7 @@ use speech::{SpeechManager, SpeechRecognitionState};
 use font_kit::source::SystemSource;
 use std::collections::HashSet;
 use std::sync::Mutex;
-use tauri::{Manager, State};
+use tauri::{Manager, State, WebviewUrl, WebviewWindowBuilder};
 
 /// Application state
 pub struct AppState {
@@ -126,6 +126,63 @@ fn toggle_main_window(app: tauri::AppHandle) -> Result<(), String> {
     Ok(())
 }
 
+/// Create a Claude terminal window
+#[tauri::command]
+fn create_claude_terminal_window(
+    app: tauri::AppHandle,
+    session_id: String,
+    title: String,
+) -> Result<(), String> {
+    let window_label = format!("claude-terminal-{}", session_id);
+
+    // If window already exists, focus it
+    if let Some(window) = app.get_webview_window(&window_label) {
+        window.set_focus().map_err(|e| e.to_string())?;
+        return Ok(());
+    }
+
+    // Create new window with URL parameter for session ID
+    let url = format!("claude-terminal-window.html?sessionId={}", session_id);
+
+    WebviewWindowBuilder::new(&app, &window_label, WebviewUrl::App(url.into()))
+        .title(&title)
+        .inner_size(800.0, 600.0)
+        .min_inner_size(400.0, 300.0)
+        .resizable(true)
+        .decorations(true)
+        .closable(true)
+        .visible(true)
+        .build()
+        .map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
+/// Close a Claude terminal window
+#[tauri::command]
+fn close_claude_terminal_window(app: tauri::AppHandle, session_id: String) -> Result<(), String> {
+    let window_label = format!("claude-terminal-{}", session_id);
+
+    if let Some(window) = app.get_webview_window(&window_label) {
+        window.close().map_err(|e| e.to_string())?;
+    }
+
+    Ok(())
+}
+
+/// Focus a Claude terminal window (returns true if window exists)
+#[tauri::command]
+fn focus_claude_terminal_window(app: tauri::AppHandle, session_id: String) -> Result<bool, String> {
+    let window_label = format!("claude-terminal-{}", session_id);
+
+    if let Some(window) = app.get_webview_window(&window_label) {
+        window.unminimize().map_err(|e| e.to_string())?;
+        window.set_focus().map_err(|e| e.to_string())?;
+        Ok(true)
+    } else {
+        Ok(false)
+    }
+}
 
 /// Start speech recognition
 #[tauri::command]
@@ -201,6 +258,9 @@ fn main() {
             get_autohide_config,
             is_sidebar_visible,
             toggle_main_window,
+            create_claude_terminal_window,
+            close_claude_terminal_window,
+            focus_claude_terminal_window,
             start_speech_recognition,
             stop_speech_recognition,
             get_speech_state,

@@ -129,15 +129,11 @@ export function TaskClaudeSessionsDialog({
 
   // アプリ内ターミナルで再開
   const handleResumeInApp = (session: TaskClaudeSession) => {
-    console.log('[TaskClaudeSessionsDialog] handleResumeInApp:', session)
     setMenuOpen(false)
     setMenuSession(null)
     if (onResumeInApp) {
-      console.log('[TaskClaudeSessionsDialog] calling onResumeInApp')
       onResumeInApp(session)
       onOpenChange(false)
-    } else {
-      console.log('[TaskClaudeSessionsDialog] onResumeInApp is not defined!')
     }
   }
 

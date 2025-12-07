@@ -17,6 +17,7 @@ export default defineConfig({
     rollupOptions: {
       input: {
         main: path.resolve(__dirname, 'index.html'),
+        'claude-terminal-window': path.resolve(__dirname, 'claude-terminal-window.html'),
       },
     },
     // コード分割を無効にして単一バンドルにする（デバッグ用）
