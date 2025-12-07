@@ -9,7 +9,7 @@ import {
   closeTerminalWindow,
   type SessionSyncPayload,
 } from '../lib/windowBridge'
-import { terminalOptions } from '../lib/terminalConfig'
+import { windowTerminalOptions } from '../lib/terminalConfig'
 
 interface ClaudeTerminalWindowProps {
   sessionId: string
@@ -30,7 +30,7 @@ export function ClaudeTerminalWindow({ sessionId }: ClaudeTerminalWindowProps) {
   const initTerminal = useCallback(() => {
     if (!terminalRef.current) return
 
-    const term = new Terminal(terminalOptions)
+    const term = new Terminal(windowTerminalOptions)
 
     const fitAddon = new FitAddon()
     term.loadAddon(fitAddon)

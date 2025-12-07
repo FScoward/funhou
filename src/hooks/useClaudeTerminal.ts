@@ -114,13 +114,20 @@ export function useClaudeTerminal(options?: UseClaudeTerminalOptions) {
       }
     }
 
-    // 少し遅延を入れてからfitを呼ぶ（DOMの準備完了を待つ）
+    setTerminal(term)
+
+    // 少し遅延を入れてからfitを呼び、その後にisReadyをtrueにする
+    // これによりattachToSession時に正しいサイズでresizeSessionが呼ばれる
     requestAnimationFrame(() => {
       fitAddon.fit()
-    })
+      // fit完了後にisReadyをtrueにすることで、正しいサイズでPTYをリサイズできる
+      setIsReady(true)
 
-    setTerminal(term)
-    setIsReady(true)
+      // ウィンドウリサイズイベントを強制発火（Claude Codeの描画を正しく初期化するため）
+      setTimeout(() => {
+        window.dispatchEvent(new Event('resize'))
+      }, 2000)
+    })
 
     return () => {
       term.dispose()
@@ -443,11 +450,19 @@ export function useClaudeTerminal(options?: UseClaudeTerminalOptions) {
     [terminal]
   )
 
-  // リサイズ処理
+  // リサイズ処理（Context モードと非Context モード両方に対応）
   const resize = useCallback(() => {
-    if (fitAddonRef.current && terminal && session) {
+    if (fitAddonRef.current && terminal) {
       fitAddonRef.current.fit()
-      session.resize(terminal.cols, terminal.rows)
+      // 非Context モード: sessionを直接使用
+      if (session) {
+        session.resize(terminal.cols, terminal.rows)
+      }
+      // Context モード: optionsRef経由でresizeSessionを呼ぶ
+      const currentOptions = optionsRef.current
+      if (currentOptions?.resizeSession && currentOptions?.sessionId) {
+        currentOptions.resizeSession(currentOptions.sessionId, terminal.cols, terminal.rows)
+      }
     }
   }, [terminal, session])
 

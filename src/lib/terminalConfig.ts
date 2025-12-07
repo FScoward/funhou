@@ -29,7 +29,7 @@ export const terminalTheme: ITheme = {
 }
 
 /**
- * ターミナルの初期化オプション
+ * ターミナルの基本オプション
  * 埋め込みターミナルと別ウィンドウターミナルで共通
  */
 export const terminalOptions: ITerminalOptions = {
@@ -38,7 +38,15 @@ export const terminalOptions: ITerminalOptions = {
   fontFamily: 'Menlo, Monaco, "Courier New", monospace',
   theme: terminalTheme,
   allowProposedApi: true,
-  scrollback: 10000,
+  scrollback: 1000,
   // convertEol: false（デフォルト）- PTYは既に適切な改行コードを送信するため変換不要
   // trueにするとClaude Codeのステータスライン（カーソル移動）が壊れる
+}
+
+/**
+ * 別ウィンドウターミナル用の追加オプション
+ */
+export const windowTerminalOptions: ITerminalOptions = {
+  ...terminalOptions,
+  scrollback: 10000,
 }

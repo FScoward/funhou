@@ -262,9 +262,11 @@ export function ClaudeTerminalSessionProvider({ children }: { children: ReactNod
 
     try {
       // PTYを起動
+      // 注: 初期サイズは大きめに設定し、ターミナルマウント後に実際のサイズにリサイズする
+      // 小さいサイズで起動するとClaude Codeの描画が崩れる
       const ptySession = claudeSessionId
-        ? await resumeClaudeTerminal(claudeSessionId, { cwd, cols: 80, rows: 24 })
-        : await spawnClaudeTerminal({ cwd, cols: 80, rows: 24 })
+        ? await resumeClaudeTerminal(claudeSessionId, { cwd, cols: 120, rows: 40 })
+        : await spawnClaudeTerminal({ cwd, cols: 120, rows: 40 })
 
       // onDataリスナーを設定
       const disposer = ptySession.onData((data) => {
