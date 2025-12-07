@@ -254,11 +254,9 @@ export function ClaudeTerminalWidget({ isOpen, onToggle }: ClaudeTerminalWidgetP
   }
 
   // FAB表示テキスト
-  const fabText = askingCount > 0
-    ? `🔔 ${askingCount} 選択肢待ち`
-    : runningCount > 0
-      ? `${runningCount} セッション実行中`
-      : `${activeSessions.length} セッション`
+  const fabText = runningCount > 0
+    ? `${runningCount} セッション実行中`
+    : `${activeSessions.length} セッション`
 
   // FABの色
   const fabIndicatorColor = askingCount > 0
@@ -277,7 +275,12 @@ export function ClaudeTerminalWidget({ isOpen, onToggle }: ClaudeTerminalWidgetP
           aria-label={askingCount > 0 ? '選択肢が待機中です' : 'Claude Terminalを開く'}
         >
           <div className={`w-2 h-2 rounded-full ${fabIndicatorColor}`} />
-          <span className="ml-1 text-xs">{fabText}</span>
+          {askingCount > 0 && (
+            <span className="bell-icon">🔔</span>
+          )}
+          <span className="ml-1 text-xs">
+            {askingCount > 0 ? `${askingCount} 選択肢待ち` : fabText}
+          </span>
         </button>
       )}
 

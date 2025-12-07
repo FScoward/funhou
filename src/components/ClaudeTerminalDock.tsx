@@ -86,6 +86,7 @@ export function ClaudeTerminalDock() {
                   ? 'bg-white/20 ring-1 ring-white/30'
                   : 'bg-white/10 hover:bg-white/15'
                 }
+                ${session.status === 'asking_question' ? 'dock-item-asking' : ''}
               `}
               title={`${title} - ${session.status}${windowOpen ? ' (opened)' : ''}`}
             >
@@ -104,6 +105,11 @@ export function ClaudeTerminalDock() {
 
               {/* ステータスアイコン（初期化中のみ） */}
               {getStatusIcon(session.status)}
+
+              {/* ベルアイコン（選択肢待ちの場合） */}
+              {session.status === 'asking_question' && (
+                <span className="bell-icon text-sm">🔔</span>
+              )}
 
               {/* 外部ウィンドウアイコン（開いている場合） */}
               {windowOpen && (
