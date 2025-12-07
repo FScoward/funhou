@@ -9,6 +9,7 @@ import {
   resumeClaudeTerminal,
   type ClaudeTerminalSession,
 } from '../lib/claudeTerminal'
+import { terminalOptions, terminalTheme } from '../lib/terminalConfig'
 
 // xterm.jsが送信するDevice Attributes (DA)クエリをフィルタリング
 // これらはClaude Codeで処理されずエコーバックされてしまう
@@ -70,37 +71,7 @@ export function useClaudeTerminal(options?: UseClaudeTerminalOptions) {
   const initTerminal = useCallback((element: HTMLElement) => {
     containerRef.current = element
 
-    const terminalTheme = {
-      background: '#1e1e1e',
-      foreground: '#d4d4d4',
-      cursor: '#d4d4d4',
-      cursorAccent: '#1e1e1e',
-      selectionBackground: 'rgba(255, 255, 255, 0.3)',
-      // ANSIカラーを明示的に設定
-      black: '#000000',
-      red: '#cd3131',
-      green: '#0dbc79',
-      yellow: '#e5e510',
-      blue: '#2472c8',
-      magenta: '#bc3fbc',
-      cyan: '#11a8cd',
-      white: '#e5e5e5',
-      brightBlack: '#666666',
-      brightRed: '#f14c4c',
-      brightGreen: '#23d18b',
-      brightYellow: '#f5f543',
-      brightBlue: '#3b8eea',
-      brightMagenta: '#d670d6',
-      brightCyan: '#29b8db',
-      brightWhite: '#ffffff',
-    }
-
-    const term = new Terminal({
-      cursorBlink: true,
-      fontSize: 14,
-      fontFamily: 'Menlo, Monaco, "Courier New", monospace',
-      allowProposedApi: true,
-    })
+    const term = new Terminal(terminalOptions)
 
     // テーマを明示的に設定（コンストラクタで設定すると一部環境で無視される問題の対策）
     term.options.theme = terminalTheme
@@ -143,13 +114,20 @@ export function useClaudeTerminal(options?: UseClaudeTerminalOptions) {
       }
     }
 
-    // 少し遅延を入れてからfitを呼ぶ（DOMの準備完了を待つ）
+    setTerminal(term)
+
+    // 少し遅延を入れてからfitを呼び、その後にisReadyをtrueにする
+    // これによりattachToSession時に正しいサイズでresizeSessionが呼ばれる
     requestAnimationFrame(() => {
       fitAddon.fit()
-    })
+      // fit完了後にisReadyをtrueにすることで、正しいサイズでPTYをリサイズできる
+      setIsReady(true)
 
-    setTerminal(term)
-    setIsReady(true)
+      // ウィンドウリサイズイベントを強制発火（Claude Codeの描画を正しく初期化するため）
+      setTimeout(() => {
+        window.dispatchEvent(new Event('resize'))
+      }, 2000)
+    })
 
     return () => {
       term.dispose()
@@ -350,6 +328,7 @@ export function useClaudeTerminal(options?: UseClaudeTerminalOptions) {
     // PTY のサイズをターミナルに同期
     if (currentOptions.resizeSession) {
       currentOptions.resizeSession(sessionId, currentTerminal.cols, currentTerminal.rows)
+
     }
   }, []) // 依存配列を空にして安定した参照を維持
 
@@ -472,11 +451,19 @@ export function useClaudeTerminal(options?: UseClaudeTerminalOptions) {
     [terminal]
   )
 
-  // リサイズ処理
+  // リサイズ処理（Context モードと非Context モード両方に対応）
   const resize = useCallback(() => {
-    if (fitAddonRef.current && terminal && session) {
+    if (fitAddonRef.current && terminal) {
       fitAddonRef.current.fit()
-      session.resize(terminal.cols, terminal.rows)
+      // 非Context モード: sessionを直接使用
+      if (session) {
+        session.resize(terminal.cols, terminal.rows)
+      }
+      // Context モード: optionsRef経由でresizeSessionを呼ぶ
+      const currentOptions = optionsRef.current
+      if (currentOptions?.resizeSession && currentOptions?.sessionId) {
+        currentOptions.resizeSession(currentOptions.sessionId, terminal.cols, terminal.rows)
+      }
     }
   }, [terminal, session])
 

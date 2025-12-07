@@ -77,7 +77,7 @@ interface ClaudeTerminalSessionContextValue {
   activeSessionId: string | null
 
   // セッション操作
-  createSession: (cwd: string, claudeSessionId?: string, name?: string) => Promise<string>
+  createSession: (cwd: string, claudeSessionId?: string, name?: string, initialSize?: { cols: number; rows: number }) => Promise<string>
   getSession: (sessionId: string) => TerminalSession | undefined
   getActiveSessions: () => TerminalSession[]
   terminateSession: (sessionId: string, graceful?: boolean) => Promise<void>
@@ -238,8 +238,13 @@ export function ClaudeTerminalSessionProvider({ children }: { children: ReactNod
   }, [])
 
   // セッションの作成
-  const createSession = useCallback(async (cwd: string, claudeSessionId?: string, name?: string): Promise<string> => {
+  // initialSizeが指定された場合、そのサイズでPTYを起動する（xterm初期化後に呼ぶ場合に使用）
+  const createSession = useCallback(async (cwd: string, claudeSessionId?: string, name?: string, initialSize?: { cols: number; rows: number }): Promise<string> => {
     const sessionId = generateSessionId()
+
+    // 初期サイズが指定されていない場合はデフォルト値を使用
+    const cols = initialSize?.cols ?? 120
+    const rows = initialSize?.rows ?? 40
 
     const newSession: TerminalSession = {
       id: sessionId,
@@ -261,10 +266,10 @@ export function ClaudeTerminalSessionProvider({ children }: { children: ReactNod
     setSessions(newSessionsMap)
 
     try {
-      // PTYを起動
+      // PTYを起動（指定されたサイズ、または デフォルトサイズで起動）
       const ptySession = claudeSessionId
-        ? await resumeClaudeTerminal(claudeSessionId, { cwd, cols: 80, rows: 24 })
-        : await spawnClaudeTerminal({ cwd, cols: 80, rows: 24 })
+        ? await resumeClaudeTerminal(claudeSessionId, { cwd, cols, rows })
+        : await spawnClaudeTerminal({ cwd, cols, rows })
 
       // onDataリスナーを設定
       const disposer = ptySession.onData((data) => {
