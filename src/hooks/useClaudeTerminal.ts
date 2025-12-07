@@ -281,7 +281,12 @@ export function useClaudeTerminal(options?: UseClaudeTerminalOptions) {
           data = '\x1b[3~'
           preventDefault = true
         } else if (e.key === 'Tab') {
-          data = '\t'
+          // Shift+Tab は Back Tab (CSI Z) を送信
+          if (e.shiftKey) {
+            data = '\x1b[Z'
+          } else {
+            data = '\t'
+          }
           preventDefault = true
         } else if (e.key === 'Escape') {
           data = '\x1b'
