@@ -93,3 +93,23 @@ export async function getClaudeSessionsForProject(
 ): Promise<SessionSummary[]> {
   return listClaudeSessions(projectPath)
 }
+
+// 現在の作業ディレクトリを取得
+export async function getCurrentWorkingDirectory(): Promise<string> {
+  return invoke<string>('get_current_working_directory')
+}
+
+// 作業ディレクトリからClaude Codeプロジェクトパスを取得
+export async function getProjectPathForCwd(cwd: string): Promise<string | null> {
+  return invoke<string | null>('get_project_path_for_cwd', { cwd })
+}
+
+// 作業ディレクトリに対応するClaude Codeセッション一覧を取得
+export async function listSessionsForCwd(cwd: string): Promise<SessionSummary[]> {
+  return invoke<SessionSummary[]>('list_sessions_for_cwd', { cwd })
+}
+
+// 作業ディレクトリの最新セッションを取得
+export async function getLatestSessionForCwd(cwd: string): Promise<SessionSummary | null> {
+  return invoke<SessionSummary | null>('get_latest_session_for_cwd', { cwd })
+}

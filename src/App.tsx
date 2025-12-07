@@ -197,6 +197,7 @@ function App() {
     unlinkSession: unlinkTaskSession,
     updateSessionName: updateTaskSessionName,
     updateSessionId: updateTaskSessionId,
+    updatePtySessionId: updateTaskPtySessionId,
   } = useTaskClaudeSessions({ database })
 
   // タスクClaude起動ダイアログの状態（アプリ内ターミナル）
@@ -206,6 +207,7 @@ function App() {
   const [terminalDialogLinkedSessionId, setTerminalDialogLinkedSessionId] = useState<string | null>(null)
   const [terminalDialogLinkedCwd, setTerminalDialogLinkedCwd] = useState<string | null>(null)
   const [terminalDialogLinkedProjectPath, setTerminalDialogLinkedProjectPath] = useState<string | null>(null)
+  const [terminalDialogLinkedPtySessionId, setTerminalDialogLinkedPtySessionId] = useState<string | null>(null)
   // 新規起動時はセッション選択をスキップ
   const [terminalDialogSkipSelector, setTerminalDialogSkipSelector] = useState(false)
 
@@ -279,6 +281,7 @@ function App() {
     setTerminalDialogLinkedSessionId(session.sessionId)
     setTerminalDialogLinkedCwd(session.cwd)
     setTerminalDialogLinkedProjectPath(session.projectPath)
+    setTerminalDialogLinkedPtySessionId(session.ptySessionId ?? null)
     setTerminalDialogOpen(true)
   }
 
@@ -751,13 +754,25 @@ function App() {
             setTerminalDialogLinkedSessionId(null)
             setTerminalDialogLinkedCwd(null)
             setTerminalDialogLinkedProjectPath(null)
+            setTerminalDialogLinkedPtySessionId(null)
             setTerminalDialogSkipSelector(false)
           }
         }}
         linkedSessionId={terminalDialogLinkedSessionId}
         linkedCwd={terminalDialogLinkedCwd}
         linkedProjectPath={terminalDialogLinkedProjectPath}
+        linkedPtySessionId={terminalDialogLinkedPtySessionId}
         onSessionCreated={handleSessionCreated}
+        onPtySessionCreated={async (claudeSessionId, ptySessionId) => {
+          // PTYセッションIDをDBに保存
+          if (terminalDialogTask && claudeSessionId) {
+            await updateTaskPtySessionId(terminalDialogTask, claudeSessionId, ptySessionId)
+            // ダイアログのセッション一覧も更新
+            setSessionsDialogSessions(prev =>
+              prev.map(s => s.sessionId === claudeSessionId ? { ...s, ptySessionId } : s)
+            )
+          }
+        }}
         skipSessionSelector={terminalDialogSkipSelector}
       />
 
@@ -791,7 +806,29 @@ function App() {
             setTerminalDialogSkipSelector(true)
             handleLaunchClaude(sessionsDialogTask, sessionsDialogTaskText)
           }}
+          onLaunchNewExternal={() => {
+            setSessionsDialogOpen(false)
+            handleLaunchClaudeExternal(sessionsDialogTask, sessionsDialogTaskText)
+          }}
           onResumeInApp={handleResumeInApp}
+          onLinkExistingSession={async (sessionId, cwd, projectPath) => {
+            if (sessionsDialogTask) {
+              // DBに保存
+              const linkedSession = await linkTaskSession(sessionsDialogTask, sessionId, cwd, projectPath)
+
+              // ダイアログのセッション一覧に即座に追加
+              if (linkedSession) {
+                setSessionsDialogSessions(prev => [...prev, linkedSession])
+              }
+
+              // バックグラウンドでセッション一覧を更新
+              const allTasks = [
+                ...todoItems.map(t => ({ entryId: t.entryId, replyId: t.replyId, lineIndex: t.lineIndex })),
+                ...incompleteTodos.map(t => ({ entryId: t.entryId, replyId: t.replyId, lineIndex: t.lineIndex })),
+              ]
+              loadSessionsForTasks(allTasks)
+            }
+          }}
         />
       )}
     </div>

@@ -268,6 +268,102 @@ export async function getDb() {
     } catch (error) {
       console.log('task_claude_sessions.name column already exists or migration error:', error)
     }
+
+    // プロジェクトマスターテーブルを作成
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS projects (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        cwd TEXT NOT NULL UNIQUE,
+        project_path TEXT NOT NULL,
+        name TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `)
+
+    await db.execute(`
+      CREATE INDEX IF NOT EXISTS idx_projects_cwd ON projects(cwd)
+    `)
+
+    // task_claude_sessionsにproject_idカラムを追加
+    try {
+      await db.execute(`
+        ALTER TABLE task_claude_sessions ADD COLUMN project_id INTEGER REFERENCES projects(id)
+      `)
+    } catch (error) {
+      console.log('task_claude_sessions.project_id column already exists or migration error:', error)
+    }
+
+    // task_claude_sessionsにgit_branchカラムを追加
+    try {
+      await db.execute(`
+        ALTER TABLE task_claude_sessions ADD COLUMN git_branch TEXT DEFAULT NULL
+      `)
+    } catch (error) {
+      console.log('task_claude_sessions.git_branch column already exists or migration error:', error)
+    }
+
+    // task_claude_sessionsにpty_session_idカラムを追加（PTYセッションとの紐付け用）
+    try {
+      await db.execute(`
+        ALTER TABLE task_claude_sessions ADD COLUMN pty_session_id TEXT DEFAULT NULL
+      `)
+    } catch (error) {
+      console.log('task_claude_sessions.pty_session_id column already exists or migration error:', error)
+    }
+
+    await db.execute(`
+      CREATE INDEX IF NOT EXISTS idx_task_claude_sessions_project
+        ON task_claude_sessions(project_id)
+    `)
+
+    // マイグレーション: 既存のcwd/project_pathからprojectsテーブルにデータを移行
+    // task_claude_sessionsの既存データからユニークなcwd/project_pathを抽出してprojectsに登録
+    await db.execute(`
+      INSERT OR IGNORE INTO projects (cwd, project_path, name)
+      SELECT DISTINCT cwd, project_path, NULL
+      FROM task_claude_sessions
+      WHERE cwd IS NOT NULL AND project_path IS NOT NULL
+    `)
+
+    // entries.claude_*からもprojectsに登録
+    await db.execute(`
+      INSERT OR IGNORE INTO projects (cwd, project_path, name)
+      SELECT DISTINCT claude_cwd, claude_project_path, NULL
+      FROM entries
+      WHERE claude_cwd IS NOT NULL AND claude_project_path IS NOT NULL
+    `)
+
+    // task_claude_sessionsのproject_idを更新（まだNULLの場合）
+    await db.execute(`
+      UPDATE task_claude_sessions
+      SET project_id = (
+        SELECT id FROM projects WHERE projects.cwd = task_claude_sessions.cwd
+      )
+      WHERE project_id IS NULL AND cwd IS NOT NULL
+    `)
+
+    // マイグレーション: entries.claude_*からtask_claude_sessionsへ移行
+    // ※ エントリーレベルの紐付けはline_index=0として扱う（後方互換性のため）
+    await db.execute(`
+      INSERT OR IGNORE INTO task_claude_sessions (entry_id, reply_id, line_index, session_id, cwd, project_path, project_id, created_at)
+      SELECT
+        e.id as entry_id,
+        NULL as reply_id,
+        0 as line_index,
+        e.claude_session_id as session_id,
+        e.claude_cwd as cwd,
+        e.claude_project_path as project_path,
+        (SELECT id FROM projects WHERE projects.cwd = e.claude_cwd) as project_id,
+        e.timestamp as created_at
+      FROM entries e
+      WHERE e.claude_session_id IS NOT NULL
+        AND e.claude_cwd IS NOT NULL
+        AND e.claude_project_path IS NOT NULL
+        AND NOT EXISTS (
+          SELECT 1 FROM task_claude_sessions tcs
+          WHERE tcs.entry_id = e.id AND tcs.session_id = e.claude_session_id
+        )
+    `)
   }
   return db
 }

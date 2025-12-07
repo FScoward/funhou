@@ -7,6 +7,7 @@ import {
   unlinkTaskClaudeSession,
   updateTaskClaudeSessionName,
   updateTaskClaudeSessionId,
+  updateTaskClaudePtySessionId,
 } from '@/lib/taskClaudeSessions'
 
 interface UseTaskClaudeSessionsProps {
@@ -35,17 +36,29 @@ export function useTaskClaudeSessions({ database }: UseTaskClaudeSessionsProps) 
     }
   }, [database])
 
-  // セッションを紐付け
+  // セッションを紐付け（作成したセッションを返す）
   const linkSession = useCallback(async (
     task: TaskIdentifier,
     sessionId: string,
     cwd: string,
     projectPath: string
-  ) => {
-    if (!database) return
+  ): Promise<TaskClaudeSession | null> => {
+    if (!database) return null
 
     try {
       await linkTaskClaudeSession(database, task, sessionId, cwd, projectPath)
+
+      // 新しいセッションオブジェクトを作成
+      const newSession: TaskClaudeSession = {
+        id: 0, // DBから再取得時に正しいIDが設定される
+        entryId: task.entryId,
+        replyId: task.replyId,
+        lineIndex: task.lineIndex,
+        sessionId,
+        cwd,
+        projectPath,
+        createdAt: new Date().toISOString(),
+      }
 
       // ローカル状態を更新
       setSessionsMap(prev => {
@@ -55,23 +68,13 @@ export function useTaskClaudeSessions({ database }: UseTaskClaudeSessionsProps) 
 
         // 既に紐付けられていない場合のみ追加
         if (!sessions.some(s => s.sessionId === sessionId)) {
-          newMap.set(key, [
-            {
-              id: 0, // DBから再取得時に正しいIDが設定される
-              entryId: task.entryId,
-              replyId: task.replyId,
-              lineIndex: task.lineIndex,
-              sessionId,
-              cwd,
-              projectPath,
-              createdAt: new Date().toISOString(),
-            },
-            ...sessions,
-          ])
+          newMap.set(key, [newSession, ...sessions])
         }
 
         return newMap
       })
+
+      return newSession
     } catch (error) {
       console.error('セッションの紐付けに失敗しました:', error)
       throw error
@@ -161,6 +164,33 @@ export function useTaskClaudeSessions({ database }: UseTaskClaudeSessionsProps) 
     }
   }, [database])
 
+  // PTYセッションIDを更新（アプリ内ターミナルとの紐付け用）
+  const updatePtySessionId = useCallback(async (
+    task: TaskIdentifier,
+    claudeSessionId: string,
+    ptySessionId: string | null
+  ) => {
+    if (!database) return
+
+    try {
+      await updateTaskClaudePtySessionId(database, task, claudeSessionId, ptySessionId)
+
+      // ローカル状態を更新
+      setSessionsMap(prev => {
+        const newMap = new Map(prev)
+        const key = getTaskIdentifierKey(task)
+        const sessions = newMap.get(key) ?? []
+        newMap.set(key, sessions.map(s =>
+          s.sessionId === claudeSessionId ? { ...s, ptySessionId: ptySessionId ?? undefined } : s
+        ))
+        return newMap
+      })
+    } catch (error) {
+      console.error('PTYセッションIDの更新に失敗しました:', error)
+      throw error
+    }
+  }, [database])
+
   return {
     sessionsMap,
     isLoading,
@@ -170,5 +200,6 @@ export function useTaskClaudeSessions({ database }: UseTaskClaudeSessionsProps) 
     getSessionsForTask,
     updateSessionName,
     updateSessionId,
+    updatePtySessionId,
   }
 }

@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { TaskClaudeSession } from '@/types'
-import { resumeClaudeCode, getClaudeSessionLog, getClaudeSessionsForProject, SessionSummary } from '../lib/claudeLogs'
+import { resumeClaudeCode, getClaudeSessionLog, getClaudeSessionsForProject, listClaudeProjects, listClaudeSessions, SessionSummary, ProjectInfo, getCurrentWorkingDirectory, listSessionsForCwd, getProjectPathForCwd } from '../lib/claudeLogs'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import {
@@ -10,7 +10,8 @@ import {
   DialogTitle,
   DialogFooter,
 } from './ui/dialog'
-import { Terminal, Play, Trash2, Plus, ChevronDown, Pencil, Check, X, FileText, Link } from 'lucide-react'
+import { Terminal, Play, Trash2, Plus, Pencil, Check, X, FileText, Link, ChevronDown } from 'lucide-react'
+import { CwdSelectorDialog, type LaunchType } from './CwdSelectorDialog'
 
 interface TaskClaudeSessionsDialogProps {
   taskText: string
@@ -22,9 +23,16 @@ interface TaskClaudeSessionsDialogProps {
   onSessionNameChanged: (sessionId: string, name: string | null) => void
   /** Claude CodeのセッションIDを更新（ログ紐付け用） */
   onSessionIdUpdated: (oldSessionId: string, newSessionId: string) => void
+  /** アプリ内ターミナルで新規起動（CWDなしでデフォルト使用） */
   onLaunchNew: () => void
+  /** 外部ターミナルで新規起動（CWDなしでデフォルト使用） */
+  onLaunchNewExternal?: () => void
+  /** CWDを指定して新規起動（アプリ内 or 外部） */
+  onLaunchWithCwd?: (cwd: string, launchType: LaunchType) => void
   /** アプリ内ターミナルでセッションを再開 */
   onResumeInApp?: (session: TaskClaudeSession) => void
+  /** 既存のClaude Codeセッションを紐づける */
+  onLinkExistingSession?: (sessionId: string, cwd: string, projectPath: string) => void
 }
 
 export function TaskClaudeSessionsDialog({
@@ -37,7 +45,10 @@ export function TaskClaudeSessionsDialog({
   onSessionNameChanged,
   onSessionIdUpdated,
   onLaunchNew,
+  onLaunchNewExternal,
+  onLaunchWithCwd,
   onResumeInApp,
+  onLinkExistingSession,
 }: TaskClaudeSessionsDialogProps) {
   const [resumingSessionId, setResumingSessionId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -46,6 +57,9 @@ export function TaskClaudeSessionsDialog({
   const [menuOpen, setMenuOpen] = useState(false)
   const [menuSession, setMenuSession] = useState<TaskClaudeSession | null>(null)
   const menuRef = useRef<HTMLDivElement>(null)
+
+  // CWD選択ダイアログ用の状態
+  const [cwdSelectorOpen, setCwdSelectorOpen] = useState(false)
 
   // 名前編集用の状態
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null)
@@ -62,6 +76,21 @@ export function TaskClaudeSessionsDialog({
   const [availableSessions, setAvailableSessions] = useState<SessionSummary[]>([])
   const [loadingAvailableSessions, setLoadingAvailableSessions] = useState(false)
   const [showLinkPicker, setShowLinkPicker] = useState(false)
+
+  // 既存セッション紐づけ用の状態
+  const [showExistingSessionPicker, setShowExistingSessionPicker] = useState(false)
+  const [projects, setProjects] = useState<ProjectInfo[]>([])
+  const [selectedProject, setSelectedProject] = useState<ProjectInfo | null>(null)
+  const [projectSessions, setProjectSessions] = useState<SessionSummary[]>([])
+  const [loadingProjects, setLoadingProjects] = useState(false)
+  const [loadingProjectSessions, setLoadingProjectSessions] = useState(false)
+
+  // 現在のプロジェクト用の状態
+  const [currentCwd, setCurrentCwd] = useState<string | null>(null)
+  const [currentProjectPath, setCurrentProjectPath] = useState<string | null>(null)
+  const [currentProjectSessions, setCurrentProjectSessions] = useState<SessionSummary[]>([])
+  const [loadingCurrentSessions, setLoadingCurrentSessions] = useState(false)
+  const [showOtherProjects, setShowOtherProjects] = useState(false)
 
   // メニュー外クリックで閉じる
   useEffect(() => {
@@ -218,6 +247,93 @@ export function TaskClaudeSessionsDialog({
     }
   }
 
+  // 既存セッション紐づけダイアログを開く
+  const handleOpenExistingSessionPicker = async () => {
+    setShowExistingSessionPicker(true)
+    setSelectedProject(null)
+    setProjectSessions([])
+    setShowOtherProjects(false)
+    setLoadingCurrentSessions(true)
+
+    try {
+      // 現在の作業ディレクトリを取得
+      const cwd = await getCurrentWorkingDirectory()
+      setCurrentCwd(cwd)
+
+      // 現在のcwdに対応するプロジェクトパスを取得
+      const projectPath = await getProjectPathForCwd(cwd)
+      setCurrentProjectPath(projectPath)
+
+      if (projectPath) {
+        // 現在のプロジェクトのセッション一覧を取得
+        const sessions = await listSessionsForCwd(cwd)
+        setCurrentProjectSessions(sessions)
+      } else {
+        setCurrentProjectSessions([])
+      }
+    } catch (err) {
+      console.error('現在のプロジェクトセッションの取得に失敗しました:', err)
+      setCurrentCwd(null)
+      setCurrentProjectPath(null)
+      setCurrentProjectSessions([])
+    } finally {
+      setLoadingCurrentSessions(false)
+    }
+  }
+
+  // 他のプロジェクト一覧を表示
+  const handleShowOtherProjects = async () => {
+    setShowOtherProjects(true)
+    setLoadingProjects(true)
+    try {
+      const projectList = await listClaudeProjects()
+      setProjects(projectList)
+    } catch (err) {
+      console.error('プロジェクト一覧の取得に失敗しました:', err)
+      setProjects([])
+    } finally {
+      setLoadingProjects(false)
+    }
+  }
+
+  // 現在のプロジェクトに戻る
+  const handleBackToCurrentProject = () => {
+    setShowOtherProjects(false)
+    setSelectedProject(null)
+    setProjectSessions([])
+  }
+
+  // プロジェクトを選択
+  const handleSelectProject = async (project: ProjectInfo) => {
+    setSelectedProject(project)
+    setLoadingProjectSessions(true)
+    try {
+      const sessionList = await listClaudeSessions(project.path)
+      setProjectSessions(sessionList)
+    } catch (err) {
+      console.error('セッション一覧の取得に失敗しました:', err)
+      setProjectSessions([])
+    } finally {
+      setLoadingProjectSessions(false)
+    }
+  }
+
+  // 既存セッションを紐づける
+  const handleLinkExistingSession = (session: SessionSummary) => {
+    if (onLinkExistingSession && session.cwd) {
+      onLinkExistingSession(session.session_id, session.cwd, session.project_path)
+      setShowExistingSessionPicker(false)
+      setSelectedProject(null)
+      setProjectSessions([])
+    }
+  }
+
+  // プロジェクト一覧に戻る
+  const handleBackToProjects = () => {
+    setSelectedProject(null)
+    setProjectSessions([])
+  }
+
   const formatTimestamp = (timestamp: string) => {
     const date = new Date(timestamp)
     return date.toLocaleString('ja-JP', {
@@ -256,17 +372,26 @@ export function TaskClaudeSessionsDialog({
               <div className="text-sm text-muted-foreground">
                 紐付けられたセッション ({sessions.length})
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  onOpenChange(false)
-                  onLaunchNew()
-                }}
-              >
-                <Plus size={14} className="mr-1" />
-                新規起動
-              </Button>
+              <div className="flex items-center gap-2">
+                {onLinkExistingSession && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleOpenExistingSessionPicker}
+                  >
+                    <Link size={14} className="mr-1" />
+                    既存を紐づけ
+                  </Button>
+                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCwdSelectorOpen(true)}
+                >
+                  <Plus size={14} className="mr-1" />
+                  新規起動
+                </Button>
+              </div>
             </div>
 
             {sessions.length === 0 ? (
@@ -578,6 +703,193 @@ export function TaskClaudeSessionsDialog({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* 既存セッション紐づけダイアログ */}
+      <Dialog open={showExistingSessionPicker} onOpenChange={setShowExistingSessionPicker}>
+        <DialogContent className="sm:max-w-2xl max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Link size={18} />
+              既存セッションを紐づける
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {!showOtherProjects ? (
+              // 現在のプロジェクトのセッション一覧
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="text-sm text-muted-foreground truncate flex-1 mr-2" title={currentCwd || ''}>
+                    {currentCwd ? `現在のプロジェクト: ${currentCwd.split('/').slice(-2).join('/')}` : 'プロジェクト情報を取得中...'}
+                  </div>
+                  <Button variant="outline" size="sm" onClick={handleShowOtherProjects}>
+                    他のプロジェクト
+                  </Button>
+                </div>
+                {loadingCurrentSessions ? (
+                  <div className="text-center text-muted-foreground py-4">
+                    読み込み中...
+                  </div>
+                ) : currentProjectPath && currentProjectSessions.length > 0 ? (
+                  <div className="space-y-2 max-h-60 overflow-y-auto">
+                    {currentProjectSessions.map((session) => (
+                      <div
+                        key={session.session_id}
+                        className={`p-3 border rounded transition-colors ${
+                          session.cwd
+                            ? 'hover:bg-muted/50 cursor-pointer'
+                            : 'opacity-50 cursor-not-allowed'
+                        }`}
+                        onClick={() => session.cwd && handleLinkExistingSession(session)}
+                      >
+                        <div className="font-mono text-xs text-muted-foreground">
+                          {session.session_id.slice(0, 8)}...
+                        </div>
+                        {session.first_message && (
+                          <div className="text-sm mt-1 truncate" title={session.first_message}>
+                            {session.first_message}
+                          </div>
+                        )}
+                        <div className="text-xs text-muted-foreground mt-1">
+                          {session.timestamp ? formatTimestamp(session.timestamp) : '日時不明'}
+                          {session.message_count > 0 && ` • ${session.message_count}メッセージ`}
+                        </div>
+                        {!session.cwd && (
+                          <div className="text-xs text-destructive mt-1">
+                            cwdが見つかりません
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : currentProjectPath ? (
+                  <div className="text-center text-muted-foreground py-4 text-sm">
+                    このプロジェクトにはセッションがありません
+                  </div>
+                ) : (
+                  <div className="text-center text-muted-foreground py-4 text-sm">
+                    現在のディレクトリに対応するClaude Codeプロジェクトが見つかりません。
+                    <br />
+                    「他のプロジェクト」から選択してください。
+                  </div>
+                )}
+              </div>
+            ) : !selectedProject ? (
+              // プロジェクト一覧
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  {currentProjectPath && (
+                    <Button variant="ghost" size="sm" onClick={handleBackToCurrentProject}>
+                      ← 現在のプロジェクトに戻る
+                    </Button>
+                  )}
+                  <span className="text-sm text-muted-foreground">
+                    プロジェクトを選択してください
+                  </span>
+                </div>
+                {loadingProjects ? (
+                  <div className="text-center text-muted-foreground py-4">
+                    読み込み中...
+                  </div>
+                ) : projects.length > 0 ? (
+                  <div className="space-y-2 max-h-60 overflow-y-auto">
+                    {projects.map((project) => (
+                      <div
+                        key={project.path}
+                        className="p-3 border rounded hover:bg-muted/50 cursor-pointer transition-colors"
+                        onClick={() => handleSelectProject(project)}
+                      >
+                        <div className="font-medium text-sm">{project.name}</div>
+                        <div className="text-xs text-muted-foreground mt-1">
+                          {project.session_count} セッション
+                          {project.last_updated && ` • ${formatTimestamp(project.last_updated)}`}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center text-muted-foreground py-4 text-sm">
+                    プロジェクトが見つかりません
+                  </div>
+                )}
+              </div>
+            ) : (
+              // 選択したプロジェクトのセッション一覧
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <Button variant="ghost" size="sm" onClick={handleBackToProjects}>
+                    ← 戻る
+                  </Button>
+                  <span className="text-sm font-medium">{selectedProject.name}</span>
+                </div>
+                {loadingProjectSessions ? (
+                  <div className="text-center text-muted-foreground py-4">
+                    読み込み中...
+                  </div>
+                ) : projectSessions.length > 0 ? (
+                  <div className="space-y-2 max-h-60 overflow-y-auto">
+                    {projectSessions.map((session) => (
+                      <div
+                        key={session.session_id}
+                        className={`p-3 border rounded transition-colors ${
+                          session.cwd
+                            ? 'hover:bg-muted/50 cursor-pointer'
+                            : 'opacity-50 cursor-not-allowed'
+                        }`}
+                        onClick={() => session.cwd && handleLinkExistingSession(session)}
+                      >
+                        <div className="font-mono text-xs text-muted-foreground">
+                          {session.session_id.slice(0, 8)}...
+                        </div>
+                        {session.first_message && (
+                          <div className="text-sm mt-1 truncate" title={session.first_message}>
+                            {session.first_message}
+                          </div>
+                        )}
+                        <div className="text-xs text-muted-foreground mt-1">
+                          {session.timestamp ? formatTimestamp(session.timestamp) : '日時不明'}
+                          {session.message_count > 0 && ` • ${session.message_count}メッセージ`}
+                        </div>
+                        {!session.cwd && (
+                          <div className="text-xs text-destructive mt-1">
+                            cwdが見つかりません
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center text-muted-foreground py-4 text-sm">
+                    セッションが見つかりません
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowExistingSessionPicker(false)}>
+              キャンセル
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* CWD選択ダイアログ */}
+      <CwdSelectorDialog
+        open={cwdSelectorOpen}
+        onOpenChange={setCwdSelectorOpen}
+        onLaunch={(cwd, launchType) => {
+          if (onLaunchWithCwd) {
+            onLaunchWithCwd(cwd, launchType)
+          } else if (launchType === 'app') {
+            onLaunchNew()
+          } else if (launchType === 'external' && onLaunchNewExternal) {
+            onLaunchNewExternal()
+          }
+          onOpenChange(false)
+        }}
+        allowExternal={!!onLaunchNewExternal}
+        title="新規セッションの作業ディレクトリを選択"
+      />
     </Dialog>
   )
 }

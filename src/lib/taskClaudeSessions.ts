@@ -11,6 +11,7 @@ interface DbTaskClaudeSession {
   project_path: string
   created_at: string
   name: string | null
+  pty_session_id: string | null
 }
 
 function mapDbToTaskClaudeSession(row: DbTaskClaudeSession): TaskClaudeSession {
@@ -24,6 +25,7 @@ function mapDbToTaskClaudeSession(row: DbTaskClaudeSession): TaskClaudeSession {
     projectPath: row.project_path,
     createdAt: row.created_at,
     name: row.name ?? undefined,
+    ptySessionId: row.pty_session_id ?? undefined,
   }
 }
 
@@ -97,6 +99,21 @@ export async function updateTaskClaudeSessionId(
      SET session_id = ?
      WHERE entry_id = ? AND (reply_id = ? OR (reply_id IS NULL AND ? IS NULL)) AND line_index = ? AND session_id = ?`,
     [newSessionId, task.entryId, task.replyId ?? null, task.replyId ?? null, task.lineIndex, oldSessionId]
+  )
+}
+
+// PTYセッションIDを更新（アプリ内ターミナルとの紐付け用）
+export async function updateTaskClaudePtySessionId(
+  db: Database,
+  task: TaskIdentifier,
+  claudeSessionId: string,
+  ptySessionId: string | null
+): Promise<void> {
+  await db.execute(
+    `UPDATE task_claude_sessions
+     SET pty_session_id = ?
+     WHERE entry_id = ? AND (reply_id = ? OR (reply_id IS NULL AND ? IS NULL)) AND line_index = ? AND session_id = ?`,
+    [ptySessionId, task.entryId, task.replyId ?? null, task.replyId ?? null, task.lineIndex, claudeSessionId]
   )
 }
 
