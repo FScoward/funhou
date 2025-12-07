@@ -9,6 +9,7 @@ import {
   resumeClaudeTerminal,
   type ClaudeTerminalSession,
 } from '../lib/claudeTerminal'
+import { terminalOptions, terminalTheme } from '../lib/terminalConfig'
 
 // xterm.jsが送信するDevice Attributes (DA)クエリをフィルタリング
 // これらはClaude Codeで処理されずエコーバックされてしまう
@@ -70,37 +71,7 @@ export function useClaudeTerminal(options?: UseClaudeTerminalOptions) {
   const initTerminal = useCallback((element: HTMLElement) => {
     containerRef.current = element
 
-    const terminalTheme = {
-      background: '#1e1e1e',
-      foreground: '#d4d4d4',
-      cursor: '#d4d4d4',
-      cursorAccent: '#1e1e1e',
-      selectionBackground: 'rgba(255, 255, 255, 0.3)',
-      // ANSIカラーを明示的に設定
-      black: '#000000',
-      red: '#cd3131',
-      green: '#0dbc79',
-      yellow: '#e5e510',
-      blue: '#2472c8',
-      magenta: '#bc3fbc',
-      cyan: '#11a8cd',
-      white: '#e5e5e5',
-      brightBlack: '#666666',
-      brightRed: '#f14c4c',
-      brightGreen: '#23d18b',
-      brightYellow: '#f5f543',
-      brightBlue: '#3b8eea',
-      brightMagenta: '#d670d6',
-      brightCyan: '#29b8db',
-      brightWhite: '#ffffff',
-    }
-
-    const term = new Terminal({
-      cursorBlink: true,
-      fontSize: 14,
-      fontFamily: 'Menlo, Monaco, "Courier New", monospace',
-      allowProposedApi: true,
-    })
+    const term = new Terminal(terminalOptions)
 
     // テーマを明示的に設定（コンストラクタで設定すると一部環境で無視される問題の対策）
     term.options.theme = terminalTheme
