@@ -104,6 +104,15 @@ export interface TimelineItem {
   replyArchived?: boolean
 }
 
+// プロジェクトマスター情報
+export interface Project {
+  id: number
+  cwd: string
+  projectPath: string
+  name?: string
+  createdAt: string
+}
+
 // タスクとClaude Codeセッションの紐付け情報
 export interface TaskClaudeSession {
   id: number
@@ -115,6 +124,9 @@ export interface TaskClaudeSession {
   projectPath: string
   createdAt: string
   name?: string
+  projectId?: number
+  gitBranch?: string
+  ptySessionId?: string  // アプリ内PTYセッションID
 }
 
 // タスク識別子

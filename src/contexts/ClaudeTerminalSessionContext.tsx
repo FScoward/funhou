@@ -73,6 +73,7 @@ interface ClaudeTerminalSessionContextValue {
   terminateSession: (sessionId: string, graceful?: boolean) => Promise<void>
   resizeSession: (sessionId: string, cols: number, rows: number) => void
   updateSessionName: (sessionId: string, name: string) => void
+  updateSessionClaudeId: (sessionId: string, claudeSessionId: string) => void
 
   // 入出力
   writeToSession: (sessionId: string, data: string) => void
@@ -433,6 +434,23 @@ export function ClaudeTerminalSessionProvider({ children }: { children: ReactNod
     })
   }, [])
 
+  // Claude CodeセッションIDの更新（新規起動後に検出したIDを設定）
+  const updateSessionClaudeId = useCallback((sessionId: string, claudeSessionId: string) => {
+    setSessions((prev) => {
+      const session = prev.get(sessionId)
+      if (!session) return prev
+
+      const updatedSession: TerminalSession = {
+        ...session,
+        claudeSessionId,
+      }
+
+      const newMap = new Map(prev)
+      newMap.set(sessionId, updatedSession)
+      return newMap
+    })
+  }, [])
+
   const value: ClaudeTerminalSessionContextValue = {
     sessions,
     activeSessionId,
@@ -442,6 +460,7 @@ export function ClaudeTerminalSessionProvider({ children }: { children: ReactNod
     terminateSession,
     resizeSession,
     updateSessionName,
+    updateSessionClaudeId,
     writeToSession,
     getSessionOutput,
     subscribeToOutput,

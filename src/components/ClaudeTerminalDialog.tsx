@@ -26,10 +26,14 @@ interface ClaudeTerminalDialogProps {
   linkedCwd?: string | null
   /** 紐付けられたClaude Codeのプロジェクトパス（セッション存在確認に使用） */
   linkedProjectPath?: string | null
+  /** 紐付けられたPTYセッションID（アクティブなら再接続） */
+  linkedPtySessionId?: string | null
   /** Widgetから開いた場合はtrue（自動再接続を許可） */
   fromWidget?: boolean
   /** セッション作成時に呼ばれるコールバック（Claude CodeのセッションID、作業ディレクトリ、プロジェクトパス） */
   onSessionCreated?: (claudeSessionId: string, cwd: string, projectPath: string) => void
+  /** PTYセッション作成時に呼ばれるコールバック（DBに保存するため） */
+  onPtySessionCreated?: (claudeSessionId: string, ptySessionId: string) => void
   /** セッション選択画面をスキップ（新規起動用） */
   skipSessionSelector?: boolean
 }
@@ -41,8 +45,10 @@ export function ClaudeTerminalDialog({
   linkedSessionId,
   linkedCwd,
   linkedProjectPath,
+  linkedPtySessionId,
   fromWidget = false,
   onSessionCreated,
+  onPtySessionCreated,
   skipSessionSelector = false,
 }: ClaudeTerminalDialogProps) {
   const [internalOpen, setInternalOpen] = useState(false)
@@ -157,6 +163,18 @@ export function ClaudeTerminalDialog({
         // セッションが存在する場合
         console.log('[ClaudeTerminalDialog] Session exists in Claude Code')
 
+        // linkedPtySessionIdが指定されている場合、そのPTYセッションがアクティブか確認
+        if (linkedPtySessionId) {
+          const existingPtySession = getSession(linkedPtySessionId)
+          if (existingPtySession && existingPtySession.status !== 'stopped') {
+            console.log('[ClaudeTerminalDialog] Reusing existing PTY session:', linkedPtySessionId)
+            setContextSessionId(linkedPtySessionId)
+            setShowTerminal(true)
+            return
+          }
+          console.log('[ClaudeTerminalDialog] Linked PTY session not active:', linkedPtySessionId)
+        }
+
         // 既存のアクティブセッションを探す（同じclaudeSessionIdを持つもの）
         const activeSessions = getActiveSessions()
         const existingSession = activeSessions.find(
@@ -175,10 +193,12 @@ export function ClaudeTerminalDialog({
         console.log('[ClaudeTerminalDialog] Creating new session with resume')
         setIsCreatingSession(true)
         try {
-          const sessionId = await createSession(linkedCwd!, linkedSessionId!)
-          console.log('[ClaudeTerminalDialog] Session created:', sessionId)
-          setContextSessionId(sessionId)
+          const ptySessionId = await createSession(linkedCwd!, linkedSessionId!)
+          console.log('[ClaudeTerminalDialog] Session created:', ptySessionId)
+          setContextSessionId(ptySessionId)
           setShowTerminal(true)
+          // PTYセッション作成をDBに通知
+          onPtySessionCreated?.(linkedSessionId!, ptySessionId)
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err)
           console.error('[ClaudeTerminalDialog] Session creation failed:', message)
@@ -211,7 +231,7 @@ export function ClaudeTerminalDialog({
 
     initializeDialog()
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, fromWidget, linkedSessionId, linkedCwd, linkedProjectPath, skipSessionSelector])  // createSession, getActiveSessions, hasLinkedSessionは意図的に除外
+  }, [open, fromWidget, linkedSessionId, linkedCwd, linkedProjectPath, linkedPtySessionId, skipSessionSelector])  // createSession, getActiveSessions, getSession, hasLinkedSession, onPtySessionCreatedは意図的に除外
 
   // プロジェクト一覧の読み込み
   const loadProjects = async () => {
@@ -241,28 +261,14 @@ export function ClaudeTerminalDialog({
     }
   }
 
-  // セッション選択時の処理
+  // セッション選択時の処理（選択のみ、ターミナル起動はしない）
   const handleSessionSelect = (session: SessionSummary) => {
     if (!session.cwd) return
     setSelectedClaudeSession({ sessionId: session.session_id, cwd: session.cwd })
     setCwd(session.cwd)
     setShowSessionSelector(false)
-    // 選択したセッションで再開
-    setIsCreatingSession(true)
-    createSession(session.cwd, session.session_id)
-      .then((appSessionId) => {
-        setContextSessionId(appSessionId)
-        setShowTerminal(true)
-        // Claude CodeのセッションIDを通知（DBに保存するため）
-        onSessionCreated?.(session.session_id, session.cwd!, session.project_path)
-      })
-      .catch((err) => {
-        const message = err instanceof Error ? err.message : String(err)
-        setError(`セッションの作成に失敗しました: ${message}`)
-      })
-      .finally(() => {
-        setIsCreatingSession(false)
-      })
+    // セッション情報を通知（DBに保存するため）- ターミナルは起動しない
+    onSessionCreated?.(session.session_id, session.cwd!, session.project_path)
   }
 
   // 新規セッション作成を選択（resumeなしで即起動）

@@ -356,6 +356,40 @@ pub fn launch_claude_code(
     Ok(session_id)
 }
 
+/// Get current working directory
+#[tauri::command]
+pub fn get_current_working_directory() -> Result<String, String> {
+    std::env::current_dir()
+        .map(|p| p.to_string_lossy().to_string())
+        .map_err(|e| e.to_string())
+}
+
+/// Get the Claude project directory path for a given cwd
+/// Returns the project path if it exists, otherwise None
+#[tauri::command]
+pub fn get_project_path_for_cwd(cwd: String) -> Result<Option<String>, String> {
+    match get_claude_project_dir(&cwd) {
+        Ok(path) => Ok(Some(path.to_string_lossy().to_string())),
+        Err(_) => Ok(None),
+    }
+}
+
+/// List sessions for the current working directory
+/// This is a convenience function that automatically finds the Claude project directory
+#[tauri::command]
+pub fn list_sessions_for_cwd(cwd: String) -> Result<Vec<SessionSummary>, String> {
+    // Use the existing list_claude_sessions which already handles cwd to project dir conversion
+    list_claude_sessions(cwd)
+}
+
+/// Get the latest session for a given cwd
+/// Returns the most recently updated session in the project
+#[tauri::command]
+pub fn get_latest_session_for_cwd(cwd: String) -> Result<Option<SessionSummary>, String> {
+    let sessions = list_sessions_for_cwd(cwd)?;
+    Ok(sessions.into_iter().next())
+}
+
 /// Resume a Claude Code session in interactive mode in a new terminal window
 #[tauri::command]
 pub fn resume_claude_code(

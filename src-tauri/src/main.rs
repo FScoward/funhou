@@ -209,6 +209,10 @@ fn main() {
             claude_logs::read_claude_session,
             claude_logs::launch_claude_code,
             claude_logs::resume_claude_code,
+            claude_logs::get_current_working_directory,
+            claude_logs::get_project_path_for_cwd,
+            claude_logs::list_sessions_for_cwd,
+            claude_logs::get_latest_session_for_cwd,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
