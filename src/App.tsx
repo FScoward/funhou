@@ -36,6 +36,8 @@ import { DailySummarySidebar } from '@/components/DailySummarySidebar'
 import { getSettings, applyFont, applyFontSize } from '@/lib/settings'
 import { applyTheme, ThemeVariant } from '@/lib/themes'
 import { onClaudeSessionFinished } from '@/lib/claudeLogs'
+import { logStatusChange, detectStatusChanges } from '@/utils/statusChangeLogger'
+import { getTagsForEntry } from '@/lib/tags'
 
 function App() {
   const { handleMouseDown: handleTabDrag } = useWindowDrag()
@@ -146,6 +148,7 @@ function App() {
   const {
     timelineItems: filteredTimelineItems,
     setTimelineItems: setFilteredTimelineItems,
+    loadEntries,
     handleScrollToEntry: scrollToEntry,
     handleScrollToReply: scrollToReply,
     currentPage,
@@ -419,6 +422,8 @@ function App() {
 
   // タスクステータス変更ハンドラー（共通化）
   const handleTaskStatusChange = async (todo: typeof todoItems[0], newStatus: import('@/utils/checkboxUtils').CheckboxStatus) => {
+    const oldStatus = todo.status // 変更前のステータスを保持
+
     if (todo.replyId) {
       // 返信のタスクを更新
       const newContent = await updateReplyLine(todo.replyId, todo.lineIndex, newStatus)
@@ -450,6 +455,31 @@ function App() {
         ))
       }
     }
+
+    // ステータス変更をエントリとして記録
+    if (database) {
+      let tagNames: string[] = []
+      if (todo.parentEntryTags && todo.parentEntryTags.length > 0) {
+        // 返信タスクの場合: parentEntryTagsを使用
+        tagNames = todo.parentEntryTags.map(t => t.name)
+      } else {
+        // エントリー直下のタスクの場合: getTagsForEntryで取得
+        const tags = await getTagsForEntry(database, todo.entryId)
+        tagNames = tags.map(t => t.name)
+      }
+
+      await logStatusChange({
+        db: database,
+        taskText: todo.text,
+        oldStatus,
+        newStatus,
+        tagNames,
+      })
+
+      // タイムラインを再読み込みして新しいエントリを表示
+      await loadEntries()
+    }
+
     await loadTodos()
     await loadCompletedTodos()
   }
@@ -619,7 +649,36 @@ function App() {
               onTogglePin={handleTogglePin}
               onToggleArchive={handleToggleArchive}
               onUpdateEntryDirectly={async (entryId, newContent) => {
+                // 変更前のコンテンツを取得
+                const oldEntry = filteredTimelineItems.find(
+                  item => item.type === 'entry' && item.id === entryId
+                )
+                const oldContent = oldEntry?.content || ''
+
                 await handleDirectUpdateEntry(entryId, newContent)
+
+                // ステータス変更を検出して記録
+                if (database && oldContent) {
+                  const statusChanges = detectStatusChanges(oldContent, newContent)
+                  if (statusChanges.length > 0) {
+                    const tags = await getTagsForEntry(database, entryId)
+                    const tagNames = tags.map(t => t.name)
+
+                    for (const change of statusChanges) {
+                      await logStatusChange({
+                        db: database,
+                        taskText: change.taskText,
+                        oldStatus: change.oldStatus,
+                        newStatus: change.newStatus,
+                        tagNames,
+                      })
+                    }
+
+                    // タイムラインを再読み込みして新しいエントリを表示
+                    await loadEntries()
+                  }
+                }
+
                 await loadTodos()
                 await loadCompletedTodos()
                 await loadIncompleteTodos()
@@ -627,7 +686,38 @@ function App() {
               onDirectTagAdd={handleDirectTagAdd}
               onDirectTagRemove={handleDirectTagRemove}
               onUpdateReplyDirectly={async (replyId, newContent) => {
+                // 変更前のコンテンツを取得
+                const oldReply = filteredTimelineItems.find(
+                  item => item.type === 'reply' && item.replyId === replyId
+                )
+                const oldContent = oldReply?.content || ''
+                const parentEntryId = oldReply?.entryId
+
                 await handleDirectUpdateReply(replyId, newContent)
+
+                // ステータス変更を検出して記録
+                if (database && oldContent && parentEntryId) {
+                  const statusChanges = detectStatusChanges(oldContent, newContent)
+                  if (statusChanges.length > 0) {
+                    // 親エントリのタグを取得
+                    const tags = await getTagsForEntry(database, parentEntryId)
+                    const tagNames = tags.map(t => t.name)
+
+                    for (const change of statusChanges) {
+                      await logStatusChange({
+                        db: database,
+                        taskText: change.taskText,
+                        oldStatus: change.oldStatus,
+                        newStatus: change.newStatus,
+                        tagNames,
+                      })
+                    }
+
+                    // タイムラインを再読み込みして新しいエントリを表示
+                    await loadEntries()
+                  }
+                }
+
                 await loadTodos()
                 await loadCompletedTodos()
                 await loadIncompleteTodos()
@@ -674,6 +764,23 @@ function App() {
             onIncompleteStatusChange={async (todo) => {
               const success = await updateToDoingStatus(todo)
               if (success) {
+                // ステータス変更をエントリとして記録
+                if (database) {
+                  const tags = await getTagsForEntry(database, todo.entryId)
+                  const tagNames = tags.map(t => t.name)
+
+                  await logStatusChange({
+                    db: database,
+                    taskText: todo.text,
+                    oldStatus: ' ', // 未完了から
+                    newStatus: '/', // DOINGへ
+                    tagNames,
+                  })
+
+                  // タイムラインを再読み込みして新しいエントリを表示
+                  await loadEntries()
+                }
+
                 await loadIncompleteTodos()
                 await loadTodos()
               }
