@@ -38,6 +38,23 @@ export function useTodos({ database }: UseTodosProps) {
 
       const todos: TodoItem[] = []
 
+      // エントリーIDからタグを取得するマップを作成
+      const entryIds = entries.map(e => e.id)
+      const entryTagsMap = new Map<number, Tag[]>()
+
+      if (entryIds.length > 0) {
+        for (const entryId of entryIds) {
+          const tags = await database.select<Tag[]>(
+            `SELECT t.id, t.name
+             FROM tags t
+             INNER JOIN entry_tags et ON t.id = et.tag_id
+             WHERE et.entry_id = ?`,
+            [entryId]
+          )
+          entryTagsMap.set(entryId, tags)
+        }
+      }
+
       for (const entry of entries) {
         const lines = entry.content.split('\n')
         lines.forEach((line, index) => {
@@ -48,7 +65,8 @@ export function useTodos({ database }: UseTodosProps) {
               lineIndex: index + 1, // 1始まり
               text: match[3].trim(),
               status: match[2] as ' ' | '/',
-              timestamp: entry.timestamp
+              timestamp: entry.timestamp,
+              parentEntryTags: entryTagsMap.get(entry.id) || []
             })
           }
         })
@@ -65,21 +83,22 @@ export function useTodos({ database }: UseTodosProps) {
         ['%[ ]%', '%[/]%']
       )
 
-      // 親エントリIDのリストを作成してタグを一括取得
+      // 親エントリIDのリストを作成してタグを一括取得（既にマップにないものだけ）
       const parentEntryIds = [...new Set(replies.map(r => r.entry_id))]
-      const entryTagsMap = new Map<number, Tag[]>()
 
       if (parentEntryIds.length > 0) {
-        // 各親エントリのタグを取得
+        // 各親エントリのタグを取得（まだマップにないものだけ）
         for (const entryId of parentEntryIds) {
-          const tags = await database.select<Tag[]>(
-            `SELECT t.id, t.name
-             FROM tags t
-             INNER JOIN entry_tags et ON t.id = et.tag_id
-             WHERE et.entry_id = ?`,
-            [entryId]
-          )
-          entryTagsMap.set(entryId, tags)
+          if (!entryTagsMap.has(entryId)) {
+            const tags = await database.select<Tag[]>(
+              `SELECT t.id, t.name
+               FROM tags t
+               INNER JOIN entry_tags et ON t.id = et.tag_id
+               WHERE et.entry_id = ?`,
+              [entryId]
+            )
+            entryTagsMap.set(entryId, tags)
+          }
         }
       }
 

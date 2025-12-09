@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { GripVertical, ExternalLink, Circle, Slash, Terminal } from 'lucide-react'
+import { TagBadge } from '@/components/TagBadge'
 import { IncompleteTodoItem, getIncompleteTodoUniqueId, TaskClaudeSession, TaskIdentifier } from '@/types'
 import { formatDateToLocalYYYYMMDD } from '@/utils/dateUtils'
 
@@ -152,6 +153,15 @@ export function SortableIncompleteItem({
         </button>
 
         <span className="task-item-text">{todo.text}</span>
+
+        {/* 親エントリーのタグを表示 */}
+        {todo.parentEntryTags && todo.parentEntryTags.length > 0 && (
+          <div className="incomplete-item-tags">
+            {todo.parentEntryTags.map(tag => (
+              <TagBadge key={tag.id} tag={tag.name} />
+            ))}
+          </div>
+        )}
 
         {/* 日付ラベル */}
         <span className="incomplete-item-date">{formatShortDateLabel(todo.timestamp)}</span>
