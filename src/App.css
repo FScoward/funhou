@@ -4376,9 +4376,8 @@ textarea::placeholder {
   color: var(--foreground);
   flex: 1;
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  word-break: break-word;
+  line-height: 1.4;
 }
 
 .completed-item .task-item-text {
