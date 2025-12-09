@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { GripVertical, ExternalLink, Circle, Slash, CheckCircle, XCircle, Terminal } from 'lucide-react'
+import { TagBadge } from '@/components/TagBadge'
 import { TodoItem, getTodoUniqueId, TaskClaudeSession, TaskIdentifier } from '@/types'
 import { CheckboxStatus } from '@/utils/checkboxUtils'
 import { formatDateToLocalYYYYMMDD } from '@/utils/dateUtils'
@@ -159,6 +160,15 @@ export function SortableDoingItem({
         )}
 
         <span className="doing-list-item-text">{todo.text}</span>
+
+        {/* 親エントリーのタグを表示 */}
+        {todo.parentEntryTags && todo.parentEntryTags.length > 0 && (
+          <div className="doing-list-item-tags">
+            {todo.parentEntryTags.map(tag => (
+              <TagBadge key={tag.id} tag={tag.name} />
+            ))}
+          </div>
+        )}
 
         {/* 日付ラベル */}
         <span className="doing-list-item-date">{formatShortDateLabel(todo.timestamp)}</span>

@@ -68,6 +68,7 @@ export interface IncompleteTodoItem {
   text: string           // タスクのテキスト部分
   timestamp: string      // エントリー/返信のタイムスタンプ（日付別グルーピング用）
   childCount?: number    // 子タスクの数（親タスクの場合のみ）
+  parentEntryTags?: Tag[] // 親エントリーのタグ
 }
 
 // IncompleteTodoItemのユニークIDを生成（ドラッグ&ドロップ用）

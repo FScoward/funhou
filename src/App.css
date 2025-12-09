@@ -2199,6 +2199,15 @@ textarea::placeholder {
   opacity: 0.7;
 }
 
+/* タグ表示 */
+.doing-list-item-tags {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex-shrink: 0;
+  margin-left: 0.25rem;
+}
+
 /* 子タスクバッジ */
 .doing-list-item-badge {
   font-size: 0.65rem;
@@ -4266,6 +4275,15 @@ textarea::placeholder {
   background: rgba(107, 114, 128, 0.1);
   border-radius: 4px;
   flex-shrink: 0;
+}
+
+/* タグ表示 */
+.incomplete-item-tags {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex-shrink: 0;
+  margin-left: 0.25rem;
 }
 
 /* 子タスクバッジ */
