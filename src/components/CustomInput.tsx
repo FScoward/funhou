@@ -1,7 +1,7 @@
 import { useRef, useState, useEffect, forwardRef, useImperativeHandle } from "react"
 import { createPortal } from "react-dom"
 import TextareaAutosize from "react-textarea-autosize"
-import { ArrowUp, Mic, MicOff, Loader2, ListTodo } from "lucide-react"
+import { ArrowUp, Mic, MicOff, Loader2, ListTodo, Send } from "lucide-react"
 
 import {
   InputGroup,
@@ -35,6 +35,12 @@ interface CustomInputProps {
   additionalButtons?: React.ReactNode
   /** 選択行をタスクに変換する右クリックメニューを有効にするか */
   enableTaskConversion?: boolean
+  /** 外部アプリへの送信機能を有効にするか */
+  enablePasteToApp?: boolean
+  /** 外部アプリへの送信時のコールバック */
+  onPasteToApp?: (text: string) => Promise<void>
+  /** 外部アプリへの送信中かどうか */
+  isPastingToApp?: boolean
 }
 
 export interface CustomInputRef {
@@ -58,6 +64,9 @@ const CustomInput = forwardRef<CustomInputRef, CustomInputProps>(function Custom
   ollamaModel = 'gemma3:4b',
   additionalButtons,
   enableTaskConversion = false,
+  enablePasteToApp = false,
+  onPasteToApp,
+  isPastingToApp = false,
 }, ref) {
   const hasContent = value.trim().length > 0
   const showTagSelector = onTagAdd && onTagRemove
@@ -306,6 +315,14 @@ const CustomInput = forwardRef<CustomInputRef, CustomInputProps>(function Custom
           value={value}
           onChange={(e) => handleChange(e.target.value)}
           onKeyDown={(e) => {
+            // Cmd+Shift+Enter で外部アプリに送信
+            if ((e.metaKey || e.ctrlKey) && e.shiftKey && e.key === 'Enter') {
+              e.preventDefault()
+              if (enablePasteToApp && hasContent && onPasteToApp && !isPastingToApp) {
+                onPasteToApp(value)
+              }
+              return
+            }
             // Cmd+D (Mac) または Ctrl+D (Windows/Linux) でマイクトグル
             if ((e.metaKey || e.ctrlKey) && e.key === 'd') {
               e.preventDefault()
@@ -350,6 +367,23 @@ const CustomInput = forwardRef<CustomInputRef, CustomInputProps>(function Custom
           {/* 追加ボタン（セッション続行など） */}
           <div className="ml-auto flex items-center gap-1">
             {additionalButtons}
+            {/* 外部アプリ送信ボタン */}
+            {enablePasteToApp && (
+              <InputGroupButton
+                className={`rounded-full transition-opacity ${hasContent && !isPastingToApp ? 'opacity-100' : 'opacity-30'}`}
+                size="icon-xs"
+                variant="ghost"
+                onClick={() => onPasteToApp?.(value)}
+                disabled={!hasContent || isPastingToApp}
+                title="外部アプリに送信 (Cmd+Shift+Enter)"
+              >
+                {isPastingToApp ? (
+                  <Loader2 className="size-[14px] animate-spin" />
+                ) : (
+                  <Send className="size-[14px]" />
+                )}
+              </InputGroupButton>
+            )}
             {/* 送信ボタン */}
             <InputGroupButton
               className={`rounded-full transition-opacity ${hasContent ? 'opacity-100' : 'opacity-30'}`}
