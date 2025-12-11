@@ -2,6 +2,8 @@ import { useState } from 'react'
 import Database from '@tauri-apps/plugin-sql'
 import { TimelineItem, Reply } from '@/types'
 import { associateTagsWithReply, getTagsForReply } from '@/lib/tags'
+import { hasTaskLine } from '@/utils/checkboxUtils'
+import { getSettings } from '@/lib/settings'
 
 interface UseRepliesProps {
   database: Database | null
@@ -33,9 +35,19 @@ export function useReplies({ database, timelineItems, setTimelineItems, loadAvai
 
         const replyId = Number(result.lastInsertId)
 
-        // 手動選択タグを保存
-        if (replyManualTags.length > 0) {
-          await associateTagsWithReply(database, replyId, replyManualTags)
+        // タスク行を含む場合、自動タグを追加
+        const tagsToSave = [...replyManualTags]
+        if (hasTaskLine(replyContent)) {
+          const settings = await getSettings(database)
+          const autoTagName = settings.taskAutoTagName
+          if (autoTagName && autoTagName.trim() !== '' && !tagsToSave.includes(autoTagName)) {
+            tagsToSave.push(autoTagName)
+          }
+        }
+
+        // タグを保存
+        if (tagsToSave.length > 0) {
+          await associateTagsWithReply(database, replyId, tagsToSave)
         }
 
         // 保存したタグを取得
@@ -111,6 +123,18 @@ export function useReplies({ database, timelineItems, setTimelineItems, loadAvai
 
         const replyId = Number(result.lastInsertId)
 
+        // タスク行を含む場合、自動タグを追加
+        if (hasTaskLine(content)) {
+          const settings = await getSettings(database)
+          const autoTagName = settings.taskAutoTagName
+          if (autoTagName && autoTagName.trim() !== '') {
+            await associateTagsWithReply(database, replyId, [autoTagName])
+          }
+        }
+
+        // 保存したタグを取得
+        const savedTags = await getTagsForReply(database, replyId)
+
         // 親エントリーを探す
         const parentEntry = timelineItems.find(item => item.type === 'entry' && item.id === entryId)
 
@@ -119,7 +143,7 @@ export function useReplies({ database, timelineItems, setTimelineItems, loadAvai
           entry_id: entryId,
           content: content,
           timestamp: timestamp,
-          tags: []
+          tags: savedTags
         }
 
         const newReplyItem: TimelineItem = {
@@ -129,7 +153,7 @@ export function useReplies({ database, timelineItems, setTimelineItems, loadAvai
           entryId: entryId,
           content: content,
           timestamp: timestamp,
-          tags: [],
+          tags: savedTags,
           parentEntry: parentEntry ? {
             id: parentEntry.id,
             content: parentEntry.content,
@@ -212,8 +236,18 @@ export function useReplies({ database, timelineItems, setTimelineItems, loadAvai
           [editReplyContent, replyId]
         )
 
-        // 手動選択タグを保存
-        await associateTagsWithReply(database, replyId, editReplyManualTags)
+        // タスク行を含む場合、自動タグを追加
+        const tagsToSave = [...editReplyManualTags]
+        if (hasTaskLine(editReplyContent)) {
+          const settings = await getSettings(database)
+          const autoTagName = settings.taskAutoTagName
+          if (autoTagName && autoTagName.trim() !== '' && !tagsToSave.includes(autoTagName)) {
+            tagsToSave.push(autoTagName)
+          }
+        }
+
+        // タグを保存
+        await associateTagsWithReply(database, replyId, tagsToSave)
 
         // 更新したタグを取得
         const updatedTags = await getTagsForReply(database, replyId)

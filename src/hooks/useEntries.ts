@@ -2,6 +2,8 @@ import { useState } from 'react'
 import Database from '@tauri-apps/plugin-sql'
 import { TimelineItem } from '@/types'
 import { associateTagsWithEntry, getTagsForEntry } from '@/lib/tags'
+import { hasTaskLine } from '@/utils/checkboxUtils'
+import { getSettings } from '@/lib/settings'
 
 interface UseEntriesProps {
   database: Database | null
@@ -31,9 +33,19 @@ export function useEntries({ database, timelineItems, setTimelineItems, loadAvai
 
         const entryId = Number(result.lastInsertId)
 
-        // 手動選択タグを保存
-        if (manualTags.length > 0) {
-          await associateTagsWithEntry(database, entryId, manualTags)
+        // タスク行を含む場合、自動タグを追加
+        const tagsToSave = [...manualTags]
+        if (hasTaskLine(currentEntry)) {
+          const settings = await getSettings(database)
+          const autoTagName = settings.taskAutoTagName
+          if (autoTagName && autoTagName.trim() !== '' && !tagsToSave.includes(autoTagName)) {
+            tagsToSave.push(autoTagName)
+          }
+        }
+
+        // タグを保存
+        if (tagsToSave.length > 0) {
+          await associateTagsWithEntry(database, entryId, tagsToSave)
         }
 
         // 保存したタグを取得
@@ -85,8 +97,18 @@ export function useEntries({ database, timelineItems, setTimelineItems, loadAvai
           [editContent, entryId]
         )
 
-        // 手動選択タグを保存
-        await associateTagsWithEntry(database, entryId, editManualTags)
+        // タスク行を含む場合、自動タグを追加
+        const tagsToSave = [...editManualTags]
+        if (hasTaskLine(editContent)) {
+          const settings = await getSettings(database)
+          const autoTagName = settings.taskAutoTagName
+          if (autoTagName && autoTagName.trim() !== '' && !tagsToSave.includes(autoTagName)) {
+            tagsToSave.push(autoTagName)
+          }
+        }
+
+        // タグを保存
+        await associateTagsWithEntry(database, entryId, tagsToSave)
 
         // 更新したタグを取得
         const updatedTags = await getTagsForEntry(database, entryId)

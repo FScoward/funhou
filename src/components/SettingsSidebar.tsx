@@ -23,6 +23,7 @@ import {
   setOllamaEnabled,
   setOllamaModel,
   setDefaultClaudeCwd,
+  setTaskAutoTagName,
 } from '@/lib/settings'
 import { open } from '@tauri-apps/plugin-dialog'
 import { Input } from '@/components/ui/input'
@@ -64,6 +65,7 @@ export function SettingsSidebar({
   const [ollamaModels, setOllamaModels] = useState<string[]>([])
   const [isCheckingOllama, setIsCheckingOllama] = useState(false)
   const [defaultClaudeCwd, setDefaultClaudeCwdState] = useState<string>('')
+  const [taskAutoTagName, setTaskAutoTagNameState] = useState<string>('TASK')
 
   useEffect(() => {
     if (isOpen && db) {
@@ -85,6 +87,7 @@ export function SettingsSidebar({
     setOllamaEnabledState(settings.ollamaEnabled ?? false)
     setOllamaModelState(settings.ollamaModel || 'gemma3:4b')
     setDefaultClaudeCwdState(settings.defaultClaudeCwd || '')
+    setTaskAutoTagNameState(settings.taskAutoTagName ?? 'TASK')
   }
 
   const checkOllamaStatus = async () => {
@@ -247,6 +250,16 @@ export function SettingsSidebar({
     }
   }
 
+  const handleTaskAutoTagNameChange = async (value: string) => {
+    if (!db) return
+    try {
+      setTaskAutoTagNameState(value)
+      await setTaskAutoTagName(db, value)
+    } catch (error) {
+      console.error('タスク自動タグ設定の変更に失敗しました:', error)
+    }
+  }
+
   return (
     <>
       {/* トグルボタン（常に表示） */}
@@ -333,6 +346,27 @@ export function SettingsSidebar({
               </SelectContent>
             </Select>
           </div>
+
+          {/* タスク自動タグ 区切り線 */}
+          <div className="settings-section-divider" />
+
+          {/* タスク自動タグ名 */}
+          <div className="settings-item-vertical">
+            <Label htmlFor="task-auto-tag-name">タスク自動タグ</Label>
+            <Input
+              id="task-auto-tag-name"
+              value={taskAutoTagName}
+              onChange={(e) => handleTaskAutoTagNameChange(e.target.value)}
+              placeholder="TASK"
+              className="w-full"
+            />
+            <span className="text-xs text-muted-foreground mt-1">
+              タスク行を含むエントリーに自動付与するタグ名。空欄で無効化。
+            </span>
+          </div>
+
+          {/* フォント 区切り線 */}
+          <div className="settings-section-divider" />
 
           {/* フォント */}
           <div className="settings-item-vertical">

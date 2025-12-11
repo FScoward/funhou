@@ -14,6 +14,7 @@ export interface Settings {
   ollamaEnabled?: boolean
   ollamaModel?: string
   defaultClaudeCwd?: string
+  taskAutoTagName?: string
 }
 
 export async function getSettings(db: Database): Promise<Settings> {
@@ -33,6 +34,7 @@ export async function getSettings(db: Database): Promise<Settings> {
       ollamaEnabled: false,
       ollamaModel: 'gemma3:4b',
       defaultClaudeCwd: undefined,
+      taskAutoTagName: 'TASK',
     }
 
     result.forEach((row) => {
@@ -56,6 +58,8 @@ export async function getSettings(db: Database): Promise<Settings> {
         settings.ollamaModel = row.value
       } else if (row.key === 'default_claude_cwd') {
         settings.defaultClaudeCwd = row.value
+      } else if (row.key === 'task_auto_tag_name') {
+        settings.taskAutoTagName = row.value
       }
     })
 
@@ -73,6 +77,7 @@ export async function getSettings(db: Database): Promise<Settings> {
       ollamaEnabled: false,
       ollamaModel: 'gemma3:4b',
       defaultClaudeCwd: undefined,
+      taskAutoTagName: 'TASK',
     }
   }
 }
@@ -179,4 +184,11 @@ export async function setDefaultClaudeCwd(
   value: string
 ): Promise<void> {
   await saveSetting(db, 'default_claude_cwd', value)
+}
+
+export async function setTaskAutoTagName(
+  db: Database,
+  value: string
+): Promise<void> {
+  await saveSetting(db, 'task_auto_tag_name', value)
 }
