@@ -56,14 +56,6 @@ pub struct ProjectInfo {
     pub last_updated: Option<String>,
 }
 
-/// Claude session finished event payload
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ClaudeSessionFinishedPayload {
-    pub session_id: String,
-    pub success: bool,
-    pub exit_code: Option<i32>,
-}
-
 /// Get Claude logs directory path
 fn get_claude_logs_dir() -> Result<PathBuf, String> {
     let home = dirs::home_dir().ok_or("Could not find home directory")?;
