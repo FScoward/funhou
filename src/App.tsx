@@ -188,7 +188,7 @@ function App() {
     incompleteTodos,
     isLoading: isIncompleteLoading,
     loadIncompleteTodos,
-    updateToDoingStatus,
+    updateIncompleteStatus,
     saveIncompleteOrder,
     reorderIncompleteTodos,
   } = useIncompleteTodos({ database })
@@ -761,8 +761,8 @@ function App() {
             isCompletedLoading={isCompletedLoading}
             incompleteTodos={incompleteTodos}
             isIncompleteLoading={isIncompleteLoading}
-            onIncompleteStatusChange={async (todo) => {
-              const success = await updateToDoingStatus(todo)
+            onIncompleteStatusChange={async (todo, newStatus) => {
+              const success = await updateIncompleteStatus(todo, newStatus)
               if (success) {
                 // ステータス変更をエントリとして記録
                 if (database) {
@@ -773,7 +773,7 @@ function App() {
                     db: database,
                     taskText: todo.text,
                     oldStatus: ' ', // 未完了から
-                    newStatus: '/', // DOINGへ
+                    newStatus: newStatus, // 指定されたステータスへ
                     tagNames,
                   })
 

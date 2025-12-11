@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react'
 import Database from '@tauri-apps/plugin-sql'
 import { IncompleteTodoItem, Entry, Reply, getIncompleteTodoUniqueId, Tag } from '@/types'
-import { CHECKBOX_PATTERN_ALL } from '@/utils/checkboxUtils'
+import { CHECKBOX_PATTERN_ALL, CheckboxStatus } from '@/utils/checkboxUtils'
 import { arrayMove } from '@dnd-kit/sortable'
 
 interface IncompleteOrderRow {
@@ -164,9 +164,10 @@ export function useIncompleteTodos({ database }: UseIncompleteTodosProps) {
     }
   }, [database])
 
-  // 未完了タスクをDOING状態に変更
-  const updateToDoingStatus = useCallback(async (
-    todo: IncompleteTodoItem
+  // 未完了タスクのステータスを変更
+  const updateIncompleteStatus = useCallback(async (
+    todo: IncompleteTodoItem,
+    newStatus: CheckboxStatus
   ): Promise<boolean> => {
     if (!database) return false
 
@@ -185,7 +186,7 @@ export function useIncompleteTodos({ database }: UseIncompleteTodosProps) {
           if (index >= 0 && index < lines.length) {
             const match = lines[index].match(CHECKBOX_PATTERN_ALL)
             if (match) {
-              lines[index] = `${match[1]}[/]${match[3]}`
+              lines[index] = `${match[1]}[${newStatus}]${match[3]}`
               const newContent = lines.join('\n')
 
               await database.execute(
@@ -210,7 +211,7 @@ export function useIncompleteTodos({ database }: UseIncompleteTodosProps) {
           if (index >= 0 && index < lines.length) {
             const match = lines[index].match(CHECKBOX_PATTERN_ALL)
             if (match) {
-              lines[index] = `${match[1]}[/]${match[3]}`
+              lines[index] = `${match[1]}[${newStatus}]${match[3]}`
               const newContent = lines.join('\n')
 
               await database.execute(
@@ -266,7 +267,7 @@ export function useIncompleteTodos({ database }: UseIncompleteTodosProps) {
     incompleteTodos,
     isLoading,
     loadIncompleteTodos,
-    updateToDoingStatus,
+    updateIncompleteStatus,
     saveIncompleteOrder,
     reorderIncompleteTodos
   }
