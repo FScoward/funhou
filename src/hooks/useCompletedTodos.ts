@@ -20,12 +20,11 @@ export function useCompletedTodos({ database, selectedDate }: UseCompletedTodosP
     try {
       const dateStr = formatDateToLocalYYYYMMDD(selectedDate)
 
-      // 選択中の日付で、完了チェックボックス [x] または [X] を含むエントリーを取得
+      // 完了チェックボックス [x] または [X] を含むエントリーを取得（アーカイブ除外）
       const entries = await database.select<Entry[]>(
         `SELECT id, content, timestamp FROM entries
-         WHERE DATE(timestamp, 'localtime') = DATE(?)
-         AND (content LIKE '%[x]%' OR content LIKE '%[X]%')`,
-        [dateStr]
+         WHERE (archived = 0 OR archived IS NULL)
+         AND (content LIKE '%[x]%' OR content LIKE '%[X]%')`
       )
 
       const completed: CompletedTodoItem[] = []
@@ -39,10 +38,26 @@ export function useCompletedTodos({ database, selectedDate }: UseCompletedTodosP
           if (match && (match[2] === 'x' || match[2] === 'X')) {
             // 次の行からCLOSED時刻を抽出
             let completedAt: string | undefined
+            let completedDate: Date | null = null
             if (index + 1 < lines.length) {
-              const closedDate = parseClosedTimestamp(lines[index + 1])
-              if (closedDate) {
-                completedAt = closedDate.toISOString()
+              completedDate = parseClosedTimestamp(lines[index + 1])
+              if (completedDate) {
+                completedAt = completedDate.toISOString()
+              }
+            }
+
+            // CLOSED日付が選択日付と一致するかチェック
+            if (completedDate) {
+              const completedDateStr = formatDateToLocalYYYYMMDD(completedDate)
+              if (completedDateStr !== dateStr) {
+                continue // 選択日付と異なる場合はスキップ
+              }
+            } else {
+              // CLOSED行がない場合は、エントリーの作成日でフォールバック
+              const entryDate = new Date(entry.timestamp)
+              const entryDateStr = formatDateToLocalYYYYMMDD(entryDate)
+              if (entryDateStr !== dateStr) {
+                continue
               }
             }
 
@@ -58,13 +73,13 @@ export function useCompletedTodos({ database, selectedDate }: UseCompletedTodosP
         }
       }
 
-      // 返信からも完了タスクを取得
+      // 返信からも完了タスクを取得（アーカイブ除外）
       const replies = await database.select<(Reply & { entry_id: number })[]>(
         `SELECT r.id, r.entry_id, r.content, r.timestamp FROM replies r
          JOIN entries e ON r.entry_id = e.id
-         WHERE DATE(r.timestamp, 'localtime') = DATE(?)
-         AND (r.content LIKE '%[x]%' OR r.content LIKE '%[X]%')`,
-        [dateStr]
+         WHERE (e.archived = 0 OR e.archived IS NULL)
+         AND (r.archived = 0 OR r.archived IS NULL)
+         AND (r.content LIKE '%[x]%' OR r.content LIKE '%[X]%')`
       )
 
       for (const reply of replies) {
@@ -75,10 +90,26 @@ export function useCompletedTodos({ database, selectedDate }: UseCompletedTodosP
           if (match && (match[2] === 'x' || match[2] === 'X')) {
             // 次の行からCLOSED時刻を抽出
             let completedAt: string | undefined
+            let completedDate: Date | null = null
             if (index + 1 < lines.length) {
-              const closedDate = parseClosedTimestamp(lines[index + 1])
-              if (closedDate) {
-                completedAt = closedDate.toISOString()
+              completedDate = parseClosedTimestamp(lines[index + 1])
+              if (completedDate) {
+                completedAt = completedDate.toISOString()
+              }
+            }
+
+            // CLOSED日付が選択日付と一致するかチェック
+            if (completedDate) {
+              const completedDateStr = formatDateToLocalYYYYMMDD(completedDate)
+              if (completedDateStr !== dateStr) {
+                continue // 選択日付と異なる場合はスキップ
+              }
+            } else {
+              // CLOSED行がない場合は、返信の作成日でフォールバック
+              const replyDate = new Date(reply.timestamp)
+              const replyDateStr = formatDateToLocalYYYYMMDD(replyDate)
+              if (replyDateStr !== dateStr) {
+                continue
               }
             }
 
