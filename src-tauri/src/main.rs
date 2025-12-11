@@ -3,6 +3,7 @@
 
 mod autohide;
 mod claude_logs;
+mod paste_to_app;
 mod speech;
 
 use autohide::{AutohideConfig, AutohideManager, ScreenEdge};
@@ -273,6 +274,8 @@ fn main() {
             claude_logs::get_project_path_for_cwd,
             claude_logs::list_sessions_for_cwd,
             claude_logs::get_latest_session_for_cwd,
+            paste_to_app::paste_text_to_app,
+            paste_to_app::get_running_apps,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

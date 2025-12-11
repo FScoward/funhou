@@ -352,6 +352,7 @@ function App() {
     deleteDialogOpen,
     setDeleteDialogOpen,
     handleAddEntry,
+    addEntryWithContent,
     startEditEntry,
     handleUpdateEntry,
     cancelEditEntry,
@@ -573,6 +574,13 @@ function App() {
               ollamaModel={ollamaModel}
               onImportLog={async (content) => {
                 setCurrentEntry(content)
+              }}
+              onPasteToAppSuccess={async (targetApp, text) => {
+                // 送信内容をエントリーとして記録
+                const entryContent = `📤 ${targetApp} に送信:\n${text}`
+                await addEntryWithContent(entryContent)
+                setCurrentEntry('')
+                await loadIncompleteTodos()
               }}
             />
 

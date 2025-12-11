@@ -73,6 +73,47 @@ export function useEntries({ database, timelineItems, setTimelineItems, loadAvai
     }
   }
 
+  // 指定したコンテンツで直接エントリーを追加（外部アプリ送信の記録用）
+  const addEntryWithContent = async (content: string, tags: string[] = []) => {
+    if (!content.trim() || !database) return
+
+    try {
+      const timestamp = new Date().toISOString()
+
+      const result = await database.execute(
+        'INSERT INTO entries (content, timestamp) VALUES (?, ?)',
+        [content, timestamp]
+      )
+
+      const entryId = Number(result.lastInsertId)
+
+      // タグを保存
+      if (tags.length > 0) {
+        await associateTagsWithEntry(database, entryId, tags)
+      }
+
+      // 保存したタグを取得
+      const savedTags = await getTagsForEntry(database, entryId)
+
+      const newItem: TimelineItem = {
+        type: 'entry',
+        id: entryId,
+        content: content,
+        timestamp: timestamp,
+        replies: [],
+        replyCount: 0,
+        tags: savedTags
+      }
+
+      setTimelineItems([newItem, ...timelineItems])
+
+      // タグ一覧を更新
+      loadAvailableTags()
+    } catch (error) {
+      console.error('エントリーの追加に失敗しました:', error)
+    }
+  }
+
   const startEditEntry = async (entryId: number, currentContent: string) => {
     setEditingEntryId(entryId)
     setEditContent(currentContent)
@@ -380,6 +421,7 @@ export function useEntries({ database, timelineItems, setTimelineItems, loadAvai
     setDeleteDialogOpen,
     // Handlers
     handleAddEntry,
+    addEntryWithContent,
     startEditEntry,
     handleUpdateEntry,
     cancelEditEntry,
