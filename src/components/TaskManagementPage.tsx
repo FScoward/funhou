@@ -40,7 +40,7 @@ interface TaskManagementPageProps {
   // Incomplete tasks
   incompleteTodos: IncompleteTodoItem[]
   isIncompleteLoading: boolean
-  onIncompleteStatusChange: (todo: IncompleteTodoItem) => Promise<void>
+  onIncompleteStatusChange: (todo: IncompleteTodoItem, newStatus: CheckboxStatus) => Promise<void>
   onIncompleteReorder: (activeId: string, overId: string) => Promise<void>
   // Claude Code sessions
   taskSessionsMap?: Map<string, TaskClaudeSession[]>

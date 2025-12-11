@@ -2,10 +2,19 @@ import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { GripVertical, ExternalLink, Circle, Slash, Terminal } from 'lucide-react'
+import { GripVertical, ExternalLink, Circle, Slash, CheckCircle, XCircle, Terminal } from 'lucide-react'
 import { TagBadge } from '@/components/TagBadge'
 import { IncompleteTodoItem, getIncompleteTodoUniqueId, TaskClaudeSession, TaskIdentifier } from '@/types'
 import { formatDateToLocalYYYYMMDD } from '@/utils/dateUtils'
+import { CheckboxStatus } from '@/utils/checkboxUtils'
+
+// ステータスメニューの定義
+const STATUS_OPTIONS: { status: CheckboxStatus; label: string; icon: React.ReactNode }[] = [
+  { status: ' ', label: '未完了', icon: <Circle size={14} /> },
+  { status: '/', label: 'DOING', icon: <Slash size={14} /> },
+  { status: 'x', label: '完了', icon: <CheckCircle size={14} /> },
+  { status: '-', label: 'キャンセル', icon: <XCircle size={14} /> },
+]
 
 // 親エントリIDから色相を生成（0-360）
 function getHueFromEntryId(entryId: number): number {
@@ -37,7 +46,7 @@ function formatShortDateLabel(timestamp: string): string {
 interface SortableIncompleteItemProps {
   todo: IncompleteTodoItem
   claudeSessions?: TaskClaudeSession[]
-  onStatusChange: (todo: IncompleteTodoItem) => Promise<void>
+  onStatusChange: (todo: IncompleteTodoItem, newStatus: CheckboxStatus) => Promise<void>
   onScrollToEntry: (entryId: number) => void
   onLaunchClaude?: (task: TaskIdentifier, taskText: string) => void
   onLaunchClaudeExternal?: (task: TaskIdentifier, taskText: string) => void
@@ -145,7 +154,7 @@ export function SortableIncompleteItem({
           className="task-item-checkbox"
           onClick={async (e) => {
             e.stopPropagation()
-            await onStatusChange(todo)
+            await onStatusChange(todo, '/')
           }}
           title="DOINGに変更"
         >
@@ -215,19 +224,22 @@ export function SortableIncompleteItem({
             top: menuPosition.y,
           }}
         >
-          {/* DOINGに変更 */}
-          <button
-            className="checkbox-status-option"
-            onClick={(e) => {
-              e.preventDefault()
-              e.stopPropagation()
-              onStatusChange(todo)
-              setMenuOpen(false)
-            }}
-          >
-            <Slash size={14} />
-            <span>DOINGに変更</span>
-          </button>
+          {/* ステータス変更オプション */}
+          {STATUS_OPTIONS.map((option) => (
+            <button
+              key={option.status}
+              className={`checkbox-status-option ${option.status === ' ' ? 'active' : ''}`}
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                onStatusChange(todo, option.status)
+                setMenuOpen(false)
+              }}
+            >
+              {option.icon}
+              <span>{option.label}</span>
+            </button>
+          ))}
 
           {/* Claude Code 関連メニュー */}
           {(onLaunchClaude || onLaunchClaudeExternal || onManageSessions) && (
