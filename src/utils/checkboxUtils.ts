@@ -98,3 +98,11 @@ export function parseClosedTimestamp(line: string): Date | null {
 export function isClosedLine(line: string): boolean {
   return CLOSED_TIMESTAMP_PATTERN.test(line)
 }
+
+/**
+ * コンテンツにタスク行（チェックボックス）が含まれているかを判定
+ */
+export function hasTaskLine(content: string): boolean {
+  const lines = content.split('\n')
+  return lines.some(line => CHECKBOX_PATTERN_ALL.test(line))
+}
