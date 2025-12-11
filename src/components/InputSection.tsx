@@ -26,6 +26,8 @@ interface InputSectionProps {
   ollamaEnabled?: boolean
   ollamaModel?: string
   onImportLog?: (content: string) => void
+  /** 外部アプリへの送信成功時のコールバック（送信先アプリ名、送信テキスト） */
+  onPasteToAppSuccess?: (targetApp: string, text: string) => void
 }
 
 export const InputSection = forwardRef<CustomInputRef, InputSectionProps>(function InputSection({
@@ -42,6 +44,7 @@ export const InputSection = forwardRef<CustomInputRef, InputSectionProps>(functi
   ollamaEnabled,
   ollamaModel,
   onImportLog,
+  onPasteToAppSuccess,
 }, ref) {
   const {
     paste,
@@ -55,7 +58,10 @@ export const InputSection = forwardRef<CustomInputRef, InputSectionProps>(functi
   const [dropdownOpen, setDropdownOpen] = useState(false)
 
   const handlePasteToApp = async (text: string) => {
-    await paste(text)
+    const success = await paste(text)
+    if (success && targetApp && onPasteToAppSuccess) {
+      onPasteToAppSuccess(targetApp, text)
+    }
   }
 
   const handleDropdownOpen = async (open: boolean) => {
