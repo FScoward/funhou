@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback } from 'react'
 import { pasteTextToApp, getRunningApps, type PasteResult, type AppInfo } from '@/lib/pasteToApp'
 
 const STORAGE_KEY = 'pasteToApp.targetApp'
