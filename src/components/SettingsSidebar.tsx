@@ -24,12 +24,23 @@ import {
   setOllamaModel,
   setDefaultClaudeCwd,
   setTaskAutoTagName,
+  setGeminiApiKey,
+  setGeminiModel,
+  setGeminiVoice,
+  setGeminiSystemPrompt,
 } from '@/lib/settings'
 import { open } from '@tauri-apps/plugin-dialog'
 import { Input } from '@/components/ui/input'
-import { FolderOpen } from 'lucide-react'
+import { FolderOpen, Eye, EyeOff } from 'lucide-react'
 import { checkOllamaAvailable, getAvailableModels } from '@/lib/ollama'
 import { ThemeVariant } from '@/lib/themes'
+import { Textarea } from '@/components/ui/textarea'
+import {
+  GEMINI_LIVE_MODELS,
+  GEMINI_VOICES,
+  DEFAULT_GEMINI_MODEL,
+  DEFAULT_GEMINI_VOICE,
+} from '@/types/geminiLive'
 
 interface SettingsSidebarProps {
   isOpen: boolean
@@ -66,6 +77,12 @@ export function SettingsSidebar({
   const [isCheckingOllama, setIsCheckingOllama] = useState(false)
   const [defaultClaudeCwd, setDefaultClaudeCwdState] = useState<string>('')
   const [taskAutoTagName, setTaskAutoTagNameState] = useState<string>('TASK')
+  // Gemini Live API 設定
+  const [geminiApiKey, setGeminiApiKeyState] = useState<string>('')
+  const [geminiModel, setGeminiModelState] = useState<string>(DEFAULT_GEMINI_MODEL)
+  const [geminiVoice, setGeminiVoiceState] = useState<string>(DEFAULT_GEMINI_VOICE)
+  const [geminiSystemPrompt, setGeminiSystemPromptState] = useState<string>('')
+  const [showGeminiApiKey, setShowGeminiApiKey] = useState(false)
 
   useEffect(() => {
     if (isOpen && db) {
@@ -88,6 +105,10 @@ export function SettingsSidebar({
     setOllamaModelState(settings.ollamaModel || 'gemma3:4b')
     setDefaultClaudeCwdState(settings.defaultClaudeCwd || '')
     setTaskAutoTagNameState(settings.taskAutoTagName ?? 'TASK')
+    setGeminiApiKeyState(settings.geminiApiKey || '')
+    setGeminiModelState(settings.geminiModel || DEFAULT_GEMINI_MODEL)
+    setGeminiVoiceState(settings.geminiVoice || DEFAULT_GEMINI_VOICE)
+    setGeminiSystemPromptState(settings.geminiSystemPrompt || '')
   }
 
   const checkOllamaStatus = async () => {
@@ -257,6 +278,46 @@ export function SettingsSidebar({
       await setTaskAutoTagName(db, value)
     } catch (error) {
       console.error('タスク自動タグ設定の変更に失敗しました:', error)
+    }
+  }
+
+  const handleGeminiApiKeyChange = async (value: string) => {
+    if (!db) return
+    try {
+      setGeminiApiKeyState(value)
+      await setGeminiApiKey(db, value)
+    } catch (error) {
+      console.error('Gemini APIキー設定の変更に失敗しました:', error)
+    }
+  }
+
+  const handleGeminiModelChange = async (value: string) => {
+    if (!db) return
+    try {
+      setGeminiModelState(value)
+      await setGeminiModel(db, value)
+    } catch (error) {
+      console.error('Geminiモデル設定の変更に失敗しました:', error)
+    }
+  }
+
+  const handleGeminiVoiceChange = async (value: string) => {
+    if (!db) return
+    try {
+      setGeminiVoiceState(value)
+      await setGeminiVoice(db, value)
+    } catch (error) {
+      console.error('Gemini音声設定の変更に失敗しました:', error)
+    }
+  }
+
+  const handleGeminiSystemPromptChange = async (value: string) => {
+    if (!db) return
+    try {
+      setGeminiSystemPromptState(value)
+      await setGeminiSystemPrompt(db, value)
+    } catch (error) {
+      console.error('Geminiシステムプロンプト設定の変更に失敗しました:', error)
     }
   }
 
@@ -521,6 +582,91 @@ export function SettingsSidebar({
             </div>
             <span className="text-xs text-muted-foreground mt-1">
               Claude Terminal起動時のデフォルト作業ディレクトリ
+            </span>
+          </div>
+
+          {/* Gemini Live API 区切り線 */}
+          <div className="settings-section-divider" />
+
+          {/* Gemini APIキー */}
+          <div className="settings-item-vertical">
+            <Label htmlFor="gemini-api-key">Gemini Live APIキー</Label>
+            <div className="flex gap-2">
+              <Input
+                id="gemini-api-key"
+                type={showGeminiApiKey ? 'text' : 'password'}
+                value={geminiApiKey}
+                onChange={(e) => handleGeminiApiKeyChange(e.target.value)}
+                placeholder="AIza..."
+                className="flex-1"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                onClick={() => setShowGeminiApiKey(!showGeminiApiKey)}
+                title={showGeminiApiKey ? '非表示' : '表示'}
+              >
+                {showGeminiApiKey ? <EyeOff size={16} /> : <Eye size={16} />}
+              </Button>
+            </div>
+            <span className="text-xs text-muted-foreground mt-1">
+              Google AI StudioでAPIキーを取得してください
+            </span>
+          </div>
+
+          {/* Geminiモデル選択 */}
+          <div className="settings-item-vertical">
+            <Label htmlFor="gemini-model">Geminiモデル</Label>
+            <Select
+              value={geminiModel}
+              onValueChange={handleGeminiModelChange}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="モデルを選択" />
+              </SelectTrigger>
+              <SelectContent>
+                {GEMINI_LIVE_MODELS.map((model) => (
+                  <SelectItem key={model.id} value={model.id}>
+                    {model.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Gemini音声選択 */}
+          <div className="settings-item-vertical">
+            <Label htmlFor="gemini-voice">音声</Label>
+            <Select
+              value={geminiVoice}
+              onValueChange={handleGeminiVoiceChange}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="音声を選択" />
+              </SelectTrigger>
+              <SelectContent>
+                {GEMINI_VOICES.map((voice) => (
+                  <SelectItem key={voice.id} value={voice.id}>
+                    {voice.name} - {voice.description}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Geminiシステムプロンプト */}
+          <div className="settings-item-vertical">
+            <Label htmlFor="gemini-system-prompt">システムプロンプト（オプション）</Label>
+            <Textarea
+              id="gemini-system-prompt"
+              value={geminiSystemPrompt}
+              onChange={(e) => handleGeminiSystemPromptChange(e.target.value)}
+              placeholder="AIアシスタントとしての振る舞いを定義..."
+              className="min-h-[80px]"
+            />
+            <span className="text-xs text-muted-foreground mt-1">
+              AIの性格や振る舞いをカスタマイズ
             </span>
           </div>
         </div>
