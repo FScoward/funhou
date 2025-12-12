@@ -33,6 +33,9 @@ import { TaskClaudeLaunchDialog } from '@/components/TaskClaudeLaunchDialog'
 import { TaskClaudeSessionsDialog } from '@/components/TaskClaudeSessionsDialog'
 import { TaskIdentifier, TaskClaudeSession as TaskClaudeSessionType } from '@/types'
 import { DailySummarySidebar } from '@/components/DailySummarySidebar'
+import { GeminiToolbar } from '@/components/GeminiToolbar'
+import { GeminiSaveDialog } from '@/components/GeminiSaveDialog'
+import { useGeminiEntryIntegration } from '@/hooks/useGeminiEntryIntegration'
 import { getSettings, applyFont, applyFontSize } from '@/lib/settings'
 import { applyTheme, ThemeVariant } from '@/lib/themes'
 import { onClaudeSessionFinished } from '@/lib/claudeLogs'
@@ -50,6 +53,11 @@ function App() {
   const [ollamaEnabled, setOllamaEnabled] = useState(false)
   const [ollamaModel, setOllamaModel] = useState('gemma3:4b')
   const [runningSessionIds, setRunningSessionIds] = useState<Set<string>>(new Set())
+  // Gemini Live API 設定
+  const [geminiApiKey, setGeminiApiKey] = useState('')
+  const [geminiModel, setGeminiModel] = useState('models/gemini-2.5-flash-preview-native-audio-dialog')
+  const [geminiVoice, setGeminiVoice] = useState('Puck')
+  const [geminiSystemPrompt, setGeminiSystemPrompt] = useState('')
 
   // セッション開始時のコールバック
   const handleSessionStart = (sessionId: string) => {
@@ -83,6 +91,11 @@ function App() {
       // Ollama設定の適用
       setOllamaEnabled(settings.ollamaEnabled ?? false)
       setOllamaModel(settings.ollamaModel || 'gemma3:4b')
+      // Gemini Live API設定の適用
+      setGeminiApiKey(settings.geminiApiKey || '')
+      setGeminiModel(settings.geminiModel || 'models/gemini-2.5-flash-preview-native-audio-dialog')
+      setGeminiVoice(settings.geminiVoice || 'Puck')
+      setGeminiSystemPrompt(settings.geminiSystemPrompt || '')
     }
 
     loadAndApplySettings()
@@ -372,6 +385,21 @@ function App() {
     loadAvailableTags,
   })
 
+  // Gemini Live とエントリーの統合
+  const {
+    systemPromptWithContext,
+    openSaveDialog,
+    closeSaveDialog,
+    saveEntry,
+    isSaveDialogOpen,
+    pendingSaveContent,
+    pendingTags,
+  } = useGeminiEntryIntegration({
+    timelineItems: filteredTimelineItems,
+    baseSystemPrompt: geminiSystemPrompt,
+    addEntryWithContent,
+  })
+
   // 返信
   const {
     replyingToId,
@@ -494,13 +522,22 @@ function App() {
             <TabsTrigger value="funhou" className="app-tab-trigger">分報</TabsTrigger>
             <TabsTrigger value="tasks" className="app-tab-trigger">タスク管理</TabsTrigger>
           </TabsList>
-          <button
-            className="window-drag-handle"
-            onMouseDown={handleTabDrag}
-            title="ウィンドウを移動"
-          >
-            <GripVertical size={18} />
-          </button>
+          <div className="flex items-center gap-2">
+            <GeminiToolbar
+              apiKey={geminiApiKey}
+              model={geminiModel}
+              voice={geminiVoice}
+              systemPrompt={systemPromptWithContext}
+              onSaveRequest={openSaveDialog}
+            />
+            <button
+              className="window-drag-handle"
+              onMouseDown={handleTabDrag}
+              title="ウィンドウを移動"
+            >
+              <GripVertical size={18} />
+            </button>
+          </div>
         </div>
 
         <TabsContent value="funhou" className="app-tab-content">
@@ -953,6 +990,19 @@ function App() {
           }}
         />
       )}
+
+      {/* Gemini Live 対話結果保存ダイアログ */}
+      <GeminiSaveDialog
+        isOpen={isSaveDialogOpen}
+        onClose={closeSaveDialog}
+        proposedContent={pendingSaveContent}
+        availableTags={availableTags}
+        initialTags={pendingTags}
+        onSave={async (content, tags) => {
+          await saveEntry(content, tags)
+          await loadIncompleteTodos()
+        }}
+      />
     </div>
     </ClaudeTerminalSessionProvider>
   )

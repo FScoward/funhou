@@ -15,6 +15,11 @@ export interface Settings {
   ollamaModel?: string
   defaultClaudeCwd?: string
   taskAutoTagName?: string
+  // Gemini Live API 設定
+  geminiApiKey?: string
+  geminiModel?: string
+  geminiVoice?: string
+  geminiSystemPrompt?: string
 }
 
 export async function getSettings(db: Database): Promise<Settings> {
@@ -35,6 +40,10 @@ export async function getSettings(db: Database): Promise<Settings> {
       ollamaModel: 'gemma3:4b',
       defaultClaudeCwd: undefined,
       taskAutoTagName: 'TASK',
+      geminiApiKey: undefined,
+      geminiModel: 'models/gemini-2.5-flash-native-audio-preview-09-2025',
+      geminiVoice: 'Puck',
+      geminiSystemPrompt: undefined,
     }
 
     result.forEach((row) => {
@@ -60,6 +69,19 @@ export async function getSettings(db: Database): Promise<Settings> {
         settings.defaultClaudeCwd = row.value
       } else if (row.key === 'task_auto_tag_name') {
         settings.taskAutoTagName = row.value
+      } else if (row.key === 'gemini_api_key') {
+        settings.geminiApiKey = row.value
+      } else if (row.key === 'gemini_model') {
+        // 古いモデル名を新しいモデル名にマイグレート
+        if (row.value === 'models/gemini-2.5-flash-preview-native-audio-dialog') {
+          settings.geminiModel = 'models/gemini-2.5-flash-native-audio-preview-09-2025'
+        } else {
+          settings.geminiModel = row.value
+        }
+      } else if (row.key === 'gemini_voice') {
+        settings.geminiVoice = row.value
+      } else if (row.key === 'gemini_system_prompt') {
+        settings.geminiSystemPrompt = row.value
       }
     })
 
@@ -78,6 +100,10 @@ export async function getSettings(db: Database): Promise<Settings> {
       ollamaModel: 'gemma3:4b',
       defaultClaudeCwd: undefined,
       taskAutoTagName: 'TASK',
+      geminiApiKey: undefined,
+      geminiModel: 'models/gemini-2.5-flash-native-audio-preview-09-2025',
+      geminiVoice: 'Puck',
+      geminiSystemPrompt: undefined,
     }
   }
 }
@@ -191,4 +217,32 @@ export async function setTaskAutoTagName(
   value: string
 ): Promise<void> {
   await saveSetting(db, 'task_auto_tag_name', value)
+}
+
+export async function setGeminiApiKey(
+  db: Database,
+  value: string
+): Promise<void> {
+  await saveSetting(db, 'gemini_api_key', value)
+}
+
+export async function setGeminiModel(
+  db: Database,
+  value: string
+): Promise<void> {
+  await saveSetting(db, 'gemini_model', value)
+}
+
+export async function setGeminiVoice(
+  db: Database,
+  value: string
+): Promise<void> {
+  await saveSetting(db, 'gemini_voice', value)
+}
+
+export async function setGeminiSystemPrompt(
+  db: Database,
+  value: string
+): Promise<void> {
+  await saveSetting(db, 'gemini_system_prompt', value)
 }
