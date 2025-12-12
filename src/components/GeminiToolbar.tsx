@@ -18,6 +18,8 @@ interface GeminiToolbarProps {
   model?: string
   voice?: string
   systemPrompt?: string
+  /** 保存リクエスト時のコールバック */
+  onSaveRequest?: (content: string) => void
 }
 
 // 状態に応じたアイコンを取得
@@ -86,6 +88,7 @@ export function GeminiToolbar({
   model,
   voice,
   systemPrompt,
+  onSaveRequest,
 }: GeminiToolbarProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false)
 
@@ -183,6 +186,7 @@ export function GeminiToolbar({
         onStop={handleStop}
         onClearMessages={clearMessages}
         isSpeechListening={isListening}
+        onSaveRequest={onSaveRequest}
       />
     </>
   )

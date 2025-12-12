@@ -34,6 +34,8 @@ import { TaskClaudeSessionsDialog } from '@/components/TaskClaudeSessionsDialog'
 import { TaskIdentifier, TaskClaudeSession as TaskClaudeSessionType } from '@/types'
 import { DailySummarySidebar } from '@/components/DailySummarySidebar'
 import { GeminiToolbar } from '@/components/GeminiToolbar'
+import { GeminiSaveDialog } from '@/components/GeminiSaveDialog'
+import { useGeminiEntryIntegration } from '@/hooks/useGeminiEntryIntegration'
 import { getSettings, applyFont, applyFontSize } from '@/lib/settings'
 import { applyTheme, ThemeVariant } from '@/lib/themes'
 import { onClaudeSessionFinished } from '@/lib/claudeLogs'
@@ -383,6 +385,21 @@ function App() {
     loadAvailableTags,
   })
 
+  // Gemini Live とエントリーの統合
+  const {
+    systemPromptWithContext,
+    openSaveDialog,
+    closeSaveDialog,
+    saveEntry,
+    isSaveDialogOpen,
+    pendingSaveContent,
+    pendingTags,
+  } = useGeminiEntryIntegration({
+    timelineItems: filteredTimelineItems,
+    baseSystemPrompt: geminiSystemPrompt,
+    addEntryWithContent,
+  })
+
   // 返信
   const {
     replyingToId,
@@ -510,7 +527,8 @@ function App() {
               apiKey={geminiApiKey}
               model={geminiModel}
               voice={geminiVoice}
-              systemPrompt={geminiSystemPrompt}
+              systemPrompt={systemPromptWithContext}
+              onSaveRequest={openSaveDialog}
             />
             <button
               className="window-drag-handle"
@@ -972,6 +990,19 @@ function App() {
           }}
         />
       )}
+
+      {/* Gemini Live 対話結果保存ダイアログ */}
+      <GeminiSaveDialog
+        isOpen={isSaveDialogOpen}
+        onClose={closeSaveDialog}
+        proposedContent={pendingSaveContent}
+        availableTags={availableTags}
+        initialTags={pendingTags}
+        onSave={async (content, tags) => {
+          await saveEntry(content, tags)
+          await loadIncompleteTodos()
+        }}
+      />
     </div>
     </ClaudeTerminalSessionProvider>
   )

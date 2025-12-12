@@ -6,7 +6,7 @@
  */
 
 import { useRef, useEffect } from 'react'
-import { X, Mic, MicOff, Loader2, Volume2, AlertCircle, Trash2 } from 'lucide-react'
+import { X, Mic, MicOff, Loader2, Volume2, AlertCircle, Trash2, Save } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import type { GeminiLiveState, GeminiLiveDialogMessage } from '@/types/geminiLive'
 import { cn } from '@/lib/utils'
@@ -23,6 +23,8 @@ interface GeminiLiveDialogProps {
   onStop: () => void
   onClearMessages: () => void
   isSpeechListening?: boolean
+  /** 保存ボタンクリック時のコールバック */
+  onSaveRequest?: (content: string) => void
 }
 
 // 状態表示コンポーネント
@@ -111,6 +113,7 @@ export function GeminiLiveDialog({
   onStop,
   onClearMessages,
   isSpeechListening,
+  onSaveRequest,
 }: GeminiLiveDialogProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const isActive = state !== 'idle' && state !== 'error'
@@ -230,15 +233,36 @@ export function GeminiLiveDialog({
             </Button>
           )}
           {messages.length > 0 && !isActive && (
-            <Button
-              variant="outline"
-              size="lg"
-              onClick={onClearMessages}
-              className="px-8"
-            >
-              <Trash2 size={20} className="mr-2" />
-              クリア
-            </Button>
+            <>
+              <Button
+                variant="outline"
+                size="lg"
+                onClick={onClearMessages}
+                className="px-8"
+              >
+                <Trash2 size={20} className="mr-2" />
+                クリア
+              </Button>
+              {onSaveRequest && (
+                <Button
+                  variant="secondary"
+                  size="lg"
+                  onClick={() => {
+                    // 最後のアシスタントメッセージを保存対象として提案
+                    const lastAssistantMessage = [...messages]
+                      .reverse()
+                      .find((m) => m.role === 'assistant')
+                    if (lastAssistantMessage) {
+                      onSaveRequest(lastAssistantMessage.content)
+                    }
+                  }}
+                  className="px-8"
+                >
+                  <Save size={20} className="mr-2" />
+                  保存
+                </Button>
+              )}
+            </>
           )}
         </div>
       </div>
