@@ -82,15 +82,30 @@ pub fn paste_text_to_app(text: String, target_app: String) -> Result<PasteResult
 
     let script = format!(
         r#"
-        set the clipboard to "{}"
-        tell application "{}" to activate
-        delay 0.3
+        set the clipboard to "{escaped_text}"
+        tell application "{escaped_app}" to activate
+
+        -- Wait for target app to become frontmost (max 1 second)
+        set maxWait to 10
+        set waited to 0
+        repeat while waited < maxWait
+            delay 0.1
+            tell application "System Events"
+                set frontApp to name of first process whose frontmost is true
+                if frontApp is "{escaped_app}" then
+                    exit repeat
+                end if
+            end tell
+            set waited to waited + 1
+        end repeat
+
+        -- Send keystroke to the specific process
         tell application "System Events"
-            keystroke "v" using command down
+            tell process "{escaped_app}"
+                keystroke "v" using command down
+            end tell
         end tell
-        "#,
-        escaped_text,
-        escaped_app
+        "#
     );
 
     println!("[paste_to_app] Running AppleScript...");
