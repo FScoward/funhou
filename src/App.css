@@ -3999,7 +3999,8 @@ textarea::placeholder {
 .app-tabs {
   display: flex;
   flex-direction: column;
-  height: 100%;
+  flex: 1;
+  min-height: 0;
   overflow: hidden;
 }
 
@@ -4084,7 +4085,10 @@ textarea::placeholder {
 
 .app-tab-content {
   flex: 1;
-  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
 }
 
 .app-tab-content[data-state="inactive"] {
@@ -4099,8 +4103,9 @@ textarea::placeholder {
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  height: 100%;
-  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
   padding: 0 0.5rem;
 }
 
@@ -4111,6 +4116,19 @@ textarea::placeholder {
   border: 1px solid var(--glass-border);
   padding: 1rem;
   box-shadow: 0 4px 16px var(--glass-shadow);
+}
+
+.task-section-incomplete,
+.task-section-completed {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.task-section-incomplete {
+  flex: 3;
 }
 
 .task-section-header {
@@ -4176,14 +4194,24 @@ textarea::placeholder {
 }
 
 .task-columns {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+  display: flex;
   gap: 1rem;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
 }
 
 @media (max-width: 768px) {
   .task-columns {
-    grid-template-columns: 1fr;
+    flex-direction: column;
+  }
+
+  .task-section-incomplete {
+    flex: 2;
+  }
+
+  .task-section-completed {
+    flex: 1;
   }
 }
 
@@ -4191,7 +4219,6 @@ textarea::placeholder {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
-  max-height: 300px;
   overflow-y: auto;
 }
 
@@ -4204,6 +4231,15 @@ textarea::placeholder {
 .task-section-incomplete .task-list {
   position: relative;
   padding-left: 1.5rem;
+  flex: 1 1 0%;
+  min-height: 0;
+  height: 0;
+}
+
+.task-section-completed .task-list {
+  flex: 1 1 0%;
+  min-height: 0;
+  height: 0;
 }
 
 .incomplete-list-lines {
