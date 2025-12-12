@@ -109,6 +109,7 @@ export function GeminiToolbar({
     currentResponse,
     startSession,
     endSession,
+    clearMessages,
     isConnected,
     isListening,
   } = useGeminiLive({
@@ -180,6 +181,7 @@ export function GeminiToolbar({
         currentResponse={currentResponse}
         onStart={handleStart}
         onStop={handleStop}
+        onClearMessages={clearMessages}
         isSpeechListening={isListening}
       />
     </>

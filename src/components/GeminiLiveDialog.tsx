@@ -6,7 +6,7 @@
  */
 
 import { useRef, useEffect } from 'react'
-import { X, Mic, MicOff, Loader2, Volume2, AlertCircle } from 'lucide-react'
+import { X, Mic, MicOff, Loader2, Volume2, AlertCircle, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import type { GeminiLiveState, GeminiLiveDialogMessage } from '@/types/geminiLive'
 import { cn } from '@/lib/utils'
@@ -21,6 +21,7 @@ interface GeminiLiveDialogProps {
   currentResponse: string
   onStart: () => void
   onStop: () => void
+  onClearMessages: () => void
   isSpeechListening?: boolean
 }
 
@@ -108,6 +109,7 @@ export function GeminiLiveDialog({
   currentResponse,
   onStart,
   onStop,
+  onClearMessages,
   isSpeechListening,
 }: GeminiLiveDialogProps) {
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -225,6 +227,17 @@ export function GeminiLiveDialog({
                 <Mic size={20} className="mr-2" />
               )}
               開始
+            </Button>
+          )}
+          {messages.length > 0 && !isActive && (
+            <Button
+              variant="outline"
+              size="lg"
+              onClick={onClearMessages}
+              className="px-8"
+            >
+              <Trash2 size={20} className="mr-2" />
+              クリア
             </Button>
           )}
         </div>
