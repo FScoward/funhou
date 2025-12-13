@@ -100,17 +100,6 @@ export function DailySummarySidebar({
 
   return (
     <>
-      {/* トグルボタン（常に表示） */}
-      {!isOpen && (
-        <button
-          className="summary-sidebar-toggle-fab"
-          onClick={onToggle}
-          aria-label="日次サマリーを開く"
-        >
-          <Sparkles size={14} />
-        </button>
-      )}
-
       {/* オーバーレイ */}
       {isOpen && (
         <div
