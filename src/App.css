@@ -3175,10 +3175,10 @@ textarea::placeholder {
    Daily Summary Sidebar - 日次サマリーサイドバー
    ======================================== */
 
-/* トグルボタン - 左側に配置 - Liquid Glass Style */
+/* トグルボタン - 左下に配置 - Liquid Glass Style */
 .summary-sidebar-toggle-fab {
   position: fixed;
-  top: 8rem;
+  bottom: 1rem;
   left: 1rem;
   width: 40px;
   height: 40px;

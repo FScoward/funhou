@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
-import { GripVertical } from 'lucide-react'
+import { GripVertical, Sparkles } from 'lucide-react'
 import './App.css'
 import { ClaudeTerminalSessionProvider } from '@/contexts/ClaudeTerminalSessionContext'
 import { ClaudeTerminalWidget } from '@/components/ClaudeTerminalWidget'
@@ -516,6 +516,16 @@ function App() {
   return (
     <ClaudeTerminalSessionProvider>
     <div className="app">
+      {/* 日次サマリーサイドバーのトグルボタン（左下に配置） */}
+      {!summarySidebarOpen && (
+        <button
+          className="summary-sidebar-toggle-fab"
+          onClick={() => setSummarySidebarOpen(!summarySidebarOpen)}
+          aria-label="日次サマリーを開く"
+        >
+          <Sparkles size={14} />
+        </button>
+      )}
       <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'funhou' | 'tasks')} className="app-tabs">
         <div className="app-tabs-header">
           <TabsList className="app-tabs-list">
