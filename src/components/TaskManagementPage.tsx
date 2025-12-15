@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState, useEffect, useCallback } from 'react'
-import { CheckCircle, ListTodo, ExternalLink, Sparkles } from 'lucide-react'
+import { CheckCircle, ListTodo, ExternalLink, Sparkles, ChevronDown, ChevronUp } from 'lucide-react'
 import { TodoItem, CompletedTodoItem, IncompleteTodoItem, getTodoUniqueId, getIncompleteTodoUniqueId, TaskClaudeSession, TaskIdentifier, getTaskIdentifierKey } from '@/types'
 import { CheckboxStatus } from '@/utils/checkboxUtils'
 import { formatTimestamp } from '@/utils/dateUtils'
@@ -71,6 +71,10 @@ export function TaskManagementPage({
   const incompleteListRef = useRef<HTMLDivElement>(null)
   const [curves, setCurves] = useState<Array<{ path: string; color: string }>>([])
   const [incompleteCurves, setIncompleteCurves] = useState<Array<{ path: string; color: string }>>([])
+
+  // アコーディオン状態
+  const [incompleteExpanded, setIncompleteExpanded] = useState(true)
+  const [completedExpanded, setCompletedExpanded] = useState(true)
 
   // DOINGのみフィルタリング
   const doingTodos = useMemo(() => {
@@ -369,8 +373,16 @@ export function TaskManagementPage({
       {/* Bottom two columns */}
       <div className="task-columns">
         {/* Incomplete Tasks Section */}
-        <section className="task-section task-section-incomplete">
-          <div className="task-section-header">
+        <section className={`task-section task-section-incomplete ${incompleteExpanded ? 'expanded' : 'collapsed'}`}>
+          <div
+            className="task-section-header accordion-header"
+            onClick={() => setIncompleteExpanded(!incompleteExpanded)}
+          >
+            {incompleteExpanded ? (
+              <ChevronDown size={18} className="accordion-icon" />
+            ) : (
+              <ChevronUp size={18} className="accordion-icon" />
+            )}
             <ListTodo size={18} className="task-section-icon incomplete-icon" />
             <h2>未完了タスク</h2>
             {incompleteTodos.length > 0 && (
@@ -378,62 +390,74 @@ export function TaskManagementPage({
             )}
           </div>
 
-          {isIncompleteLoading ? (
-            <div className="task-section-empty">読み込み中...</div>
-          ) : incompleteTodos.length === 0 ? (
-            <div className="task-section-empty">未完了のタスクはありません</div>
-          ) : (
-            <DndContext
-              sensors={sensors}
-              collisionDetection={closestCenter}
-              onDragEnd={handleIncompleteDragEnd}
-            >
-              <SortableContext
-                items={incompleteTodos.map(getIncompleteTodoUniqueId)}
-                strategy={verticalListSortingStrategy}
-              >
-                <div className="task-list incomplete-list" ref={incompleteListRef}>
-                  {/* SVG接続曲線 */}
-                  <svg className="incomplete-list-lines">
-                    {incompleteCurves.map((curve, i) => (
-                      <path
-                        key={i}
-                        d={curve.path}
-                        stroke={curve.color}
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        fill="none"
-                      />
-                    ))}
-                  </svg>
-                  {incompleteTodos.map((item) => {
-                    const taskKey = getTaskIdentifierKey({
-                      entryId: item.entryId,
-                      replyId: item.replyId,
-                      lineIndex: item.lineIndex,
-                    })
-                    return (
-                      <SortableIncompleteItem
-                        key={getIncompleteTodoUniqueId(item)}
-                        todo={item}
-                        claudeSessions={taskSessionsMap?.get(taskKey)}
-                        onStatusChange={onIncompleteStatusChange}
-                        onScrollToEntry={onScrollToEntry}
-                        onLaunchClaude={onLaunchClaude}
-                        onLaunchClaudeExternal={onLaunchClaudeExternal}
-                        onManageSessions={onManageSessions}
-                      />
-                    )
-                  })}
-                </div>
-              </SortableContext>
-            </DndContext>
+          {incompleteExpanded && (
+            <div className="accordion-content">
+              {isIncompleteLoading ? (
+                <div className="task-section-empty">読み込み中...</div>
+              ) : incompleteTodos.length === 0 ? (
+                <div className="task-section-empty">未完了のタスクはありません</div>
+              ) : (
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={handleIncompleteDragEnd}
+                >
+                  <SortableContext
+                    items={incompleteTodos.map(getIncompleteTodoUniqueId)}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    <div className="task-list incomplete-list" ref={incompleteListRef}>
+                      {/* SVG接続曲線 */}
+                      <svg className="incomplete-list-lines">
+                        {incompleteCurves.map((curve, i) => (
+                          <path
+                            key={i}
+                            d={curve.path}
+                            stroke={curve.color}
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            fill="none"
+                          />
+                        ))}
+                      </svg>
+                      {incompleteTodos.map((item) => {
+                        const taskKey = getTaskIdentifierKey({
+                          entryId: item.entryId,
+                          replyId: item.replyId,
+                          lineIndex: item.lineIndex,
+                        })
+                        return (
+                          <SortableIncompleteItem
+                            key={getIncompleteTodoUniqueId(item)}
+                            todo={item}
+                            claudeSessions={taskSessionsMap?.get(taskKey)}
+                            onStatusChange={onIncompleteStatusChange}
+                            onScrollToEntry={onScrollToEntry}
+                            onLaunchClaude={onLaunchClaude}
+                            onLaunchClaudeExternal={onLaunchClaudeExternal}
+                            onManageSessions={onManageSessions}
+                          />
+                        )
+                      })}
+                    </div>
+                  </SortableContext>
+                </DndContext>
+              )}
+            </div>
           )}
         </section>
 
         {/* Completed Tasks Section */}
-        <section className="task-section task-section-completed">
-          <div className="task-section-header">
+        <section className={`task-section task-section-completed ${completedExpanded ? 'expanded' : 'collapsed'}`}>
+          <div
+            className="task-section-header accordion-header"
+            onClick={() => setCompletedExpanded(!completedExpanded)}
+          >
+            {completedExpanded ? (
+              <ChevronDown size={18} className="accordion-icon" />
+            ) : (
+              <ChevronUp size={18} className="accordion-icon" />
+            )}
             <CheckCircle size={18} className="task-section-icon completed-icon" />
             <h2>今日やったこと</h2>
             {completedItems.length > 0 && (
@@ -441,37 +465,41 @@ export function TaskManagementPage({
             )}
           </div>
 
-          {isCompletedLoading ? (
-            <div className="task-section-empty">読み込み中...</div>
-          ) : completedItems.length === 0 ? (
-            <div className="task-section-empty">完了したタスクはありません</div>
-          ) : (
-            <div className="task-list completed-list">
-              {completedItems.map((item) => (
-                <div
-                  key={`${item.entryId}-${item.lineIndex}`}
-                  className="task-item completed-item"
-                  onClick={() => onScrollToEntry(item.entryId)}
-                >
-                  <div className="task-item-timestamp">
-                    {formatTimestamp(item.completedAt || item.entryTimestamp)}
-                  </div>
-                  <div className="task-item-content">
-                    <CheckCircle size={14} className="task-item-check" />
-                    <span className="task-item-text">{item.text}</span>
-                  </div>
-                  <button
-                    className="task-item-jump"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      onScrollToEntry(item.entryId)
-                    }}
-                    title="エントリーに移動"
-                  >
-                    <ExternalLink size={14} />
-                  </button>
+          {completedExpanded && (
+            <div className="accordion-content">
+              {isCompletedLoading ? (
+                <div className="task-section-empty">読み込み中...</div>
+              ) : completedItems.length === 0 ? (
+                <div className="task-section-empty">完了したタスクはありません</div>
+              ) : (
+                <div className="task-list completed-list">
+                  {completedItems.map((item) => (
+                    <div
+                      key={`${item.entryId}-${item.lineIndex}`}
+                      className="task-item completed-item"
+                      onClick={() => onScrollToEntry(item.entryId)}
+                    >
+                      <div className="task-item-timestamp">
+                        {formatTimestamp(item.completedAt || item.entryTimestamp)}
+                      </div>
+                      <div className="task-item-content">
+                        <CheckCircle size={14} className="task-item-check" />
+                        <span className="task-item-text">{item.text}</span>
+                      </div>
+                      <button
+                        className="task-item-jump"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          onScrollToEntry(item.entryId)
+                        }}
+                        title="エントリーに移動"
+                      >
+                        <ExternalLink size={14} />
+                      </button>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              )}
             </div>
           )}
         </section>
