@@ -112,7 +112,7 @@ export function SortableDoingItem({
   const parentColorLight = `hsla(${hue}, 75%, 40%, 0.2)`
 
   const style = {
-    transform: CSS.Transform.toString(transform),
+    transform: CSS.Translate.toString(transform),
     transition,
     '--parent-color': parentColor,
     '--parent-color-light': parentColorLight,
