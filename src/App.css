@@ -4140,6 +4140,43 @@ textarea::placeholder {
   border-bottom: 1px solid var(--glass-border);
 }
 
+/* アコーディオンヘッダー */
+.task-section-header.accordion-header {
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.2s ease;
+  border-radius: 0.5rem;
+  margin: -0.5rem;
+  padding: 0.5rem;
+  margin-bottom: 0;
+}
+
+.task-section-header.accordion-header:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.accordion-icon {
+  flex-shrink: 0;
+  color: var(--muted-foreground);
+  transition: transform 0.2s ease;
+}
+
+/* 折りたたみ時のスタイル */
+.task-section.collapsed .task-section-header {
+  margin-bottom: 0;
+  border-bottom: none;
+}
+
+/* アコーディオンコンテンツ */
+.accordion-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  margin-top: 0.75rem;
+}
+
 .task-section-header h2 {
   font-size: 1rem;
   font-weight: 600;
@@ -4195,24 +4232,24 @@ textarea::placeholder {
 
 .task-columns {
   display: flex;
+  flex-direction: column;
   gap: 1rem;
   flex: 1;
   min-height: 0;
-  overflow: hidden;
+  overflow-y: auto;
 }
 
-@media (max-width: 768px) {
-  .task-columns {
-    flex-direction: column;
-  }
+/* アコーディオン展開時のセクション高さ */
+.task-section-incomplete.expanded,
+.task-section-completed.expanded {
+  flex: 1 1 auto;
+  min-height: 150px;
+}
 
-  .task-section-incomplete {
-    flex: 2;
-  }
-
-  .task-section-completed {
-    flex: 1;
-  }
+/* アコーディオン折りたたみ時のセクション */
+.task-section-incomplete.collapsed,
+.task-section-completed.collapsed {
+  flex: 0 0 auto;
 }
 
 .task-list {
