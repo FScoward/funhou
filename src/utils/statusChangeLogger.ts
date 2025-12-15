@@ -48,9 +48,9 @@ export async function logStatusChange({
     // 記録エントリのコンテンツ
     const content = `${taskText} を ${oldLabel} から ${newLabel} に変更`
 
-    // エントリを作成
+    // エントリを作成（ステータス変更記録は最初からアーカイブ状態にする）
     const result = await db.execute(
-      'INSERT INTO entries (content, timestamp) VALUES (?, ?)',
+      'INSERT INTO entries (content, timestamp, archived) VALUES (?, ?, 1)',
       [content, timestamp]
     )
 
