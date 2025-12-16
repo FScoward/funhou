@@ -515,6 +515,26 @@ export function ClaudeTerminalSessionProvider({ children }: { children: ReactNod
         if (session?.pty) {
           session.pty.resize(cols, rows)
         }
+      } else if (payload.type === 'ready') {
+        // ウィンドウが初期化完了 -> バッファを送信してforwarderを登録
+        const buffer = sessionBuffersRef.current.get(sessionId)
+        if (buffer && buffer.chunks.length > 0) {
+          // 過去のバッファを一括送信
+          sendToTerminalWindow(sessionId, { type: 'buffer', data: buffer.chunks })
+        }
+
+        // forwarderを登録（以降の出力をリアルタイムで転送）
+        if (!windowForwardersRef.current.has(sessionId)) {
+          const forwarder = (data: string) => {
+            sendToTerminalWindow(sessionId, { type: 'output', data })
+          }
+          windowForwardersRef.current.set(sessionId, forwarder)
+
+          if (!outputSubscribersRef.current.has(sessionId)) {
+            outputSubscribersRef.current.set(sessionId, new Set())
+          }
+          outputSubscribersRef.current.get(sessionId)!.add(forwarder)
+        }
       } else if (payload.type === 'terminate' && payload.data === 'window_closed') {
         // ウィンドウが閉じられた通知を受け取った
         // ウィンドウ状態を更新（ドックに戻す）
@@ -602,25 +622,7 @@ export function ClaudeTerminalSessionProvider({ children }: { children: ReactNod
       }
     })
 
-    // 新しく開かれたウィンドウにforwarderを追加
-    openWindowSessionIds.forEach((sessionId) => {
-      // 既にforwarderが登録されている場合はスキップ
-      if (windowForwardersRef.current.has(sessionId)) {
-        return
-      }
-
-      // 新しいforwarderを作成
-      const forwarder = (data: string) => {
-        sendToTerminalWindow(sessionId, { type: 'output', data })
-      }
-      windowForwardersRef.current.set(sessionId, forwarder)
-
-      // 購読者として登録
-      if (!outputSubscribersRef.current.has(sessionId)) {
-        outputSubscribersRef.current.set(sessionId, new Set())
-      }
-      outputSubscribersRef.current.get(sessionId)!.add(forwarder)
-    })
+    // forwarderの登録はreadyシグナル受信時に行うため、ここでは行わない
 
     // クリーンアップ：全てのforwarderを削除
     return () => {

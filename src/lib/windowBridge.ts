@@ -6,7 +6,7 @@ import { invoke } from '@tauri-apps/api/core'
  */
 export interface SessionSyncPayload {
   sessionId: string
-  type: 'output' | 'input' | 'status' | 'resize' | 'terminate'
+  type: 'output' | 'input' | 'status' | 'resize' | 'terminate' | 'ready' | 'buffer'
   data: unknown
 }
 
