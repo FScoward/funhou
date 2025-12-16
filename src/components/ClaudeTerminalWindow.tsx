@@ -71,6 +71,9 @@ export function ClaudeTerminalWindow({ sessionId }: ClaudeTerminalWindowProps) {
     setTerminal(term)
     setIsReady(true)
 
+    // メインウィンドウに初期化完了を通知
+    sendToMainWindow(sessionId, { type: 'ready', data: null })
+
     return () => {
       term.dispose()
     }
@@ -94,6 +97,11 @@ export function ClaudeTerminalWindow({ sessionId }: ClaudeTerminalWindowProps) {
           const data = payload.data as string
           terminal.write(data)
           outputBufferRef.current.push(data)
+        } else if (payload.type === 'buffer') {
+          // 過去のバッファを復元（ウィンドウ再オープン時）
+          const bufferData = payload.data as string[]
+          bufferData.forEach((chunk) => terminal.write(chunk))
+          outputBufferRef.current.push(...bufferData)
         } else if (payload.type === 'status') {
           // ステータス変更の処理（必要に応じて）
         } else if (payload.type === 'terminate') {
