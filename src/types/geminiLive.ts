@@ -136,8 +136,18 @@ export interface GeminiSettings {
 export const GEMINI_LIVE_MODELS = [
   {
     id: 'models/gemini-2.5-flash-native-audio-preview-09-2025',
-    name: 'Gemini 2.5 Flash Native Audio',
+    name: 'Gemini 2.5 Flash Native Audio (09-2025)',
     description: 'リアルタイム双方向音声対話向け',
+  },
+  {
+    id: 'models/gemini-2.5-flash-native-audio-preview-12-2025',
+    name: 'Gemini 2.5 Flash Native Audio (12-2025)',
+    description: 'リアルタイム双方向音声対話向け（最新版）',
+  },
+  {
+    id: 'models/gemini-2.5-pro-preview-tts',
+    name: 'Gemini 2.5 Pro TTS',
+    description: 'テキスト読み上げ向け（Live API非対応の可能性あり）',
   },
 ] as const
 
