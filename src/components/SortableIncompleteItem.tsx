@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { GripVertical, ExternalLink, Circle, Slash, CheckCircle, XCircle, Terminal } from 'lucide-react'
+import { GripVertical, ExternalLink, Circle, Slash, CheckCircle, XCircle, Terminal, MessageSquare } from 'lucide-react'
 import { TagBadge } from '@/components/TagBadge'
 import { IncompleteTodoItem, getIncompleteTodoUniqueId, TaskClaudeSession, TaskIdentifier } from '@/types'
 import { formatDateToLocalYYYYMMDD } from '@/utils/dateUtils'
@@ -48,6 +48,8 @@ interface SortableIncompleteItemProps {
   claudeSessions?: TaskClaudeSession[]
   onStatusChange: (todo: IncompleteTodoItem, newStatus: CheckboxStatus) => Promise<void>
   onScrollToEntry: (entryId: number) => void
+  onScrollToReply?: (replyId: number) => void
+  onPreviewReplies?: (entryId: number, taskText: string) => void
   onLaunchClaude?: (task: TaskIdentifier, taskText: string) => void
   onLaunchClaudeExternal?: (task: TaskIdentifier, taskText: string) => void
   onManageSessions?: (task: TaskIdentifier, taskText: string, sessions: TaskClaudeSession[]) => void
@@ -58,6 +60,8 @@ export function SortableIncompleteItem({
   claudeSessions = [],
   onStatusChange,
   onScrollToEntry,
+  onScrollToReply,
+  onPreviewReplies,
   onLaunchClaude,
   onLaunchClaudeExternal,
   onManageSessions,
@@ -131,6 +135,11 @@ export function SortableIncompleteItem({
     setMenuOpen(true)
   }
 
+  // 返信プレビューを開く
+  const handleOpenRepliesPreview = () => {
+    onPreviewReplies?.(todo.entryId, todo.text)
+  }
+
   return (
     <>
       <div
@@ -139,7 +148,7 @@ export function SortableIncompleteItem({
         className={itemClasses}
         data-entry-id={todo.entryId}
         data-is-child={isReplyTask}
-        onClick={() => onScrollToEntry(todo.entryId)}
+        onClick={handleOpenRepliesPreview}
         onContextMenu={handleContextMenu}
       >
         <button
@@ -180,16 +189,43 @@ export function SortableIncompleteItem({
           <span className="incomplete-item-badge">+{todo.childCount}</span>
         )}
 
-        <button
-          className="task-item-jump"
-          onClick={(e) => {
-            e.stopPropagation()
-            onScrollToEntry(todo.entryId)
-          }}
-          title="エントリーに移動"
-        >
-          <ExternalLink size={14} />
-        </button>
+        {/* 返信プレビューボタン */}
+        {onPreviewReplies && (
+          <button
+            className="incomplete-item-replies"
+            onClick={(e) => {
+              e.stopPropagation()
+              handleOpenRepliesPreview()
+            }}
+            title="返信を表示"
+          >
+            <MessageSquare size={14} />
+          </button>
+        )}
+
+        {todo.replyId && onScrollToReply ? (
+          <button
+            className="task-item-jump"
+            onClick={(e) => {
+              e.stopPropagation()
+              onScrollToReply(todo.replyId!)
+            }}
+            title="返信に移動"
+          >
+            <ExternalLink size={14} />
+          </button>
+        ) : (
+          <button
+            className="task-item-jump"
+            onClick={(e) => {
+              e.stopPropagation()
+              onScrollToEntry(todo.entryId)
+            }}
+            title="エントリーに移動"
+          >
+            <ExternalLink size={14} />
+          </button>
+        )}
 
         {/* Claude Code ボタン */}
         {(onLaunchClaude || onManageSessions) && (
