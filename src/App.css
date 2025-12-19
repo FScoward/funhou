@@ -2219,6 +2219,243 @@ textarea::placeholder {
   flex-shrink: 0;
 }
 
+/* 展開トグルボタン */
+.doing-list-item-expand,
+.incomplete-item-expand {
+  background: none;
+  border: none;
+  padding: 0.125rem;
+  cursor: pointer;
+  color: var(--muted-foreground);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  opacity: 0.6;
+  transition: opacity 0.15s, color 0.15s;
+}
+
+.doing-list-item-expand:hover,
+.incomplete-item-expand:hover {
+  opacity: 1;
+  color: var(--foreground);
+}
+
+/* 返信エントリの展開表示 - タイムライン風 */
+.doing-list-item-expanded-replies,
+.incomplete-item-expanded-replies {
+  margin-left: 1.5rem;
+  margin-top: 0.75rem;
+  margin-bottom: 0.75rem;
+  padding-left: 1rem;
+  border-left: 2px solid var(--parent-color, hsl(var(--muted-foreground) / 0.3));
+  position: relative;
+}
+
+.doing-list-item-expanded-replies > .expanded-reply-content,
+.incomplete-item-expanded-replies > .expanded-reply-content {
+  position: relative;
+  padding: 0.625rem 0.875rem;
+  margin-bottom: 0.5rem;
+  background: hsl(var(--background) / 0.6);
+  border-radius: 6px;
+  border: 1px solid hsl(var(--border) / 0.5);
+  transition: all 0.15s ease;
+}
+
+.doing-list-item-expanded-replies > .expanded-reply-content:last-child,
+.incomplete-item-expanded-replies > .expanded-reply-content:last-child {
+  margin-bottom: 0;
+}
+
+.doing-list-item-expanded-replies > .expanded-reply-content:hover,
+.incomplete-item-expanded-replies > .expanded-reply-content:hover {
+  background: hsl(var(--background) / 0.9);
+  border-color: var(--parent-color, hsl(var(--border)));
+}
+
+/* タイムラインのドット */
+.doing-list-item-expanded-replies > .expanded-reply-content::before,
+.incomplete-item-expanded-replies > .expanded-reply-content::before {
+  content: '';
+  position: absolute;
+  left: -1.375rem;
+  top: 0.75rem;
+  width: 6px;
+  height: 6px;
+  background: var(--parent-color, hsl(var(--muted-foreground)));
+  border-radius: 50%;
+}
+
+.expanded-reply-loading,
+.expanded-reply-error,
+.expanded-reply-empty {
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  padding: 0.5rem 0;
+}
+
+.expanded-reply-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.expanded-reply-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.expanded-reply-timestamp {
+  font-size: 0.65rem;
+  color: var(--muted-foreground);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+.expanded-reply-tags {
+  display: flex;
+  gap: 0.25rem;
+  flex-wrap: wrap;
+}
+
+.expanded-reply-tags .tag-badge {
+  font-size: 0.6rem;
+  padding: 0.125rem 0.375rem;
+}
+
+.expanded-reply-body {
+  font-size: 0.8rem;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: hsl(var(--foreground) / 0.9);
+}
+
+/* 返信プレビューダイアログ */
+.replies-preview-dialog {
+  max-width: 600px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.replies-preview-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--foreground);
+  padding-right: 2rem;
+  flex-shrink: 0;
+}
+
+.replies-preview-content {
+  flex: 1;
+  overflow-y: auto;
+  margin-top: 0.75rem;
+  min-height: 0;
+  max-height: calc(80vh - 120px);
+}
+
+.replies-preview-loading,
+.replies-preview-empty {
+  font-size: 0.85rem;
+  color: var(--muted-foreground);
+  text-align: center;
+  padding: 2rem 1rem;
+}
+
+.replies-preview-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.replies-preview-item {
+  padding: 0.875rem;
+  background: hsl(var(--muted) / 0.5);
+  border-radius: 8px;
+  border: 1px solid hsl(var(--border) / 0.5);
+  transition: all 0.15s ease;
+}
+
+.replies-preview-item:hover {
+  background: hsl(var(--muted) / 0.8);
+  border-color: hsl(var(--border));
+}
+
+.replies-preview-item-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.5rem;
+}
+
+.replies-preview-timestamp {
+  font-size: 0.7rem;
+  color: var(--muted-foreground);
+  font-weight: 500;
+}
+
+.replies-preview-tags {
+  display: flex;
+  gap: 0.25rem;
+  flex-wrap: wrap;
+}
+
+.replies-preview-tags .tag-badge {
+  font-size: 0.6rem;
+  padding: 0.125rem 0.375rem;
+}
+
+.replies-preview-jump {
+  margin-left: auto;
+  background: none;
+  border: none;
+  padding: 0.25rem;
+  cursor: pointer;
+  color: var(--muted-foreground);
+  border-radius: 4px;
+  transition: all 0.15s ease;
+}
+
+.replies-preview-jump:hover {
+  color: var(--foreground);
+  background: hsl(var(--muted));
+}
+
+.replies-preview-item-body {
+  font-size: 0.85rem;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: hsl(var(--foreground) / 0.9);
+}
+
+/* 返信ボタンスタイル */
+.doing-list-item-replies,
+.incomplete-item-replies {
+  background: none;
+  border: none;
+  padding: 0.25rem;
+  cursor: pointer;
+  color: var(--muted-foreground);
+  border-radius: 4px;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+}
+
+.doing-list-item-replies:hover,
+.incomplete-item-replies:hover {
+  color: var(--foreground);
+  background: hsl(var(--muted) / 0.5);
+}
+
 /* 空状態 */
 .current-activity-empty {
   text-align: center;

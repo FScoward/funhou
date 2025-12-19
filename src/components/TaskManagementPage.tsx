@@ -19,6 +19,8 @@ import {
 } from '@dnd-kit/sortable'
 import { SortableDoingItem } from './SortableDoingItem'
 import { SortableIncompleteItem } from './SortableIncompleteItem'
+import { RepliesPreviewDialog } from './RepliesPreviewDialog'
+import Database from '@tauri-apps/plugin-sql'
 
 // 親エントリIDから色相を生成
 function getHueFromEntryId(entryId: number): number {
@@ -47,6 +49,8 @@ interface TaskManagementPageProps {
   onLaunchClaude?: (task: TaskIdentifier, taskText: string) => void
   onLaunchClaudeExternal?: (task: TaskIdentifier, taskText: string) => void
   onManageSessions?: (task: TaskIdentifier, taskText: string, sessions: TaskClaudeSession[]) => void
+  // Database for reply preview
+  database?: Database | null
 }
 
 export function TaskManagementPage({
@@ -66,6 +70,7 @@ export function TaskManagementPage({
   onLaunchClaude,
   onLaunchClaudeExternal,
   onManageSessions,
+  database,
 }: TaskManagementPageProps) {
   const listRef = useRef<HTMLDivElement>(null)
   const incompleteListRef = useRef<HTMLDivElement>(null)
@@ -75,6 +80,18 @@ export function TaskManagementPage({
   // アコーディオン状態
   const [incompleteExpanded, setIncompleteExpanded] = useState(true)
   const [completedExpanded, setCompletedExpanded] = useState(true)
+
+  // 返信プレビューダイアログの状態
+  const [repliesDialogOpen, setRepliesDialogOpen] = useState(false)
+  const [repliesDialogEntryId, setRepliesDialogEntryId] = useState<number | null>(null)
+  const [repliesDialogTaskText, setRepliesDialogTaskText] = useState('')
+
+  // 返信プレビューダイアログを開く
+  const handlePreviewReplies = useCallback((entryId: number, taskText: string) => {
+    setRepliesDialogEntryId(entryId)
+    setRepliesDialogTaskText(taskText)
+    setRepliesDialogOpen(true)
+  }, [])
 
   // DOINGのみフィルタリング
   const doingTodos = useMemo(() => {
@@ -358,6 +375,7 @@ export function TaskManagementPage({
                       onStatusChange={onStatusChange}
                       onScrollToEntry={onScrollToEntry}
                       onScrollToReply={onScrollToReply}
+                      onPreviewReplies={handlePreviewReplies}
                       onLaunchClaude={onLaunchClaude}
                       onLaunchClaudeExternal={onLaunchClaudeExternal}
                       onManageSessions={onManageSessions}
@@ -433,6 +451,8 @@ export function TaskManagementPage({
                             claudeSessions={taskSessionsMap?.get(taskKey)}
                             onStatusChange={onIncompleteStatusChange}
                             onScrollToEntry={onScrollToEntry}
+                            onScrollToReply={onScrollToReply}
+                            onPreviewReplies={handlePreviewReplies}
                             onLaunchClaude={onLaunchClaude}
                             onLaunchClaudeExternal={onLaunchClaudeExternal}
                             onManageSessions={onManageSessions}
@@ -504,6 +524,16 @@ export function TaskManagementPage({
           )}
         </section>
       </div>
+
+      {/* 返信プレビューダイアログ */}
+      <RepliesPreviewDialog
+        isOpen={repliesDialogOpen}
+        onClose={() => setRepliesDialogOpen(false)}
+        entryId={repliesDialogEntryId}
+        taskText={repliesDialogTaskText}
+        database={database ?? null}
+        onScrollToReply={onScrollToReply}
+      />
     </div>
   )
 }

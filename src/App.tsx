@@ -805,6 +805,7 @@ function App() {
               setActiveTab('funhou')
               setTimeout(() => scrollToReply(replyId), 100)
             }}
+            database={database}
             onStatusChange={handleTaskStatusChange}
             onReorder={async (activeId, overId) => {
               const reorderedDoingTodos = reorderDoingTodos(activeId, overId)

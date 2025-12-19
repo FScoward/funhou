@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { GripVertical, ExternalLink, Circle, Slash, CheckCircle, XCircle, Terminal } from 'lucide-react'
+import { GripVertical, ExternalLink, Circle, Slash, CheckCircle, XCircle, Terminal, MessageSquare } from 'lucide-react'
 import { TagBadge } from '@/components/TagBadge'
 import { TodoItem, getTodoUniqueId, TaskClaudeSession, TaskIdentifier } from '@/types'
 import { CheckboxStatus } from '@/utils/checkboxUtils'
@@ -50,6 +50,7 @@ interface SortableDoingItemProps {
   onStatusChange?: (todo: TodoItem, newStatus: CheckboxStatus) => Promise<void>
   onScrollToEntry?: (entryId: number) => void
   onScrollToReply?: (replyId: number) => void
+  onPreviewReplies?: (entryId: number, taskText: string) => void
   onLaunchClaude?: (task: TaskIdentifier, taskText: string) => void
   onLaunchClaudeExternal?: (task: TaskIdentifier, taskText: string) => void
   onManageSessions?: (task: TaskIdentifier, taskText: string, sessions: TaskClaudeSession[]) => void
@@ -61,6 +62,7 @@ export function SortableDoingItem({
   onStatusChange,
   onScrollToEntry,
   onScrollToReply,
+  onPreviewReplies,
   onLaunchClaude,
   onLaunchClaudeExternal,
   onManageSessions,
@@ -134,6 +136,11 @@ export function SortableDoingItem({
     setMenuOpen(true)
   }
 
+  // 返信プレビューを開く
+  const handleOpenRepliesPreview = () => {
+    onPreviewReplies?.(todo.entryId, todo.text)
+  }
+
   return (
     <>
       <div
@@ -159,7 +166,13 @@ export function SortableDoingItem({
           />
         )}
 
-        <span className="doing-list-item-text">{todo.text}</span>
+        <span
+          className="doing-list-item-text"
+          onClick={handleOpenRepliesPreview}
+          style={{ cursor: onPreviewReplies ? 'pointer' : 'default' }}
+        >
+          {todo.text}
+        </span>
 
         {/* 親エントリーのタグを表示 */}
         {todo.parentEntryTags && todo.parentEntryTags.length > 0 && (
@@ -176,6 +189,17 @@ export function SortableDoingItem({
         {/* 子タスクバッジ（親の場合） */}
         {hasChildren && (
           <span className="doing-list-item-badge">+{todo.childCount}</span>
+        )}
+
+        {/* 返信プレビューボタン */}
+        {onPreviewReplies && (
+          <button
+            className="doing-list-item-replies"
+            onClick={handleOpenRepliesPreview}
+            title="返信を表示"
+          >
+            <MessageSquare size={14} />
+          </button>
         )}
 
         {todo.replyId && onScrollToReply ? (
