@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react'
 import { pasteTextToApp, getRunningApps, type PasteResult, type AppInfo } from '@/lib/pasteToApp'
 
 const STORAGE_KEY = 'pasteToApp.targetApp'
+const STORAGE_KEY_BUNDLE_ID = 'pasteToApp.bundleId'
 
 export function usePasteToApp() {
   const [isPasting, setIsPasting] = useState(false)
@@ -11,6 +12,10 @@ export function usePasteToApp() {
   const [targetApp, setTargetApp] = useState<string | null>(() => {
     // localStorageから復元
     return localStorage.getItem(STORAGE_KEY)
+  })
+  const [targetBundleId, setTargetBundleId] = useState<string | null>(() => {
+    // localStorageから復元
+    return localStorage.getItem(STORAGE_KEY_BUNDLE_ID)
   })
   const [isLoadingApps, setIsLoadingApps] = useState(false)
 
@@ -30,12 +35,21 @@ export function usePasteToApp() {
   }, [])
 
   // 送信先アプリを設定
-  const selectTargetApp = useCallback((appName: string | null) => {
-    setTargetApp(appName)
-    if (appName) {
-      localStorage.setItem(STORAGE_KEY, appName)
+  const selectTargetApp = useCallback((appInfo: AppInfo | null) => {
+    if (appInfo) {
+      setTargetApp(appInfo.name)
+      setTargetBundleId(appInfo.bundle_id ?? null)
+      localStorage.setItem(STORAGE_KEY, appInfo.name)
+      if (appInfo.bundle_id) {
+        localStorage.setItem(STORAGE_KEY_BUNDLE_ID, appInfo.bundle_id)
+      } else {
+        localStorage.removeItem(STORAGE_KEY_BUNDLE_ID)
+      }
     } else {
+      setTargetApp(null)
+      setTargetBundleId(null)
       localStorage.removeItem(STORAGE_KEY)
+      localStorage.removeItem(STORAGE_KEY_BUNDLE_ID)
     }
   }, [])
 
@@ -54,7 +68,7 @@ export function usePasteToApp() {
     setError(null)
 
     try {
-      const result = await pasteTextToApp(text, targetApp)
+      const result = await pasteTextToApp(text, targetApp, targetBundleId ?? undefined)
       setLastResult(result)
 
       if (!result.success) {
@@ -71,7 +85,7 @@ export function usePasteToApp() {
     } finally {
       setIsPasting(false)
     }
-  }, [targetApp])
+  }, [targetApp, targetBundleId])
 
   const clearError = useCallback(() => {
     setError(null)

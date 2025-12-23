@@ -67,9 +67,9 @@ pub fn get_running_apps() -> Result<Vec<AppInfo>, String> {
 
 /// 指定したアプリにテキストをペースト
 #[tauri::command]
-pub fn paste_text_to_app(text: String, target_app: String) -> Result<PasteResult, String> {
+pub fn paste_text_to_app(text: String, target_app: String, bundle_id: Option<String>) -> Result<PasteResult, String> {
     let preview: String = text.chars().take(20).collect();
-    println!("[paste_to_app] Called with text: {}, target: {}", preview, target_app);
+    println!("[paste_to_app] Called with text: {}, target: {}, bundle_id: {:?}", preview, target_app, bundle_id);
 
     // エスケープ処理
     let escaped_text = text
@@ -80,30 +80,20 @@ pub fn paste_text_to_app(text: String, target_app: String) -> Result<PasteResult
         .replace('\\', "\\\\")
         .replace('"', "\\\"");
 
+    // Bundle IDがある場合は `tell application id` を使用
+    // ない場合は従来通り `tell application` を使用
+    let activate_command = match &bundle_id {
+        Some(id) => format!(r#"tell application id "{}" to activate"#, id.replace('"', "\\\"")),
+        None => format!(r#"tell application "{escaped_app}" to activate"#),
+    };
+
     let script = format!(
         r#"
         set the clipboard to "{escaped_text}"
-        tell application "{escaped_app}" to activate
-
-        -- Wait for target app to become frontmost (max 1 second)
-        set maxWait to 10
-        set waited to 0
-        repeat while waited < maxWait
-            delay 0.1
-            tell application "System Events"
-                set frontApp to name of first process whose frontmost is true
-                if frontApp is "{escaped_app}" then
-                    exit repeat
-                end if
-            end tell
-            set waited to waited + 1
-        end repeat
-
-        -- Send keystroke to the specific process
+        {activate_command}
+        delay 0.3
         tell application "System Events"
-            tell process "{escaped_app}"
-                keystroke "v" using command down
-            end tell
+            keystroke "v" using command down
         end tell
         "#
     );
