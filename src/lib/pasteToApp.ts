@@ -30,12 +30,13 @@ export async function getRunningApps(): Promise<AppInfo[]> {
  * 指定したアプリにテキストをペースト
  * @param text 送信するテキスト
  * @param targetApp 送信先アプリ名
+ * @param bundleId 送信先アプリのBundle ID（オプション、あればより確実にアクティブ化できる）
  * @returns 送信結果
  */
-export async function pasteTextToApp(text: string, targetApp: string): Promise<PasteResult> {
-  console.log('[pasteToApp] Invoking paste_text_to_app with text:', text.substring(0, 50), 'target:', targetApp)
+export async function pasteTextToApp(text: string, targetApp: string, bundleId?: string): Promise<PasteResult> {
+  console.log('[pasteToApp] Invoking paste_text_to_app with text:', text.substring(0, 50), 'target:', targetApp, 'bundleId:', bundleId)
   try {
-    const result = await invoke<PasteResult>('paste_text_to_app', { text, targetApp })
+    const result = await invoke<PasteResult>('paste_text_to_app', { text, targetApp, bundleId })
     console.log('[pasteToApp] Result:', result)
     return result
   } catch (error) {

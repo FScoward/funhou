@@ -99,7 +99,7 @@ export const InputSection = forwardRef<CustomInputRef, InputSectionProps>(functi
               runningApps.map((app) => (
                 <DropdownMenuItem
                   key={app.name}
-                  onClick={() => selectTargetApp(app.name)}
+                  onClick={() => selectTargetApp(app)}
                   className={targetApp === app.name ? 'bg-accent' : ''}
                 >
                   {app.name}
